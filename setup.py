@@ -92,6 +92,7 @@ def main(**extra_args):
           requires=info.REQUIRES,
           provides=info.PROVIDES,
           packages     = ['ISLP',
+                          'ISLP.wrappers',
                           ],
           ext_modules = EXTS,
           package_data = {},
