@@ -3,17 +3,22 @@ from functools import partial
 import numpy as np, pandas as pd
 
 import rpy2.robjects as rpy
+from rpy2.robjects.packages import importr
+from rpy2.robjects import pandas2ri
+from rpy2.robjects.conversion import localconverter
 
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.model_selection import cross_validate, check_cv
 from sklearn.metrics import mean_squared_error
-from sklearn.externals.joblib.parallel import Parallel, delayed
+from joblib.parallel import Parallel, delayed
 
-class Subset(BaseEstimator, RegressorMixin): 
+rpy.r('library(leaps)')
 
-    def __init__(self, 
-                 formula_str, 
-                 nvar, 
+class Subset(BaseEstimator, RegressorMixin):
+
+    def __init__(self,
+                 formula_str,
+                 nvar,
                  method='exhaustive'):
 
         self.formula_str = formula_str
@@ -24,44 +29,37 @@ class Subset(BaseEstimator, RegressorMixin):
     def fit(self, X, y):
         """Fit best subsets regression for a given `nvar`
 
-        Parameters
-        ----------
-        X : {array-like}, shape (n_samples, n_features)
-            Training data. Pass directly as Fortran-contiguous data
-            to avoid unnecessary memory duplication. If y is mono-output,
-            X can be sparse.
+        Parameters                                                         
+        ---------                                                         
+        X : {array-like}, shape (n_samples, n_features)                    
+            Training data. Pass directly as Fortran-contiguous data to avoid
+            unnecessary memory duplication. If y is mono-output, X can be
+            sparse.  
 
-        y : array-like, shape (n_samples,) or (n_samples, n_targets)
+        y : array-like, shape (n_samples,) or (n_samples, n_targets) 
             Target values
+
         """
-        rpy.pandas2ri.activate() # for data frame conversion
-        D = pd.concat([X, y], axis=1) # reconstitute data
-        _regfit = rpy.r['regsubsets'](self.formula, 
-                                      data=D, 
+        leaps = importr('leaps')
+        base = importr('base')
+
+        D = _convert_df(pd.concat([X, y], axis=1).copy()) # reconstitute data                   
+        _regfit = rpy.r['regsubsets'](self.formula,
+                                      data=D,
                                       method=self.method,
                                       nvmax=self.nvar)
-        self._which = rpy.r['summary'](_regfit).rx2('which').astype(np.bool)
-        _names = _regfit.rx2('xnames')
+        self._which = np.asarray(rpy.r['summary'](_regfit).rx2('which')).astype(np.bool)
+        _names = np.asarray(_regfit.rx2('xnames'))
         self._nz_coef = rpy.r['coef'](_regfit, self.nvar)
         self.coef_ = pd.Series(self._nz_coef, index=_names[self._which[self.nvar-1]])
-        rpy.pandas2ri.deactivate() 
 
     def predict(self, X):
-        rpy.pandas2ri.activate() # for data frame conversion
-        _X = rpy.r['model.matrix'](self.formula, data=X)
-        _X = _X[:, self._which[self.nvar-1]] # 0-based indexing
-        rpy.pandas2ri.deactivate() 
+        stats = importr('stats')
+        with localconverter(rpy.default_converter + pandas2ri.converter):
+            _X = stats.model_matrix(self.formula, data=X)
+            _X = _X[:, self._which[self.nvar-1]] # 0-based indexing             
         return _X.dot(self._nz_coef)
-
-    def score(self, X, y, sample_weight=None):
-        return -mean_squared_error(y, 
-                                   self.predict(X), 
-                                   sample_weight=sample_weight,
-                                   multioutput='uniform_average')
-
-    def predict(self, D):
-        return _predict(self.formula, D, self._which, self.nvar, self.coef_)
-
+    
 class SubsetCV(BaseEstimator, RegressorMixin): 
 
     def __init__(self, 
@@ -107,8 +105,10 @@ class SubsetCV(BaseEstimator, RegressorMixin):
 
         # Loop over folds, computing mse path
         # for each (train, test)
-        jobs = (delayed(_regsubsets_MSE)(X, 
-                                         y, 
+        D = pd.concat([X, y], axis=1) # reconstitute data
+
+        jobs = (delayed(_regsubsets_MSE)(X,
+                                         y,
                                          self.formula, 
                                          self.method, 
                                          self.nvmax, 
@@ -124,61 +124,64 @@ class SubsetCV(BaseEstimator, RegressorMixin):
 
         # Find best index by minimizing MSEs
 
-        self.best_index = np.argmin(self.mse_path) + 1
+        self.best_index = int(np.argmin(self.mse_path) + 1)
 
-        # Refit with best index hyperparameter
-        self.best_estimator = Subset(self.formula_str, 
+        # Refit with best index hyperparameter                                  
+        self.best_estimator = Subset(self.formula_str,
                                      self.best_index,
                                      method=self.method)
+
         self.best_estimator.fit(X, y)
         self.coef_ = self.best_estimator.coef_
+
+        
         return self
 
     def predict(self, D):
         return self.best_estimator.predict(D)
 
-def _regsubsets_MSE(X, 
-                    y, 
+def _regsubsets_MSE(X,
+                    y,
                     formula, 
                     method, 
                     nvar, 
                     train, 
                     test):
-                    
-        rpy.pandas2ri.activate() # for data frame conversion
-        D = pd.concat([X, y], axis=1) # reconstitute data
 
-        Dtrain = D.loc[D.index[train]]
-        Dtest = D.loc[D.index[test]]
+    D = pd.concat([X, y], axis=1) # reconstitute data
 
-        _regfit = rpy.r['regsubsets'](formula, 
-                                      data=Dtrain, 
-                                      method=method,
-                                      nvmax=nvar)
-        _which = rpy.r['summary'](_regfit).rx2('which').astype(np.bool)
-        _Xtest = rpy.r['model.matrix'](formula, data=Dtest)
-        _coef = np.zeros(_Xtest.shape[1])
+    Dtrain = _convert_df(D.loc[D.index[train]].copy())
+    Dtest = _convert_df(D.loc[D.index[test]].copy())
 
-        _MSEs = []
+    _regfit = rpy.r['regsubsets'](formula, 
+                                  data=Dtrain, 
+                                  method=method,
+                                  nvmax=nvar)
+    _which = np.asarray(rpy.r['summary'](_regfit).rx2('which')).astype(np.bool)
+    _Xtest = np.asarray(rpy.r['model.matrix'](formula, data=Dtest))
+    _coef = np.zeros(_Xtest.shape[1])
 
-        _y_test = y.loc[y.index[test]]
-        for ivar in range(1, nvar+1):
-            yhat = np.zeros_like(y[test])
-            rpy.numpy2ri.activate()
-            _nz_coef = rpy.r['coef'](_regfit, ivar)
-            _mask = _which[ivar-1]
-            _coef *= 0
-            _coef[_mask] = _nz_coef
-            rpy.numpy2ri.deactivate()
-            _y_hat = _Xtest.dot(_coef)
-            _MSEs.append(((_y_test - _y_hat)**2).mean())
-        rpy.pandas2ri.deactivate()
-        return _MSEs
+    _MSEs = []
+
+    _y_test = y.loc[y.index[test]]
+    for ivar in range(1, nvar+1):
+        _nz_coef = rpy.r['coef'](_regfit, ivar)
+        _mask = _which[ivar-1]
+        _coef *= 0
+        _coef[_mask] = _nz_coef
+        _y_hat = _Xtest.dot(_coef)
+        _MSEs.append(((_y_test - _y_hat)**2).mean())
+
+    return _MSEs
+
+def _convert_df(pd_df):
+    with localconverter(rpy.default_converter + pandas2ri.converter):
+        r_from_pd_df = rpy.conversion.py2rpy(pd_df)
+    return r_from_pd_df
 
 def _predict(formula, D, _which, nvar, _nz_coef):
-    rpy.pandas2ri.activate() # for data frame conversion
-    _X = rpy.r['model.matrix'](formula, data=D)
-    _X = _X[:, _which[nvar-1]] # 0-based indexing
-    rpy.pandas2ri.deactivate() 
+    D_ = _convert_df(D)
+    _X = np.asarray(rpy.r['model_matrix'](formula, data=D_))
+    _X = _X[:, _which[nvar-1]] # 0-based indexing                           
     return _X.dot(_nz_coef)
-    
+
