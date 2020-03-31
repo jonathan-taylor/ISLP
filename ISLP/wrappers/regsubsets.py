@@ -1,4 +1,4 @@
-from functools import partial
+import uuid
 
 import numpy as np, pandas as pd
 
@@ -31,19 +31,18 @@ class Subset(BaseEstimator, RegressorMixin):
 
         Parameters                                                         
         ---------                                                         
-        X : {array-like}, shape (n_samples, n_features)                    
-            Training data. Pass directly as Fortran-contiguous data to avoid
-            unnecessary memory duplication. If y is mono-output, X can be
-            sparse.  
+        X : pd.DataFrame
+            Training data. 
 
-        y : array-like, shape (n_samples,) or (n_samples, n_targets) 
-            Target values
+        y : ignored 
+            Outcome for formula is assumed to be a column in the
+            data frame X.
 
         """
         leaps = importr('leaps')
         base = importr('base')
 
-        D = _convert_df(pd.concat([X, y], axis=1).copy()) # reconstitute data                   
+        D = _convert_df(X.copy())
         _regfit = rpy.r['regsubsets'](self.formula,
                                       data=D,
                                       method=self.method,
@@ -70,6 +69,7 @@ class SubsetCV(BaseEstimator, RegressorMixin):
                  n_jobs=-1,
                  verbose=False):
         self.formula_str = formula_str
+        self._y_label = formula_str.split('~')[0].strip()
         self.formula = rpy.r(formula_str)
         self.method = method
         self.cv = cv
@@ -82,33 +82,28 @@ class SubsetCV(BaseEstimator, RegressorMixin):
 
         Fit is over a grid of sizes up to `nvmax`.
 
-        Parameters
-        ----------
-        X : {array-like}, shape (n_samples, n_features)
-            Training data. Pass directly as Fortran-contiguous data
-            to avoid unnecessary memory duplication. If y is mono-output,
-            X can be sparse.
+        Parameters                                                         
+        ---------                                                         
+        X : pd.DataFrame
+            Training data. 
 
-        y : array-like, shape (n_samples,) or (n_samples, n_targets)
-            Target values
+        y : ignored 
+            Outcome for formula is assumed to be a column in the
+            data frame X.
+
         """
-
-        if X.shape[0] != y.shape[0]:
-            raise ValueError("X and y have inconsistent dimensions (%d != %d)"
-                             % (X.shape[0], y.shape[0]))
 
         cv = check_cv(self.cv)
 
         # Compute path for all folds and compute MSE to get the best alpha
-        folds = list(cv.split(X, y))
+        folds = list(cv.split(X))
         best_mse = np.inf
 
         # Loop over folds, computing mse path
         # for each (train, test)
-        D = pd.concat([X, y], axis=1) # reconstitute data
 
         jobs = (delayed(_regsubsets_MSE)(X,
-                                         y,
+                                         self._y_label,
                                          self.formula, 
                                          self.method, 
                                          self.nvmax, 
@@ -141,14 +136,14 @@ class SubsetCV(BaseEstimator, RegressorMixin):
         return self.best_estimator.predict(D)
 
 def _regsubsets_MSE(X,
-                    y,
+                    y_label,
                     formula, 
                     method, 
                     nvar, 
                     train, 
                     test):
 
-    D = pd.concat([X, y], axis=1) # reconstitute data
+    D = X # pd.concat([X, y], axis=1) # reconstitute data
 
     Dtrain = _convert_df(D.loc[D.index[train]].copy())
     Dtest = _convert_df(D.loc[D.index[test]].copy())
@@ -163,6 +158,7 @@ def _regsubsets_MSE(X,
 
     _MSEs = []
 
+    y = D[y_label]
     _y_test = y.loc[y.index[test]]
     for ivar in range(1, nvar+1):
         _nz_coef = rpy.r['coef'](_regfit, ivar)
