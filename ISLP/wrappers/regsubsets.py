@@ -7,7 +7,7 @@ import rpy2.robjects as rpy
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.model_selection import cross_validate, check_cv
 from sklearn.metrics import mean_squared_error
-from sklearn.externals.joblib.parallel import Parallel, delayed
+from joblib.parallel import Parallel, delayed
 
 class Subset(BaseEstimator, RegressorMixin): 
 

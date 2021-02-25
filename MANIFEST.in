@@ -1,1 +1,1 @@
-include islip/data/*.csv
+include ISLP/data/*.csv
