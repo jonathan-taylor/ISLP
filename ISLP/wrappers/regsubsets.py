@@ -40,8 +40,8 @@ class Subset(BaseEstimator, RegressorMixin):
                                       data=D, 
                                       method=self.method,
                                       nvmax=self.nvar)
-        self._which = rpy.r['summary'](_regfit).rx2('which').astype(np.bool)
-        _names = _regfit.rx2('xnames')
+        self._which = np.asarray(rpy.r['summary'](_regfit).rx2('which'), np.bool)
+        _names = np.asarray(_regfit.rx2('xnames'))
         self._nz_coef = rpy.r['coef'](_regfit, self.nvar)
         self.coef_ = pd.Series(self._nz_coef, index=_names[self._which[self.nvar-1]])
         rpy.pandas2ri.deactivate() 
@@ -107,8 +107,8 @@ class SubsetCV(BaseEstimator, RegressorMixin):
 
         # Loop over folds, computing mse path
         # for each (train, test)
-        jobs = (delayed(_regsubsets_MSE)(X, 
-                                         y, 
+        jobs = (delayed(_regsubsets_MSE)(X,
+                                         y,
                                          self.formula, 
                                          self.method, 
                                          self.nvmax, 
@@ -127,18 +127,19 @@ class SubsetCV(BaseEstimator, RegressorMixin):
         self.best_index = np.argmin(self.mse_path) + 1
 
         # Refit with best index hyperparameter
+        D = pd.concat([X, y], axis=1) 
         self.best_estimator = Subset(self.formula_str, 
                                      self.best_index,
                                      method=self.method)
-        self.best_estimator.fit(X, y)
+        self.best_estimator.fit(D, None)
         self.coef_ = self.best_estimator.coef_
         return self
 
     def predict(self, D):
         return self.best_estimator.predict(D)
 
-def _regsubsets_MSE(X, 
-                    y, 
+def _regsubsets_MSE(X,
+                    y,
                     formula, 
                     method, 
                     nvar, 
@@ -155,7 +156,7 @@ def _regsubsets_MSE(X,
                                       data=Dtrain, 
                                       method=method,
                                       nvmax=nvar)
-        _which = rpy.r['summary'](_regfit).rx2('which').astype(np.bool)
+        _which = np.array(rpy.r['summary'](_regfit).rx2('which'), np.bool)
         _Xtest = rpy.r['model.matrix'](formula, data=Dtest)
         _coef = np.zeros(_Xtest.shape[1])
 
@@ -163,9 +164,8 @@ def _regsubsets_MSE(X,
 
         _y_test = y.loc[y.index[test]]
         for ivar in range(1, nvar+1):
-            yhat = np.zeros_like(y[test])
             rpy.numpy2ri.activate()
-            _nz_coef = rpy.r['coef'](_regfit, ivar)
+            _nz_coef = np.asarray(rpy.r['coef'](_regfit, ivar))
             _mask = _which[ivar-1]
             _coef *= 0
             _coef[_mask] = _nz_coef
@@ -177,7 +177,7 @@ def _regsubsets_MSE(X,
 
 def _predict(formula, D, _which, nvar, _nz_coef):
     rpy.pandas2ri.activate() # for data frame conversion
-    _X = rpy.r['model.matrix'](formula, data=D)
+    _X = np.asarray(rpy.r['model.matrix'](formula, data=D))
     _X = _X[:, _which[nvar-1]] # 0-based indexing
     rpy.pandas2ri.deactivate() 
     return _X.dot(_nz_coef)
