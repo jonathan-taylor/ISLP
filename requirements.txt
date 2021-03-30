@@ -1,0 +1,5 @@
+cython>=0.18
+numpy>=1.7.1
+scipy>=0.16.0
+sklearn
+joblib
