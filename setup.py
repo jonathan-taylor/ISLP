@@ -95,7 +95,7 @@ def main(**extra_args):
                           'ISLP.wrappers',
                           ],
           ext_modules = EXTS,
-          package_data = {},
+          package_data = {"ISLP":["data/*csv", "data/*npy", "data/*data"]},
           include_package_data=True,
           data_files=[],
           scripts=[],
