@@ -28,12 +28,6 @@ def load_data(dataset):
                 'ytrain':ytrain}
     elif dataset == 'BrainCancer':
         df = pd.read_csv(resource_filename('ISLP', pjoin('data', 'BrainCancer.csv')))
-        diagnosis = df['diagnosis']
-        df.drop(['diagnosis'], axis=1)
-        diagnosis_ = np.array(diagnosis, object)
-        mask = ~np.isnan(diagnosis)
-        diagnosis_[mask] = diagnosis[mask].astype(np.int)
-        df['diagnosis'] = pd.Categorical(diagnosis_)
         return df
     else:
         filename = resource_filename('ISLP', pjoin('data', '%s.csv' % dataset))
