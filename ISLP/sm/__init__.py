@@ -36,3 +36,5 @@ def poly(X, degree):
     df = pd.DataFrame(result, columns=['poly(%s, %d)' % (X.name, degree) 
                                        for degree in range(1, degree+1)])
     return df
+
+from .sklearn import sklearn_sm
