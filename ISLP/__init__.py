@@ -27,6 +27,9 @@ def load_data(dataset):
                 'xtrain':xtrain,
                 'ytest':ytest,
                 'ytrain':ytrain}
+    elif dataset == 'NYSE':
+        filename = resource_filename('ISLP', pjoin('data', '%s.csv' % dataset))
+        return pd.read_csv(filename).set_index('date')
     elif dataset == 'BrainCancer':
         df = pd.read_csv(resource_filename('ISLP', pjoin('data', 'BrainCancer.csv')))
         return df
