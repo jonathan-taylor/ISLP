@@ -33,6 +33,10 @@ def load_data(dataset):
     elif dataset == 'BrainCancer':
         df = pd.read_csv(resource_filename('ISLP', pjoin('data', 'BrainCancer.csv')))
         return df
+    elif dataset == 'Wage':
+        df = pd.read_csv(resource_filename('ISLP', pjoin('data', 'Wage.csv')))
+        df['education'] = pd.Categorical(df['education'], ordered=True)
+        return df
     else:
         filename = resource_filename('ISLP', pjoin('data', '%s.csv' % dataset))
         return pd.read_csv(filename)

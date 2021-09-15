@@ -1,4 +1,5 @@
 import numpy as np, pandas as pd
+from ..sklearn import Poly
 
 def summarize(results):
     """
@@ -23,18 +24,6 @@ def poly(X, degree):
     for orthogonal polynomial for a given series X
     """
 
-    result = np.zeros((X.shape[0], degree))
-    powX = np.power.outer(X.values, np.arange(1, degree+1))
-    powX -= powX.mean(0)
-    result[:,0] = powX[:,0] / np.linalg.norm(powX[:,0])
-
-    for i in range(1, degree):
-        result[:,i] = powX[:,i]
-        for j in range(i):
-            result[:,i] -= (result[:,i] * result[:,j]).sum() * result[:,j]
-        result[:,i] /= np.linalg.norm(result[:,i])
-    df = pd.DataFrame(result, columns=['poly(%s, %d)' % (X.name, degree) 
-                                       for degree in range(1, degree+1)])
-    return df
+    result = Poly(degree=degree).fit_transform(X)
 
 from .sklearn import sklearn_sm

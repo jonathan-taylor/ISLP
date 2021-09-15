@@ -1,7 +1,10 @@
 import numpy as np, pandas as pd
 
-from sklearn.base import BaseEstimator, RegressorMixin
-from sklearn.metrics import mean_squared_error
+from sklearn.base import (BaseEstimator,
+                          RegressorMixin,
+                          TransformerMixin)
+from sklearn.utils.validation import check_is_fitted
+
 import statsmodels.api as sm
 from patsy import dmatrix, dmatrices
 
@@ -59,8 +62,8 @@ class sklearn_sm(BaseEstimator,
             y, X = dmatrices(self.model_str,
                              data=D,
                              return_type='dataframe')
-        self._model = self.model_type(y, X, **self.model_args)
-        self._results = self._model.fit()
+        self.model_ = self.model_type(y, X, **self.model_args)
+        self.results_ = self._model.fit()
 
     def predict(self, X):
         """
@@ -78,7 +81,7 @@ class sklearn_sm(BaseEstimator,
             X = dmatrix(self.model_str.split('~')[1],
                         data=X,
                         return_type='dataframe')
-        return self._results.predict(exog=X)
+        return self.results_.predict(exog=X)
  
     def score(self, X, y, sample_weight=None):
         """
@@ -103,20 +106,21 @@ class sklearn_sm(BaseEstimator,
         """
 
         yhat = self.predict(X)
-        if isinstance(self._model, sm.OLS):
+        if isinstance(self.model_, sm.OLS):
             if sample_weight is None:
                 return np.mean((y-yhat)**2)
             else:
                 return (np.mean((y-yhat)**2*sample_weight) /
                         np.mean(sample_weight))
                 
-        elif isinstance(self._model, sm.GLM):
+        elif isinstance(self.model_, sm.GLM):
             if sample_weight is None:
-                return self._model.family.deviance(y,
+                return self.model_.family.deviance(y,
                                                    yhat).mean()
             else:
-                value = self._model.family.deviance(y,
+                value = self.model_.family.deviance(y,
                                                     yhat,
                                                     freq_weights=sample_weight).mean()
 
                 return value / np.mean(sample_weight)
+

@@ -18,8 +18,4 @@ def poly(Xseries, degree):
     df = pd.DataFrame(result, columns=['poly(%s, %d)' % (Xseries.name, degree) for degree in range(1, degree+1)])
     return df
 
-X = pd.Series(name='blah', data=np.random.standard_normal(50))
-W = poly(X, 5)
-V = poly(X, 5).values
-print(V.T.dot(V))
 
