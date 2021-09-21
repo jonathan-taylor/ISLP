@@ -8,6 +8,7 @@ class Poly(TransformerMixin):
 
     def __init__(self,
                  degree=1,
+                 intercept=True,
                  with_mean=True,
                  with_scale=True,
                  raw=False):
@@ -20,14 +21,17 @@ class Poly(TransformerMixin):
         degree : int
             Degree of polynomial.
 
-        with_mean : bool
+        intercept : bool (optional)
+            Include a column for intercept?
+
+        with_mean : bool (optional)
             Center feature before evaluating polynomial?
 
-        with_scale : bool
+        with_scale : bool (optional)
             Scale feature to have norm `X.shape[0]`?
             Will result in `std` of 1 with `with_mean` is True.
 
-        raw : bool
+        raw : bool (optional)
             If False, perform a QR decomposition on the resulting
             matrix of powers of centered and / or scaled features.
         '''
@@ -36,7 +40,8 @@ class Poly(TransformerMixin):
         self.with_mean = with_mean
         self.with_scale = with_scale
         self.raw = raw
-
+        self.intercept = intercept
+        
     def fit(self, X, y=None):
 
         """
@@ -54,7 +59,7 @@ class Poly(TransformerMixin):
 
         """
         
-        X = np.asarray(X).astype(np.float).copy()
+        X = np.asarray(X).astype(float).copy()
         n = X.shape[0]
         if X.reshape(-1).shape[0] != n:
             raise ValueError('expecting a single column feature')
@@ -75,6 +80,11 @@ class Poly(TransformerMixin):
             powX = np.power.outer(X, np.arange(0, self.degree+1))
             self.Q_, self.R_ = np.linalg.qr(powX)
             self.Rinv_ = np.linalg.inv(self.R_)
+
+        # for pandas 
+        self.columns_ = range(self.degree+1)
+        if not self.intercept:
+            self.columns_ = self.columns_[1:]
 
         return self
     
@@ -105,18 +115,22 @@ class Poly(TransformerMixin):
         powX = np.power.outer(X, np.arange(0, self.degree+1))
         if not self.raw:
             powX = powX.dot(self.Rinv_)
+
+        if not self.intercept:
+            powX = powX[:,1:]
+
         if isinstance(X_orig, (pd.Series, pd.DataFrame)):
             name = '_',
             if hasattr(X_orig, 'name'): # a pd.Series
                 name = X_orig.name
             columns=['poly(%s, %d)' % (name, d) 
-                     for d in range(1, self.degree+1)]
-            df = pd.DataFrame(powX[:,1:],
+                     for d in self.columns_]
+            df = pd.DataFrame(powX,
                               columns=columns)
             df.index = X_orig.index
             return df
         else:
-            return powX[:,1:]
+            return powX
 
 #### Spline specific code
 
@@ -164,11 +178,11 @@ class BSpline(TransformerMixin):
 
     def __init__(self,
                  degree=3,
+                 intercept=True,
                  lower_bound=None,
                  upper_bound=None,
                  internal_knots=None,
                  df=None,
-                 intercept=False,
                  ext=0):
 
         '''
@@ -178,6 +192,10 @@ class BSpline(TransformerMixin):
 
         degree : int
             Degree of polynomial.
+
+        intercept : bool
+            If False, a column of basis is dropped so that by
+            adding an intercept column design stays full rank.
 
         lower_bound : float
             Lower boundary not. Will be set to minimal value if not supplied.
@@ -191,11 +209,6 @@ class BSpline(TransformerMixin):
 
         df : int
             Degrees of freedom for regression. Defaults to `degree + intercept`.
-
-        intercept : bool
-            If False, a column of basis is dropped so that by
-            adding an intercept column design stays full rank.
-
         ext : int
             How B-splines are to be extended beyond the boundary using
             `scipy.interpolate.splev`.
@@ -306,11 +319,11 @@ class BSpline(TransformerMixin):
 class NaturalSpline(TransformerMixin):
 
     def __init__(self,
+                 intercept=False,
                  lower_bound=None,
                  upper_bound=None,
                  internal_knots=None,
                  df=None,
-                 intercept=False,
                  ext=0):
 
         '''
@@ -319,6 +332,10 @@ class NaturalSpline(TransformerMixin):
 
         Parameters
         ----------
+
+        intercept : bool
+            If False, a column of basis is dropped so that by
+            adding an intercept column design stays full rank.
 
         lower_bound : float
             Lower boundary not. Will be set to minimal value if not supplied.
@@ -332,10 +349,6 @@ class NaturalSpline(TransformerMixin):
 
         df : int
             Degrees of freedom for regression. Defaults to `3 + intercept`.
-
-        intercept : bool
-            If False, a column of basis is dropped so that by
-            adding an intercept column design stays full rank.
 
         ext : int
             How B-splines are to be extended beyond the boundary using
