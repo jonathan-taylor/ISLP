@@ -1,5 +1,7 @@
 from collections import namedtuple
 from itertools import product
+from typing import NamedTuple, Any
+
 import numpy as np, pandas as pd
 
 from sklearn.base import TransformerMixin, BaseEstimator, clone
@@ -8,10 +10,18 @@ from sklearn.preprocessing import (OneHotEncoder,
                                    OrdinalEncoder)
 from sklearn.exceptions import NotFittedError
 
+from columns import _get_column_info, Column
 from transforms import (Poly,
                         BSpline,
                         NaturalSpline,
                         Interaction)
+
+
+class Variable(NamedTuple):
+
+    variables: tuple
+    name: str
+    encoder: Any
 
 class ModelMatrix(TransformerMixin, BaseEstimator):
 
@@ -19,10 +29,9 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
                  intercept=True,
                  terms=None,
                  categorical_features=None,
-                 transforms={},
                  default_encoders={'categorical': OneHotEncoder(drop=None, sparse=False),
-                                   'ordinal': OrdinalEncoder()},
-                 encoders={}):
+                                   'ordinal': OrdinalEncoder()}
+                 ):
 
         '''
 
@@ -62,9 +71,7 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
         self.intercept = intercept
         self.terms = terms
         self.categorical_features = categorical_features
-        self.transforms = transforms 
         self.default_encoders = default_encoders
-        self.encoders = encoders
         
     def fit(self, X, y=None):
 
@@ -95,7 +102,6 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
                                          index=self.columns_)
             self.is_categorical_ = pd.Series(self.is_categorical_,
                                              index=self.columns_)
-            X_list = X
         else:
             is_dataframe = False
             categorical_features = self.categorical_features
@@ -107,88 +113,63 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
             self.is_ordinal_ = np.zeros(self.is_categorical_.shape,
                                         np.bool)
             self.columns_ = np.arange(X.shape[1])
-            X_list = X.T
 
         self.variables_ = {}
-        for idx, col_ in enumerate(self.columns_):
-            if self.is_categorical_[idx]:
-                if col_ not in self.encoders:
-                    Xa = np.asarray(X_list[col_]).reshape((-1,1))
-                    if not self.is_ordinal_[idx]:
-                        encoder_ = clone(self.default_encoders['categorical']).fit(Xa)
-                        column_names_ = ['Cat({0})[{1}]'.format(col_, i) for i in
-                                         range(len(encoder_.categories_[0]))]
-                    else:
-                        encoder_ = clone(self.default_encoders['ordinal']).fit(Xa)
-                        column_names_ = 'Ord({})'.format(col_)
-                else:
-                    encoder_ = self.encoders[col_] # don't clone prespecified encoders
-                    encoder_ = encoder_.fit(Xa)
-                    if hasattr(encoder_, 'columns_'):
-                        column_names_ = encoder_.columns_
-                    else:
-                        Xt = encoder_.transform(Xa)
-                        column_names_ = ['Cat({0})[{1}]'.format(col_, i) for i in
-                                         range(Xt.shape[1])]
-            else:
-                encoder_ = None
-                column_names_ = [str(col_)]
-            self.variables_[col_] = column(col_, column_names_, encoder_)
+        self.encoders_ = {}
 
-        if self.terms is None:
-            terms_ = [(t,) for t in self.columns_]
-        else:
-            terms_ = self.terms
+        self.column_info_ = _get_column_info(X,
+                                             self.columns_,
+                                             self.is_categorical_,
+                                             self.is_ordinal_,
+                                             default_encoders=self.default_encoders)
+        # include each column as a Variable
+        # so that their columns are built if needed
 
-        # find possible wilds, elements of terms that are not in self.columns_
+        for col_ in self.columns_:
+            self.variables_[col_] = Variable((col_,), str(col_), None) 
 
-        for t in terms_:
-            for v in t:
-                if v not in self.variables_:
-                    if isinstance(v, wild):
-                        self.variables_[v] = v
-                    else:
-                        raise ValueError('each element in a term should be a column identifier or a wild')
+        # find possible interactions and other variables
 
-        self.terms_ = [frozenset(t) for t in terms_]
-        self.terms_ = terms_
+        for term in self.terms:
+            if isinstance(term, Variable):
+                self.variables_[term] = term
+                self.build_columns(term, X, fit=True) # these encoders won't have been fit yet
+                for var in term.variables:
+                    if var not in self.variables_ and isinstance(var, Variable):
+                            self.variables_[var] = var
+            # a tuple of variables represents an interaction
+            elif term not in self.column_info_ and type(term) == type((1,)): 
+                names = []
+                column_map = {}
+                idx = 0
+                for var in term:
+                    if var in self.variables_:
+                        var = self.variables_[var]
+                    cols = self.build_columns(var, X, fit=True) # these encoders won't have been fit yet
+                    column_map[var.name] = range(idx, idx + cols.shape[1])
+                    idx += cols.shape[1]                 
+                    names.append(var.name)
+                encoder_ = Interaction(names, column_map)
+                self.variables_[term] = Variable(term, ':'.join(n for n in names), encoder_)
+            elif term not in self.column_info_:
+                raise ValueError('each element in a term should be a Variable or identify a column')
 
-        # build the categorical variable transforms
+        # build the mapping of terms to columns and column names
 
-        self.transforms_ = {}
         self.column_names_ = {}
         self.column_map_ = {}
-
+        self.terms_ = [self.variables_[t] for t in self.terms]
+        
         idx = 0
         if self.intercept:
             self.column_map_['intercept'] = slice(0, 1)
             idx += 1 # intercept will be first column
         
-        has_transform = {frozenset(term):term for term in self.transforms.keys()}
-        has_transform = {term:term for term in self.transforms.keys()}
-        
-        for term in self.terms_:
-            term_dfs = []
-            for col in term:
-                var = self.variables_[col]
-                term_dfs.append(_build_columns(var, X_list, self.variables_, fit=True))
-              
-            if term in has_transform.keys():
-                term_cols = pd.concat(term_dfs, axis=1)
-                self.transforms_[term] = self.transforms[has_transform[term]].fit(term_cols)
-                if hasattr(self.transforms_[term], 'columns_'):
-                    term_names = self.transforms_[term].columns_
-                else:
-                    term_names = ['T({0})[{1}]'.format(','.join(*term), i) for i in range(term_cols.shape[1])]
-            else:
-                if len(term) > 1:
-                    inter_df = _interaction(term_dfs)
-                    term_cols, term_names = inter_df.values, inter_df.columns
-                else:
-                    term_cols, term_names = term_dfs[0].values, term_dfs[0].columns
-            self.column_names_[term] = term_names
-            self.column_map_[term] = slice(idx, idx + term_cols.shape[1])
-            idx += term_cols.shape[1]
+        for term, term_ in zip(self.terms, self.terms_):
+            term_df = self.build_columns(term_, X)
+            self.column_names_[term] = term_df.columns
+            self.column_map_[term] = slice(idx, idx + term_df.shape[1])
+            idx += term_df.shape[1]
     
         return self
     
@@ -215,34 +196,13 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
 
         check_is_fitted(self)
 
-        if isinstance(X, (pd.DataFrame, pd.Series)):
-            X_list = X
-        else:
-            X_list = X.T
-            
         dfs = []
 
         if self.intercept:
             dfs.append(pd.DataFrame({'intercept':np.ones(X.shape[0])}))
 
-        has_transform = {frozenset(term):term for term in self.transforms.keys()}
-        has_transform = {term:term for term in self.transforms.keys()}
-
-        for term in self.terms_:
-            term_dfs = []
-            for col in term:
-                var = self.variables_[col]
-                term_dfs.append(_build_columns(var, X_list, self.variables_))
-
-            if term in self.transforms_:
-                term_cols = pd.concat(term_dfs, axis=1)
-                term_cols = self.transforms_[term].transform(term_cols)
-                term_df = pd.DataFrame(term_cols, columns=self.column_names_[term])
-            else:
-                if len(term) > 1:
-                    term_df = _interaction(term_dfs)
-                else:
-                    term_df  = term_dfs[0]
+        for term_ in self.terms_:
+            term_df = self.build_columns(term_, X)
             dfs.append(term_df)
 
         df = pd.concat(dfs, axis=1)
@@ -251,77 +211,85 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
         else:
             return df.values
 
-def main_effects(columns):
-    """
-    Make a sequence of terms from `columns`
+    def fit_encoder(self, var, X):
+        """
+        Fit an encoder if not already registered
+        in `self.encoders_`.
 
-    Parameters
-    ----------
+        Return the fit encoder.
 
-    columns : sequence
-       Sequence of column identifiers
+        Parameters
+        ----------
 
-    Returns
-    -------
+        var : Variable
+            Variable whose encoder will be fit.
 
-    terms : sequence
-       Sequence of singleton terms of the form 
-       `[(col,) for col in columns]`
-    """
+        X : array-like
+            X on which encoder will be fit.
 
-    return [(col,) for col in columns]
-
-column = namedtuple('Column', ['idx', 'column_names', 'encoder'])
-wild = namedtuple('Wild', ['variables', 'name', 'encoder'])
-
-
-def _interaction(dfs):
-
-    term_cols = []
-    term_names = []
-    for cols in product(*[list(df) for df in dfs]):
-        term_names.append(':'.join(cols))
-        cur_col = np.ones(dfs[0][cols[0]].shape[0])
-        for col, df in zip(cols, dfs):
-            cur_col *= df[col]
-        term_cols.append(cur_col)
-
-    return pd.DataFrame(np.column_stack(term_cols), columns=term_names)
-
-def _build_columns(var, X_list, variables, fit=False):
-
-    if isinstance(var, column):
-        col = var.idx
-        if var.encoder: # columns with encoders should be fit previously
-            Xa = np.asarray(X_list[col]).reshape((-1,1))
-            cols = var.encoder.transform(Xa).T
+        """
+        if var.encoder in self.encoders_:
+            return var.encoder
         else:
-            cols = [X_list[col]]
-        names = var.column_names
-    elif isinstance(var, wild):
-        cols = []
-        for v in var.variables:
-            cur = _build_columns(variables[v], X_list, variables)
-            cols.append(cur)
-        if var.encoder:
-            cols = np.column_stack(cols)
-            try:
-                check_is_fitted(var.encoder)
-                if fit:
-                    raise ValueError('encoder has already been fit')
-            except NotFittedError as e:
-                if fit:
-                    var.encoder.fit(cols)
-                else:
-                    raise(e)
-            cols = var.encoder.transform(cols).T
-        cols = np.column_stack(cols).T
-        names = ['{0}[{1}]'.format(var.name, j) for j in range(len(cols))]
-    else:
-        raise ValueError('expecting either a column or a wild')
-    cols = np.column_stack(cols)
-    return pd.DataFrame(cols, columns=names)
+            self.encoders_[var] = var.encoder.fit(X)
+        
+    def build_columns(self, var, X, fit=False):
+        """
+        Build columns for a Variable from X.
 
+        Parameters
+        ----------
+
+        var : Variable
+            Variable whose columns will be built.
+
+        X : array-like
+            X on which columns are evaluated.
+
+        fit : bool (optional)
+            If True, then try to fit encoder.
+            Will raise an error if encoder has already been fit.
+
+        """
+
+        if var in self.column_info_:
+            var = self.column_info_[var]
+
+        if isinstance(var, Column):
+            cols = var.get_columns(X)
+            if not var.columns:
+                names = [var.name]
+            else:
+                names = ['{0}[{1}]'.format(var.name, c) for c in var.columns]
+        elif isinstance(var, Variable):
+            cols = []
+            for v in var.variables:
+                cur = self.build_columns(v, X, fit=fit)
+                cols.append(cur)
+            cols = np.column_stack(cols)
+
+            if var.encoder:
+                cols = np.column_stack(cols)
+                try:
+                    check_is_fitted(var.encoder)
+                    if fit and var not in self.encoders_:
+                        raise ValueError('encoder has already been fit previously')
+                except NotFittedError as e:
+                    if fit:
+                        self.fit_encoder(var, cols)
+                    else:
+                        raise(e)
+                cols = np.column_stack(cols)
+                cols = var.encoder.transform(cols)
+
+            if not hasattr(cols, 'columns'):
+                names = ['{0}[{1}]'.format(var.name, j) for j in range(cols.shape[1])]
+            else:
+                names = cols.columns
+        else:
+            raise ValueError('expecting either a column or a Variable')
+        val = pd.DataFrame(np.asarray(cols), columns=names)
+        return val
 
 # extracted from method of BaseHistGradientBoosting from
 # https://github.com/scikit-learn/scikit-learn/blob/2beed55847ee70d363bdbfe14ee4401438fba057/sklearn/ensemble/_hist_gradient_boosting/gradient_boosting.py
@@ -441,9 +409,9 @@ def test_ndarray():
     
     X = np.random.standard_normal((50,5))
 
-    M = ModelMatrix(terms=[(1,), (3,2)])
-    clone(M)
-    MX = M.fit_transform(X)
+    M = ModelMatrix(terms=[1, (3,2)])
+    M.fit(X)
+    MX = M.transform(X)
 
     np.testing.assert_allclose(X[:,1], MX[:,1])
     np.testing.assert_allclose(X[:,2] * X[:,3], MX[:,2])
@@ -453,7 +421,7 @@ def test_dataframe1():
     X = np.random.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
     
-    M = ModelMatrix(terms=[('A',), ('D',), ('D','E')])
+    M = ModelMatrix(terms=['A','D',('D','E')])
     clone(M)
     MX = np.asarray(M.fit_transform(D))
 
@@ -466,10 +434,7 @@ def test_dataframe2():
     X = np.random.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['V','B','A','D','E'])
     
-    M = ModelMatrix(terms=[('A',), ('D',), ('B',), ('D','E'), ('V',)],
-                    transforms={('A',):Poly(degree=3),
-                                ('B',):BSpline(df=7),
-                                ('V',):NaturalSpline(df=6)})
+    M = ModelMatrix(terms=['A', 'D', 'B', ('D','E'), 'V'])
     clone(M)
 
     MX = M.fit_transform(D)
@@ -484,7 +449,7 @@ def test_dataframe3():
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
     D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
     
-    M = ModelMatrix(terms=[('A',), ('E',), ('D','E')])
+    M = ModelMatrix(terms=['A', 'E', ('D','E')])
     MX = np.asarray(M.fit_transform(D))
     M2 = clone(M)
 
@@ -504,7 +469,7 @@ def test_dataframe4():
     D['D'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
     D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
     
-    M = ModelMatrix(terms=[('A',), ('E',), ('D','E')])
+    M = ModelMatrix(terms=['A', 'E', ('D','E')])
     MX = np.asarray(M.fit_transform(D))
 
     DE = pd.get_dummies(D['E'])
@@ -526,8 +491,7 @@ def test_dataframe5():
     D['D'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
     D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
     
-    M = ModelMatrix(terms=[('A',), ('E',), ('D','E')], 
-                    transforms={('A',):Poly(degree=3)})
+    M = ModelMatrix(terms=['A', 'E', ('D','E')])
     MX = np.asarray(M.fit_transform(D))
 
     # check they agree on copy of dataframe
@@ -542,11 +506,11 @@ def test_dataframe6():
 
     X = np.random.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
-    W = wild(('A','E'), 'AE', None)
+    W = Variable(('A','E'), 'AE', None)
     D['D'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
     D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
     
-    M = ModelMatrix(terms=[('A',), (W,), (W, 'D',)])
+    M = ModelMatrix(terms=['A',W,(W,'D',)])
     MX = M.fit_transform(D)
 
     MX = np.asarray(MX)
@@ -560,7 +524,7 @@ def test_dataframe7():
     D['Ddd'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
     D['Eee'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
         
-    M = ModelMatrix(terms=main_effects(D.columns.drop(['Y','C'])))
+    M = ModelMatrix(terms=D.columns.drop(['Y','C']))
     MX = M.fit_transform(D)
     print(MX.columns)
     MX = np.asarray(MX)
@@ -576,8 +540,8 @@ def test_dataframe8():
     
     poly =  Poly(degree=3)
     # raises a ValueError because poly will have been already fit -- need new instance of Poly
-    W = wild(('A',), 'poly(A)', poly)
-    M = ModelMatrix(terms=main_effects(D.columns.drop(['Y','C'])) + [(W,'E')])
+    W = Variable(('A',), 'poly(A)', poly)
+    M = ModelMatrix(terms=list(D.columns.drop(['Y','C'])) + [(W,'E')])
     MX = M.fit_transform(D)
 
     print(MX.columns)
@@ -594,9 +558,9 @@ def test_dataframe9():
     
     poly =  Poly(degree=3)
     # raises a ValueError because poly will have been already fit -- need new instance of Poly
-    W = wild(('A',), 'poly(A)', poly)
-    U = wild(('B',), 'poly(B)', poly)
-    M = ModelMatrix(terms=main_effects(D.columns.drop(['Y','C'])) + [(W,), (U,)])
+    W = Variable(('A',), 'poly(A)', poly)
+    U = Variable(('B',), 'poly(B)', clone(poly))
+    M = ModelMatrix(terms=list(D.columns.drop(['Y','C'])) + [W,U])
     MX = M.fit_transform(D)
 
     print(MX.columns)
@@ -608,20 +572,20 @@ def test_dataframe10():
 
     X = np.random.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
-    W = wild(('A','E'), 'AE', None)
-    U = wild((W, 'C'), 'WC', None)
+    W = Variable(('A','E'), 'AE', None)
+    U = Variable((W, 'C'), 'WC', None)
     D['D'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
     D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
     
-    M = ModelMatrix(terms=[('A',), ('E',), ('C',), (W,), (W, 'D',), (U,)])
+    M = ModelMatrix(terms=['A', 'E', 'C', W, (W, 'D',), U])
     MX = M.fit_transform(D)
     print(MX.columns)
     MX = np.asarray(MX)
 
     V = MX[:,-6:]
-    V2 = np.column_stack([MX[:,M.column_map_[('A',)]],
-                          MX[:,M.column_map_[('E',)]],
-                          MX[:,M.column_map_[('C',)]]])
+    V2 = np.column_stack([MX[:,M.column_map_['A']],
+                          MX[:,M.column_map_['E']],
+                          MX[:,M.column_map_['C']]])
     print(np.linalg.norm(V-V2))
     
 if __name__ == "__main__":
@@ -636,5 +600,6 @@ if __name__ == "__main__":
     test_dataframe6()
     test_dataframe7()
     test_dataframe8()
+    test_dataframe9()
     test_dataframe10()
     pass
