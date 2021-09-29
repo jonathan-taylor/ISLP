@@ -27,6 +27,12 @@ def load_data(dataset):
                 'xtrain':xtrain,
                 'ytest':ytest,
                 'ytrain':ytrain}
+    elif dataset == 'Carseats':
+        filename = resource_filename('ISLP', pjoin('data', '%s.csv' % dataset))
+        df = pd.read_csv(filename)
+        for col in ['ShelveLoc', 'Urban', 'US']:
+            df[col] = pd.Categorical(df[col])
+        return df
     elif dataset == 'NYSE':
         filename = resource_filename('ISLP', pjoin('data', '%s.csv' % dataset))
         return pd.read_csv(filename).set_index('date')

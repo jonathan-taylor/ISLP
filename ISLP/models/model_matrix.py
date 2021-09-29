@@ -29,8 +29,8 @@ class Variable(NamedTuple):
 class ModelMatrix(TransformerMixin, BaseEstimator):
 
     def __init__(self,
+                 terms,
                  intercept=True,
-                 terms=None,
                  categorical_features=None,
                  default_encoders={'categorical': OneHotEncoder(drop='first', sparse=False),
                                    'ordinal': OrdinalEncoder()}
@@ -138,23 +138,26 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
                 for var in term.variables:
                     if var not in self.variables_ and isinstance(var, Variable):
                             self.variables_[var] = var
-            # a tuple of variables represents an interaction
-            elif term not in self.column_info_ and type(term) == type((1,)): 
-                names = []
-                column_map = {}
-                idx = 0
-                for var in term:
-                    if var in self.variables_:
-                        var = self.variables_[var]
-                    cols = self.build_columns(var, X, fit=True) # these encoders won't have been fit yet
-                    column_map[var.name] = range(idx, idx + cols.shape[1])
-                    idx += cols.shape[1]                 
-                    names.append(var.name)
-                encoder_ = Interaction(names, column_map)
-                self.variables_[term] = Variable(term, ':'.join(n for n in names), encoder_)
             elif term not in self.column_info_:
-                raise ValueError('each element in a term should be a Variable or identify a column')
-
+                # a tuple of variables represents an interaction
+                if type(term) == type((1,)): 
+                    names = []
+                    column_map = {}
+                    idx = 0
+                    for var in term:
+                        if var in self.variables_:
+                            var = self.variables_[var]
+                        cols = self.build_columns(var, X, fit=True) # these encoders won't have been fit yet
+                        column_map[var.name] = range(idx, idx + cols.shape[1])
+                        idx += cols.shape[1]                 
+                        names.append(var.name)
+                    encoder_ = Interaction(names, column_map)
+                    self.variables_[term] = Variable(term, ':'.join(n for n in names), encoder_)
+                elif isinstance(term, Column):
+                    self.variables_[term] = Variable((term,), term.name, None)
+                else:
+                    raise ValueError('each element in a term should be a Variable, Column or identify a column')
+                
         # build the mapping of terms to columns and column names
 
         self.column_names_ = {}
@@ -257,11 +260,8 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
             var = self.column_info_[var]
 
         if isinstance(var, Column):
-            cols = var.get_columns(X)
-            if not var.columns:
-                names = [var.name]
-            else:
-                names = ['{0}[{1}]'.format(var.name, c) for c in var.columns]
+            cols = var.get_columns(X, fit=fit)
+            names = var.columns
         elif isinstance(var, Variable):
             cols = []
             for v in var.variables:
@@ -284,7 +284,10 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
                 cols = var.encoder.transform(cols)
 
             if not hasattr(cols, 'columns'):
-                names = ['{0}[{1}]'.format(var.name, j) for j in range(cols.shape[1])]
+                if cols.shape[1] > 1:
+                    names = ['{0}[{1}]'.format(var.name, j) for j in range(cols.shape[1])]
+                else:
+                    names = [var.name]
             else:
                 names = cols.columns
         else:

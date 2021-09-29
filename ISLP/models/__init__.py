@@ -1,6 +1,6 @@
 import numpy as np, pandas as pd
 from ..transforms import Poly
-from .model_matrix import ModelMatrix, Column
+from .model_matrix import ModelMatrix, Column, Variable
 
 def summarize(results,
               conf_int=False):

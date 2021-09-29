@@ -5,6 +5,8 @@ import numpy as np
 from sklearn.base import clone
 from sklearn.preprocessing import (OneHotEncoder,
                                    OrdinalEncoder)
+from sklearn.utils.validation import check_is_fitted
+from sklearn.exceptions import NotFittedError
 
 class Column(NamedTuple):
 
@@ -20,7 +22,7 @@ class Column(NamedTuple):
     columns: tuple = ()
     encoder: Any = None
     
-    def get_columns(self, X):
+    def get_columns(self, X, fit=False):
 
         """
         Extract associated column from X,
@@ -28,22 +30,54 @@ class Column(NamedTuple):
 
         Parameters
         ----------
+
         X : array-like
             X on which model matrix will be evaluated.
             If a `pd.DataFrame` or `pd.Series`, variables that are of
             categorical dtype will be treated as categorical.
+
+        fit : bool
+            If True, fit `self.encoder` on corresponding
+            column.
+
         Returns
         -------
         cols : `np.ndarray`
-            Evaluated columns -- if an encored is used,
+            Evaluated columns -- if an encoder is used,
             several columns may be produced.
 
         """
         cols = _get_column(self.idx, X, twodim=self.encoder is not None)
+
+        if fit:
+            self.fit_encoder(X)
+
         if self.encoder is not None:
             cols = self.encoder.transform(cols)
         return np.asarray(cols)
 
+    def fit_encoder(self, X):
+
+        """
+        Fit `self.encoder`.
+
+        Parameters
+        ----------
+        X : array-like
+            X on which encoder will be fit.
+
+        Returns
+        -------
+        None
+        """
+        cols = _get_column(self.idx, X, twodim=self.encoder is not None)
+        if self.encoder is not None:
+            try:
+                check_is_fitted(self.encoder)
+            except NotFittedError:
+                self.encoder.fit(cols)
+        return np.asarray(cols)
+    
 def _get_column(idx, X, twodim=False):
     """
     Extract column `idx` from `X`,
@@ -96,7 +130,8 @@ def _get_column_info(X,
                                       encoder)
         else:
             column_info[col] = Column(col,
-                                      name)
+                                      name,
+                                      columns=[name])
     return column_info
 
 # extracted from method of BaseHistGradientBoosting from

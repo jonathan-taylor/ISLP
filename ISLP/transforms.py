@@ -9,7 +9,7 @@ class Poly(TransformerMixin, BaseEstimator):
 
     def __init__(self,
                  degree=1,
-                 intercept=True,
+                 intercept=False,
                  with_mean=True,
                  with_scale=True,
                  raw=False):
@@ -169,7 +169,11 @@ class Interaction(TransformerMixin, BaseEstimator):
 
         variable_names = []
         for variable in self.variables:
-            variable_names.append(['{0}[{1}]'.format(variable, i) for i, _ in enumerate(self.columns[variable])])
+            cols = self.columns[variable]
+            if len(cols) > 1:
+                variable_names.append(['{0}[{1}]'.format(variable, i) for i, _ in enumerate(self.columns[variable])])
+            else:
+                variable_names.append(['{0}'.format(variable)])
 
         for names in product(*variable_names):
             self.columns_.append(':'.join(names))
@@ -276,7 +280,7 @@ class BSpline(TransformerMixin, BaseEstimator):
 
     def __init__(self,
                  degree=3,
-                 intercept=True,
+                 intercept=False,
                  lower_bound=None,
                  upper_bound=None,
                  internal_knots=None,
@@ -441,7 +445,7 @@ class BSpline(TransformerMixin, BaseEstimator):
 class NaturalSpline(TransformerMixin, BaseEstimator):
 
     def __init__(self,
-                 intercept=True,
+                 intercept=False,
                  lower_bound=None,
                  upper_bound=None,
                  internal_knots=None,
