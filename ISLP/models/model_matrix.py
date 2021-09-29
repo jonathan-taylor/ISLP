@@ -10,7 +10,11 @@ from sklearn.preprocessing import (OneHotEncoder,
                                    OrdinalEncoder)
 from sklearn.exceptions import NotFittedError
 
-from .columns import _get_column_info, Column
+from .columns import (_get_column_info,
+                      Column,
+                      _categorical_from_df,
+                      _check_categories)
+
 from ..transforms import (Poly,
                           BSpline,
                           NaturalSpline,
@@ -28,7 +32,7 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
                  intercept=True,
                  terms=None,
                  categorical_features=None,
-                 default_encoders={'categorical': OneHotEncoder(drop=None, sparse=False),
+                 default_encoders={'categorical': OneHotEncoder(drop='first', sparse=False),
                                    'ordinal': OrdinalEncoder()}
                  ):
 
@@ -88,7 +92,6 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
         """
         
         if isinstance(X, (pd.DataFrame, pd.Series)):
-            is_dataframe = True
             (categorical_features,
              self.is_ordinal_) = _categorical_from_df(X)
             (self.is_categorical_,
@@ -102,7 +105,6 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
             self.is_categorical_ = pd.Series(self.is_categorical_,
                                              index=self.columns_)
         else:
-            is_dataframe = False
             categorical_features = self.categorical_features
             (self.is_categorical_,
              self.known_categories_) = _check_categories(categorical_features,
@@ -290,116 +292,4 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
         val = pd.DataFrame(np.asarray(cols), columns=names)
         return val
 
-# extracted from method of BaseHistGradientBoosting from
-# https://github.com/scikit-learn/scikit-learn/blob/2beed55847ee70d363bdbfe14ee4401438fba057/sklearn/ensemble/_hist_gradient_boosting/gradient_boosting.py
-# max_bins is ignored
-def _check_categories(categorical_features, X):
-    """Check and validate categorical features in X
 
-    Return
-    ------
-    is_categorical : ndarray of shape (n_features,) or None, dtype=bool
-        Indicates whether a feature is categorical. If no feature is
-        categorical, this is None.
-    known_categories : list of size n_features or None
-        The list contains, for each feature:
-            - an array of shape (n_categories,) with the unique cat values
-            - None if the feature is not categorical
-        None if no feature is categorical.
-    """
-    if categorical_features is None:
-        return None, None
-
-    categorical_features = np.asarray(categorical_features)
-
-    if categorical_features.size == 0:
-        return None, None
-
-    if categorical_features.dtype.kind not in ('i', 'b'):
-        raise ValueError("categorical_features must be an array-like of "
-                         "bools or array-like of ints.")
-
-    n_features = X.shape[1]
-
-    # check for categorical features as indices
-    if categorical_features.dtype.kind == 'i':
-        if (np.max(categorical_features) >= n_features
-                or np.min(categorical_features) < 0):
-            raise ValueError("categorical_features set as integer "
-                             "indices must be in [0, n_features - 1]")
-        is_categorical = np.zeros(n_features, dtype=bool)
-        is_categorical[categorical_features] = True
-    else:
-        if categorical_features.shape[0] != n_features:
-            raise ValueError("categorical_features set as a boolean mask "
-                             "must have shape (n_features,), got: "
-                             f"{categorical_features.shape}")
-        is_categorical = categorical_features
-
-    if not np.any(is_categorical):
-        return None, None
-
-    # compute the known categories in the training data. We need to do
-    # that here instead of in the BinMapper because in case of early
-    # stopping, the mapper only gets a fraction of the training data.
-    known_categories = []
-
-    if isinstance(X, (pd.DataFrame, pd.Series)):
-        X_list = [X[c] for c in X.columns]
-    else:
-        X_list = X.T
-
-    for f_idx in range(n_features):
-        if is_categorical[f_idx]:
-            categories = np.unique(X_list[f_idx])
-            missing = []
-            for c in categories:
-                try:
-                    missing.append(np.isnan(c))
-                except TypeError: # not a float
-                    missing.append(False)
-            missing = np.array(missing)
-            if missing.any():
-                categories = categories[~missing]
-
-        else:
-            categories = None
-        known_categories.append(categories)
-
-    return is_categorical, known_categories
-
-def _categorical_from_df(df):
-    """
-    Find
-    """
-    is_categorical = []
-    is_ordinal = []
-    for c in df.columns:
-        try:
-            is_categorical.append(df[c].dtype == 'category')
-            is_ordinal.append(df[c].cat.ordered)
-        except TypeError:
-            is_categorical.append(False)
-            is_ordinal.append(False)
-    is_categorical = np.array(is_categorical)
-    is_ordinal = np.array(is_ordinal)
-
-    return is_categorical, is_ordinal
-
-
-    
-if __name__ == "__main__":
-
-    test_interaction()
-    test_ndarray()
-    test_dataframe1()
-    test_dataframe2()
-    test_dataframe3()
-    test_dataframe4()
-    test_dataframe5()
-    test_dataframe6()
-    test_dataframe7()
-    test_dataframe8()
-    test_dataframe9()
-    test_dataframe10()
-    pass

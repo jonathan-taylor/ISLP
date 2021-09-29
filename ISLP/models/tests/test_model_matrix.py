@@ -4,6 +4,11 @@ from sklearn.base import clone
 from ...transforms import Poly, NaturalSpline, BSpline, Interaction
 from ..model_matrix import ModelMatrix, Variable
 
+from sklearn.preprocessing import (OneHotEncoder,
+                                   OrdinalEncoder)
+default_encoders = {'categorical': OneHotEncoder(drop=None, sparse=False),
+                    'ordinal': OrdinalEncoder()}
+
 def test_interaction():
 
     I = Interaction(['V', 'U'],
@@ -25,7 +30,8 @@ def test_ndarray():
     
     X = np.random.standard_normal((50,5))
 
-    M = ModelMatrix(terms=[1, (3,2)])
+    M = ModelMatrix(terms=[1, (3,2)],
+                    default_encoders=default_encoders)
     M.fit(X)
     MX = M.transform(X)
 
@@ -37,7 +43,8 @@ def test_dataframe1():
     X = np.random.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
     
-    M = ModelMatrix(terms=['A','D',('D','E')])
+    M = ModelMatrix(terms=['A','D',('D','E')],
+                    default_encoders=default_encoders)
     clone(M)
     MX = np.asarray(M.fit_transform(D))
 
@@ -50,7 +57,8 @@ def test_dataframe2():
     X = np.random.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['V','B','A','D','E'])
     
-    M = ModelMatrix(terms=['A', 'D', 'B', ('D','E'), 'V'])
+    M = ModelMatrix(terms=['A', 'D', 'B', ('D','E'), 'V'],
+                    default_encoders=default_encoders)
     clone(M)
 
     MX = M.fit_transform(D)
@@ -65,7 +73,8 @@ def test_dataframe3():
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
     D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
     
-    M = ModelMatrix(terms=['A', 'E', ('D','E')])
+    M = ModelMatrix(terms=['A', 'E', ('D','E')],
+                    default_encoders=default_encoders)
     MX = np.asarray(M.fit_transform(D))
     M2 = clone(M)
 
@@ -85,7 +94,8 @@ def test_dataframe4():
     D['D'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
     D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
     
-    M = ModelMatrix(terms=['A', 'E', ('D','E')])
+    M = ModelMatrix(terms=['A', 'E', ('D','E')],
+                    default_encoders=default_encoders)
     MX = np.asarray(M.fit_transform(D))
 
     DE = pd.get_dummies(D['E'])
@@ -105,7 +115,8 @@ def test_dataframe5():
     D['D'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
     D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
     
-    M = ModelMatrix(terms=['A', 'E', ('D','E')])
+    M = ModelMatrix(terms=['A', 'E', ('D','E')],
+                    default_encoders=default_encoders)
     MX = np.asarray(M.fit_transform(D))
 
     # check they agree on copy of dataframe
@@ -122,7 +133,8 @@ def test_dataframe6():
     D['D'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
     D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
     
-    M = ModelMatrix(terms=['A',W,(W,'D',)])
+    M = ModelMatrix(terms=['A',W,(W,'D',)],
+                    default_encoders=default_encoders)
     MX = M.fit_transform(D)
 
     MX = np.asarray(MX)
@@ -134,7 +146,8 @@ def test_dataframe7():
     D['Ddd'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
     D['Eee'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
         
-    M = ModelMatrix(terms=D.columns.drop(['Y','C']))
+    M = ModelMatrix(terms=D.columns.drop(['Y','C']),
+                    default_encoders=default_encoders)
     MX = M.fit_transform(D)
     print(MX.columns)
     MX = np.asarray(MX)
@@ -149,7 +162,8 @@ def test_dataframe8():
     poly =  Poly(degree=3)
     # raises a ValueError because poly will have been already fit -- need new instance of Poly
     W = Variable(('A',), 'poly(A)', poly)
-    M = ModelMatrix(terms=list(D.columns.drop(['Y','C'])) + [(W,'E')])
+    M = ModelMatrix(terms=list(D.columns.drop(['Y','C'])) + [(W,'E')],
+                    default_encoders=default_encoders)
     MX = M.fit_transform(D)
 
     print(MX.columns)
@@ -166,7 +180,8 @@ def test_dataframe9():
     # raises a ValueError because poly will have been already fit -- need new instance of Poly
     W = Variable(('A',), 'poly(A)', poly)
     U = Variable(('B',), 'poly(B)', clone(poly))
-    M = ModelMatrix(terms=list(D.columns.drop(['Y','C'])) + [W,U])
+    M = ModelMatrix(terms=list(D.columns.drop(['Y','C'])) + [W,U],
+                    default_encoders=default_encoders)
     MX = M.fit_transform(D)
 
     print(MX.columns)
@@ -181,7 +196,8 @@ def test_dataframe10():
     D['D'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
     D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
     
-    M = ModelMatrix(terms=['A', 'E', 'C', W, (W, 'D',), U])
+    M = ModelMatrix(terms=['A', 'E', 'C', W, (W, 'D',), U],
+                    default_encoders=default_encoders)
     MX = M.fit_transform(D)
     print(MX.columns)
     MX = np.asarray(MX)
