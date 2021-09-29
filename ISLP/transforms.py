@@ -223,8 +223,12 @@ class Interaction(TransformerMixin, BaseEstimator):
                 col *= x
             cols.append(col)
 
-        return pd.DataFrame(np.column_stack(cols),
-                            columns=self.columns_)
+        df = pd.DataFrame(np.column_stack(cols),
+                          columns=self.columns_)
+        if isinstance(X_orig, (pd.DataFrame, pd.Series)):
+            df.index = X_orig.index
+
+        return df
 
 #### Spline specific code
 

@@ -1,5 +1,5 @@
 import numpy as np, pandas as pd
-from ..sklearn import Poly
+from ..transforms import Poly
 
 def summarize(results,
               conf_int=False):
