@@ -360,7 +360,7 @@ def from_encoder(encoder, *variables, name=None):
     encoder :  transform-like
         Transform obeying sklearn fit/transform convention.
 
-    variabless : column identifier, Column, Variable
+    variables : column identifier, Column, Variable
         Variables to apply transform to. Could be
         column identifiers or variables: all columns
         will be stacked before encoding.
@@ -378,7 +378,7 @@ def from_encoder(encoder, *variables, name=None):
         name = str(encoder)
     return Variable(variables, name, encoder)
 
-def poly(col, *args, intercept=False, **kwargs):
+def poly(col, *args, intercept=False, name=None, **kwargs):
     """
     Create a polynomial Variable
     for a given column.
@@ -395,24 +395,29 @@ def poly(col, *args, intercept=False, **kwargs):
     intercept : bool
         Include an intercept column.
 
+    name : str (optional)
+        Defaults to one derived from col.
+
     Returns
     -------
 
     var : Variable
     """
     shortname, klass = 'poly', Poly
-    if isinstance(col, Column):
-        name = col.name
-    else:
-        name = str(col)
+    if name is None:
+        if isinstance(col, Column):
+            name = col.name
+        else:
+            name = str(col)
+        name = f'{shortname}({name})'
     encoder = klass(*args,
                     intercept=intercept,
                     **kwargs) 
     return from_encoder(encoder,
                         col,
-                        name=f'{shortname}({name})')
+                        name=name)
 
-def ns(col, *args, intercept=False, **kwargs):
+def ns(col, *args, intercept=False, name=None, **kwargs):
     """
     Create a natural spline Variable
     for a given column.
@@ -428,6 +433,9 @@ def ns(col, *args, intercept=False, **kwargs):
     intercept : bool
         Include an intercept column.
 
+    name : str (optional)
+        Defaults to one derived from col.
+
     Returns
     -------
 
@@ -435,18 +443,20 @@ def ns(col, *args, intercept=False, **kwargs):
 
     """
     shortname, klass = 'ns', NaturalSpline
-    if isinstance(col, Column):
-        name = col.name
-    else:
-        name = str(col)
+    if name is None:
+        if isinstance(col, Column):
+            name = col.name
+        else:
+            name = str(col)
+        name = f'{shortname}({name})'
     encoder = klass(*args,
                     intercept=intercept,
                     **kwargs) 
     return from_encoder(encoder,
                         col,
-                        name=f'{shortname}({name})')
+                        name=name)
 
-def bs(col, *args, intercept=False, **kwargs):
+def bs(col, *args, intercept=False, name=None, **kwargs):
     """
     Create a B-spline Variable
     for a given column.
@@ -462,6 +472,9 @@ def bs(col, *args, intercept=False, **kwargs):
     intercept : bool
         Include an intercept column.
 
+    name : str (optional)
+        Defaults to one derived from col.
+
     Returns
     -------
 
@@ -469,16 +482,18 @@ def bs(col, *args, intercept=False, **kwargs):
 
     """
     shortname, klass = 'bs', BSpline
-    if isinstance(col, Column):
-        name = col.name
-    else:
-        name = str(col)
+    if name is None:
+        if isinstance(col, Column):
+            name = col.name
+        else:
+            name = str(col)
+        name = f'{shortname}({name})'
     encoder = klass(*args,
                     intercept=intercept,
                     **kwargs) 
     return from_encoder(encoder,
                         col,
-                        name=f'{shortname}({name})')
+                        name=name)
 
 def pca(variables, name, *args, **kwargs):
     """
