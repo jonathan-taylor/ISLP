@@ -2,7 +2,7 @@ import numpy as np, pandas as pd
 from sklearn.base import clone
 
 from ...transforms import Poly, NaturalSpline, BSpline, Interaction
-from ..model_matrix import ModelMatrix, Variable, ns, bs, poly
+from ..model_matrix import ModelMatrix, Variable, ns, bs, poly, pca
 
 from sklearn.preprocessing import (OneHotEncoder,
                                    OrdinalEncoder)
@@ -233,11 +233,17 @@ def test_pca():
     X = np.random.standard_normal((50,8))
     D = pd.DataFrame(X, columns=['A','B','C','D','E', 'F', 'G', 'H'])
     
-    pca = Variable(('A','B','C','D'), 'pca(ABCD)', PCA(n_components=2))
+    pca_ = Variable(('A','B','C','D'), 'pca(ABCD)', PCA(n_components=2))
     M = ModelMatrix(terms=[poly('F', intercept=True, degree=3),
-                           pca])
+                           pca_])
 
     MX = M.fit_transform(D)
-    print(MX.columns)
 
+    M2 = ModelMatrix(terms=[poly('F', intercept=True, degree=3),
+                            pca(('A','B','C','D'), 'ABCD', n_components=2)])
+    MX2 = M2.fit_transform(D)
+
+    np.testing.assert_allclose(MX, MX2)
+
+    
     

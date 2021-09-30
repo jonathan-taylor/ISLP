@@ -8,6 +8,7 @@ from sklearn.base import TransformerMixin, BaseEstimator, clone
 from sklearn.utils.validation import check_is_fitted
 from sklearn.preprocessing import (OneHotEncoder,
                                    OrdinalEncoder)
+from sklearn.decomposition import PCA
 from sklearn.exceptions import NotFittedError
 
 from .columns import (_get_column_info,
@@ -237,7 +238,7 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
             X on which encoder will be fit.
 
         """
-        print(var, X.shape)
+
         if var.encoder in self.encoders_:
             return var.encoder
         else:
@@ -299,12 +300,41 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
         val = pd.DataFrame(np.asarray(cols), columns=names)
         return val
 
+def from_encoder(encoder, *variables, name=None):
+    """
+    Create a Variable
+    by applying a transform to some variables.
+    
+    Parameters
+    ----------
+
+    encoder :  transform-like
+        Transform obeying sklearn fit/transform convention.
+
+    variabless : column identifier, Column, Variable
+        Variables to apply transform to. Could be
+        column identifiers or variables: all columns
+        will be stacked before encoding.
+
+    name : str (optional)
+        Defaults to `str(encoder)`.
+
+    Returns
+    -------
+
+    var : Variable
+    """
+
+    if name is None:
+        name = str(encoder)
+    return Variable(variables, name, encoder)
+
 def poly(col, *args, intercept=False, **kwargs):
     """
     Create a polynomial Variable
     for a given column.
     
-    Additional `args` and `keyword_args`
+    Additional `args` and `kwargs`
     are passed to `Poly`.
 
     Parameters
@@ -321,23 +351,24 @@ def poly(col, *args, intercept=False, **kwargs):
 
     var : Variable
     """
+    shortname, klass = 'poly', Poly
     if isinstance(col, Column):
         name = col.name
     else:
         name = str(col)
-    var = Variable((col,),
-                   'poly({})'.format(name),
-                   Poly(*args,
-                        intercept=intercept,
-                        **kwargs)) 
-    return var
+    encoder = klass(*args,
+                    intercept=intercept,
+                    **kwargs) 
+    return from_encoder(encoder,
+                        col,
+                        name=f'{shortname}({name})')
 
 def ns(col, *args, intercept=False, **kwargs):
     """
     Create a natural spline Variable
     for a given column.
     
-    Additional `args` and `keyword_args`
+    Additional `args` and `kwargs`
     are passed to `NaturalSpline`.
 
     Parameters
@@ -354,23 +385,24 @@ def ns(col, *args, intercept=False, **kwargs):
     var : Variable
 
     """
+    shortname, klass = 'ns', NaturalSpline
     if isinstance(col, Column):
         name = col.name
     else:
         name = str(col)
-    var = Variable((col,),
-                   'ns({})'.format(name),
-                   NaturalSpline(*args,
-                                 intercept=intercept,
-                                 **kwargs)) 
-    return var
+    encoder = klass(*args,
+                    intercept=intercept,
+                    **kwargs) 
+    return from_encoder(encoder,
+                        col,
+                        name=f'{shortname}({name})')
 
 def bs(col, *args, intercept=False, **kwargs):
     """
     Create a B-spline Variable
     for a given column.
     
-    Additional `args` and `keyword_args`
+    Additional `args` and `kwargs`
     are passed to `BSpline`.
 
     Parameters
@@ -387,13 +419,41 @@ def bs(col, *args, intercept=False, **kwargs):
     var : Variable
 
     """
+    shortname, klass = 'bs', BSpline
     if isinstance(col, Column):
         name = col.name
     else:
         name = str(col)
-    var = Variable((col,),
-                   'bs({})'.format(name),
-                   BSpline(*args,
-                           intercept=intercept,
-                           **kwargs)) 
-    return var
+    encoder = klass(*args,
+                    intercept=intercept,
+                    **kwargs) 
+    return from_encoder(encoder,
+                        col,
+                        name=f'{shortname}({name})')
+
+def pca(variables, name, *args, **kwargs):
+    """
+    Create PCA encoding of features
+    from a sequence of variables.
+    
+    Additional `args` and `kwargs`
+    are passed to `PCA`.
+
+    Parameters
+    ----------
+
+    variables : [column identifier, Column or Variable]
+        Sequence whose columns will be encoded by PCA.
+
+    Returns
+    -------
+
+    var : Variable
+
+    """
+    shortname, klass = 'pca', PCA
+    encoder = klass(*args,
+                    **kwargs) 
+    return from_encoder(encoder,
+                        *variables,
+                        name=f'{shortname}({name})')
