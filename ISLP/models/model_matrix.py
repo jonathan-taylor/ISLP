@@ -183,7 +183,7 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
     
         return self
     
-    def transform(self, X):
+    def transform(self, X, y=None):
 
         """
         Construct parameters for orthogonal
@@ -200,7 +200,7 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
 
         Returns
         -------
-        D : np.ndarray
+        df : np.ndarray or pd.DataFrame
             Design matrix.
         """
 
@@ -217,6 +217,7 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
 
         df = pd.concat(dfs, axis=1)
         if isinstance(X, (pd.Series, pd.DataFrame)):
+            df.index = X.index
             return df
         else:
             return df.values
@@ -298,6 +299,8 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
         else:
             raise ValueError('expecting either a column or a Variable')
         val = pd.DataFrame(np.asarray(cols), columns=names)
+        if isinstance(X, (pd.DataFrame, pd.Series)):
+            val.index = X.index
         return val
 
 def from_encoder(encoder, *variables, name=None):
