@@ -22,6 +22,11 @@ from ..transforms import (Poly,
 
 class Variable(NamedTuple):
 
+    """
+    An element in a model matrix that will build
+    columns from an X.
+    """
+
     variables: tuple
     name: str
     encoder: Any
@@ -232,6 +237,7 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
             X on which encoder will be fit.
 
         """
+        print(var, X.shape)
         if var.encoder in self.encoders_:
             return var.encoder
         else:
@@ -268,9 +274,8 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
                 cur = self.build_columns(v, X, fit=fit)
                 cols.append(cur)
             cols = np.column_stack(cols)
-
+            
             if var.encoder:
-                cols = np.column_stack(cols)
                 try:
                     check_is_fitted(var.encoder)
                     if fit and var not in self.encoders_:
@@ -280,7 +285,6 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
                         self.fit_encoder(var, cols)
                     else:
                         raise(e)
-                cols = np.column_stack(cols)
                 cols = var.encoder.transform(cols)
 
             if not hasattr(cols, 'columns'):
@@ -295,4 +299,101 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
         val = pd.DataFrame(np.asarray(cols), columns=names)
         return val
 
+def poly(col, *args, intercept=False, **kwargs):
+    """
+    Create a polynomial Variable
+    for a given column.
+    
+    Additional `args` and `keyword_args`
+    are passed to `Poly`.
 
+    Parameters
+    ----------
+
+    col : column identifier or Column
+        Column to transform.
+
+    intercept : bool
+        Include an intercept column.
+
+    Returns
+    -------
+
+    var : Variable
+    """
+    if isinstance(col, Column):
+        name = col.name
+    else:
+        name = str(col)
+    var = Variable((col,),
+                   'poly({})'.format(name),
+                   Poly(*args,
+                        intercept=intercept,
+                        **kwargs)) 
+    return var
+
+def ns(col, *args, intercept=False, **kwargs):
+    """
+    Create a natural spline Variable
+    for a given column.
+    
+    Additional `args` and `keyword_args`
+    are passed to `NaturalSpline`.
+
+    Parameters
+    ----------
+
+    col : column identifier or Column
+
+    intercept : bool
+        Include an intercept column.
+
+    Returns
+    -------
+
+    var : Variable
+
+    """
+    if isinstance(col, Column):
+        name = col.name
+    else:
+        name = str(col)
+    var = Variable((col,),
+                   'ns({})'.format(name),
+                   NaturalSpline(*args,
+                                 intercept=intercept,
+                                 **kwargs)) 
+    return var
+
+def bs(col, *args, intercept=False, **kwargs):
+    """
+    Create a B-spline Variable
+    for a given column.
+    
+    Additional `args` and `keyword_args`
+    are passed to `BSpline`.
+
+    Parameters
+    ----------
+
+    col : column identifier or Column
+
+    intercept : bool
+        Include an intercept column.
+
+    Returns
+    -------
+
+    var : Variable
+
+    """
+    if isinstance(col, Column):
+        name = col.name
+    else:
+        name = str(col)
+    var = Variable((col,),
+                   'bs({})'.format(name),
+                   BSpline(*args,
+                           intercept=intercept,
+                           **kwargs)) 
+    return var

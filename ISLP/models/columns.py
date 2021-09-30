@@ -126,12 +126,12 @@ def _get_column_info(X,
                                       name,
                                       is_categorical[i],
                                       is_ordinal[i],
-                                      columns,
+                                      tuple(columns),
                                       encoder)
         else:
             column_info[col] = Column(col,
                                       name,
-                                      columns=[name])
+                                      columns=(name,))
     return column_info
 
 # extracted from method of BaseHistGradientBoosting from

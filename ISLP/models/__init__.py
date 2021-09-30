@@ -1,6 +1,9 @@
 import numpy as np, pandas as pd
+
 from ..transforms import Poly
+
 from .model_matrix import ModelMatrix, Column, Variable
+from .sklearn_wrap import sklearn_sm
 
 def summarize(results,
               conf_int=False):
@@ -44,4 +47,4 @@ def poly(X, degree):
 
     result = Poly(degree=degree).fit_transform(X)
 
-from .sklearn import sklearn_sm
+

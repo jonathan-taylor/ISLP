@@ -2,10 +2,12 @@ import numpy as np, pandas as pd
 from sklearn.base import clone
 
 from ...transforms import Poly, NaturalSpline, BSpline, Interaction
-from ..model_matrix import ModelMatrix, Variable
+from ..model_matrix import ModelMatrix, Variable, ns, bs, poly
 
 from sklearn.preprocessing import (OneHotEncoder,
                                    OrdinalEncoder)
+from sklearn.decomposition import PCA
+
 default_encoders = {'categorical': OneHotEncoder(drop=None, sparse=False),
                     'ordinal': OrdinalEncoder()}
 
@@ -207,3 +209,35 @@ def test_dataframe10():
                           MX[:,M.column_map_['E']],
                           MX[:,M.column_map_['C']]])
     print(np.linalg.norm(V-V2))
+
+def test_poly_ns_bs():
+    
+    X = np.random.standard_normal((50,5))
+    D = pd.DataFrame(X, columns=['A','B','C','D','E'])
+    
+    M = ModelMatrix(terms=[poly('A', intercept=True, degree=3),
+                           ns('E', df=5),
+                           bs('D', df=4)])
+
+    MX = M.fit_transform(D)
+    A =  M.column_info_['A']
+    M2 = ModelMatrix(terms=[poly(A, intercept=True, degree=3),
+                           ns('E', df=5),
+                           bs('D', df=4)])
+    MX2 = M2.fit_transform(D)
+    print(MX.columns)
+    print(MX2.columns)
+    
+def test_pca():
+    
+    X = np.random.standard_normal((50,8))
+    D = pd.DataFrame(X, columns=['A','B','C','D','E', 'F', 'G', 'H'])
+    
+    pca = Variable(('A','B','C','D'), 'pca(ABCD)', PCA(n_components=2))
+    M = ModelMatrix(terms=[poly('F', intercept=True, degree=3),
+                           pca])
+
+    MX = M.fit_transform(D)
+    print(MX.columns)
+
+    
