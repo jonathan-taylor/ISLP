@@ -131,7 +131,7 @@ def test_dataframe6():
     
     X = np.random.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
-    W = Variable(['A','E'], 'AE', None)
+    W = Variable(('A','E'), 'AE', None)
     D['D'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
     D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
     

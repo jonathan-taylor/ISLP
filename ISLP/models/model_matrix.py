@@ -145,50 +145,38 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
 
         # find possible interactions and other variables
 
-        self.terms_ = []
         for term in self.terms:
             if isinstance(term, Variable):
-                term = term.hashable()
                 self.variables_[term] = term
                 self.build_columns(term, X, fit=True) # these encoders won't have been fit yet
                 for var in term.variables:
                     if var not in self.variables_ and isinstance(var, Variable):
-                        var = var.hashable()
-                        self.variables_[var] = var
-                self.terms_.append(self.variables_[term])
-            elif type(term) == tuple: 
+                            self.variables_[var] = var
+            elif term not in self.column_info_:
                 # a tuple of variables represents an interaction
-                names = []
-                column_map = {}
-                idx = 0
-                term_ = ()
-                for var in term:
-                    if isinstance(var, Variable):
-                        var = var.hashable()
-                    term_ = term_ + (var,)
-                    if var in self.variables_:
-                        var = self.variables_[var]
-                    cols = self.build_columns(var, X, fit=True) # these encoders won't have been fit yet
-                    column_map[var.name] = range(idx, idx + cols.shape[1])
-                    idx += cols.shape[1]                 
-                    names.append(var.name)
-                encoder_ = Interaction(names, column_map)
-                self.variables_[term_] = Variable(term_,
-                                                  ':'.join(n for n in names),
-                                                  encoder_)
-                self.terms_.append(self.variables_[term_])
-            elif type(term) is str and term not in self.column_info_:
-                if isinstance(term, Column):
+                if type(term) == type((1,)): 
+                    names = []
+                    column_map = {}
+                    idx = 0
+                    for var in term:
+                        if var in self.variables_:
+                            var = self.variables_[var]
+                        cols = self.build_columns(var, X, fit=True) # these encoders won't have been fit yet
+                        column_map[var.name] = range(idx, idx + cols.shape[1])
+                        idx += cols.shape[1]                 
+                        names.append(var.name)
+                    encoder_ = Interaction(names, column_map)
+                    self.variables_[term] = Variable(term, ':'.join(n for n in names), encoder_)
+                elif isinstance(term, Column):
                     self.variables_[term] = Variable((term,), term.name, None)
-                    self.terms_.append(self.variables_[term])
                 else:
-                    raise ValueError('each element in a term should be a Variable, ' +
-                                     'tuple (for interaction), Column or identify a column')
+                    raise ValueError('each element in a term should be a Variable, Column or identify a column')
                 
         # build the mapping of terms to columns and column names
 
         self.column_names_ = {}
         self.column_map_ = {}
+        self.terms_ = [self.variables_[t] for t in self.terms]
         
         idx = 0
         if self.intercept:
