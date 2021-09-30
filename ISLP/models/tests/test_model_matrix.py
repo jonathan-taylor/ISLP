@@ -227,6 +227,16 @@ def test_poly_ns_bs():
     MX2 = M2.fit_transform(D)
     print(MX.columns)
     print(MX2.columns)
+
+def test_poly_ns_bs2():
+    
+    X = np.random.standard_normal((50,5))
+    D = pd.DataFrame(X, columns=['A','B','C','D','E'])
+    D['C'] = pd.Categorical(np.random.choice(range(4,9), 50, replace=True))
+    M = ModelMatrix(terms=[(poly('A', intercept=True, degree=3),'C')])
+    MX = M.fit_transform(D)
+    print(MX.columns)
+
     
 def test_pca():
     
@@ -240,7 +250,7 @@ def test_pca():
     MX = M.fit_transform(D)
 
     M2 = ModelMatrix(terms=[poly('F', intercept=True, degree=3),
-                            pca(('A','B','C','D'), 'ABCD', n_components=2)])
+                            pca(['A','B','C','D'], 'ABCD', n_components=2)])
     MX2 = M2.fit_transform(D)
 
     np.testing.assert_allclose(MX, MX2)

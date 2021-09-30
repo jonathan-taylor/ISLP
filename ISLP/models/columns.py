@@ -110,7 +110,10 @@ def _get_column_info(X,
     """
     column_info = {}
     for i, col in enumerate(columns):
-        name = '{0}'.format(col)
+        if type(col) == int:
+            name = f'X{col}'
+        else:
+            name = str(col)
         Xcol = _get_column(col, X, twodim=True)
         if is_categorical[i]:
             if is_ordinal[i]:
