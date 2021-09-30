@@ -32,6 +32,14 @@ class Variable(NamedTuple):
     name: str
     encoder: Any
 
+    def hashable(self):
+        return self._replace(variables=tuple(self.variables))
+
+def _hashable(obj):
+    if isinstance(obj, Variable):
+        return obj.hashable()
+    return obj
+
 class ModelMatrix(TransformerMixin, BaseEstimator):
 
     def __init__(self,
@@ -137,38 +145,50 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
 
         # find possible interactions and other variables
 
+        self.terms_ = []
         for term in self.terms:
             if isinstance(term, Variable):
+                term = term.hashable()
                 self.variables_[term] = term
                 self.build_columns(term, X, fit=True) # these encoders won't have been fit yet
                 for var in term.variables:
                     if var not in self.variables_ and isinstance(var, Variable):
-                            self.variables_[var] = var
-            elif term not in self.column_info_:
+                        var = var.hashable()
+                        self.variables_[var] = var
+                self.terms_.append(self.variables_[term])
+            elif type(term) == tuple: 
                 # a tuple of variables represents an interaction
-                if type(term) == type((1,)): 
-                    names = []
-                    column_map = {}
-                    idx = 0
-                    for var in term:
-                        if var in self.variables_:
-                            var = self.variables_[var]
-                        cols = self.build_columns(var, X, fit=True) # these encoders won't have been fit yet
-                        column_map[var.name] = range(idx, idx + cols.shape[1])
-                        idx += cols.shape[1]                 
-                        names.append(var.name)
-                    encoder_ = Interaction(names, column_map)
-                    self.variables_[term] = Variable(term, ':'.join(n for n in names), encoder_)
-                elif isinstance(term, Column):
+                names = []
+                column_map = {}
+                idx = 0
+                term_ = ()
+                for var in term:
+                    if isinstance(var, Variable):
+                        var = var.hashable()
+                    term_ = term_ + (var,)
+                    if var in self.variables_:
+                        var = self.variables_[var]
+                    cols = self.build_columns(var, X, fit=True) # these encoders won't have been fit yet
+                    column_map[var.name] = range(idx, idx + cols.shape[1])
+                    idx += cols.shape[1]                 
+                    names.append(var.name)
+                encoder_ = Interaction(names, column_map)
+                self.variables_[term_] = Variable(term_,
+                                                  ':'.join(n for n in names),
+                                                  encoder_)
+                self.terms_.append(self.variables_[term_])
+            elif type(term) is str and term not in self.column_info_:
+                if isinstance(term, Column):
                     self.variables_[term] = Variable((term,), term.name, None)
+                    self.terms_.append(self.variables_[term])
                 else:
-                    raise ValueError('each element in a term should be a Variable, Column or identify a column')
+                    raise ValueError('each element in a term should be a Variable, ' +
+                                     'tuple (for interaction), Column or identify a column')
                 
         # build the mapping of terms to columns and column names
 
         self.column_names_ = {}
         self.column_map_ = {}
-        self.terms_ = [self.variables_[t] for t in self.terms]
         
         idx = 0
         if self.intercept:
@@ -184,19 +204,32 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
         return self
     
     def transform(self, X, y=None):
+        """
+        Build design on X after fitting.
+
+        Parameters
+        ----------
+        X : array-like
+
+        y : None
+            Ignored. This parameter exists only for compatibility with
+            :class:`~sklearn.pipeline.Pipeline`.
+        """
+        return self.build_submodel(X, self.terms_)
+    
+    # ModelMatrix specific methods
+
+    def build_submodel(self, X, terms):
 
         """
-        Construct parameters for orthogonal
-        polynomials in the feature X.
+        Construct design matrix on a
+        sequence of terms and X after 
+        fitting.
 
         Parameters
         ----------
         X : array-like
             X on which model matrix will be evaluated.
-
-        y : None
-            Ignored. This parameter exists only for compatibility with
-            :class:`~sklearn.pipeline.Pipeline`.
 
         Returns
         -------
@@ -211,7 +244,7 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
         if self.intercept:
             dfs.append(pd.DataFrame({'intercept':np.ones(X.shape[0])}))
 
-        for term_ in self.terms_:
+        for term_ in terms:
             term_df = self.build_columns(term_, X)
             dfs.append(term_df)
 
@@ -302,6 +335,31 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
         if isinstance(X, (pd.DataFrame, pd.Series)):
             val.index = X.index
         return val
+
+    def build_sequence(self, X):
+        """
+        Build implied sequence of submodels 
+        based on successively including more terms.
+        """
+
+        check_is_fitted(self)
+
+        dfs = []
+
+        if self.intercept:
+            df_int = pd.DataFrame({'intercept':np.ones(X.shape[0])})
+            if isinstance(X, (pd.Series, pd.DataFrame)):
+                df_int.index = X.index
+            dfs.append(df_int)
+
+        for term_ in self.terms_:
+            term_df = self.build_columns(term_, X)
+            if isinstance(X, (pd.Series, pd.DataFrame)):
+                term_df.index = X.index
+
+            dfs.append(term_df)
+
+        return (pd.concat(dfs[:i], axis=1) for i in range(1, len(dfs)+1))
 
 def from_encoder(encoder, *variables, name=None):
     """

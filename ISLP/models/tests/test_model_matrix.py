@@ -131,7 +131,7 @@ def test_dataframe6():
     
     X = np.random.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
-    W = Variable(('A','E'), 'AE', None)
+    W = Variable(['A','E'], 'AE', None)
     D['D'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
     D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
     
@@ -228,6 +228,33 @@ def test_poly_ns_bs():
     print(MX.columns)
     print(MX2.columns)
 
+def test_submodel():
+    
+    X = np.random.standard_normal((50,5))
+    D = pd.DataFrame(X, columns=['A','B','C','D','E'])
+    
+    M = ModelMatrix(terms=[poly('A', intercept=True, degree=3),
+                           ns('E', df=5),
+                           bs('D', df=4)])
+
+    M.fit(D)
+    MX = M.transform(D)
+    MXsub = M.build_submodel(D, M.terms[:2])
+    print(MX.columns)
+    print(MXsub.columns)
+
+def test_sequence():
+    
+    X = np.random.standard_normal((50,5))
+    D = pd.DataFrame(X, columns=['A','B','C','D','E'])
+    
+    M = ModelMatrix(terms=[poly('A', intercept=True, degree=3),
+                           ns('E', df=5),
+                           bs('D', df=4)])
+    M.fit(D)
+    for df in M.build_sequence(D):
+        print(df.columns)
+    
 def test_poly_ns_bs2():
     
     X = np.random.standard_normal((50,5))
