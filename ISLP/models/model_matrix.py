@@ -32,13 +32,89 @@ class Variable(NamedTuple):
     name: str
     encoder: Any
 
-    def hashable(self):
-        return self._replace(variables=tuple(self.variables))
+#### contrast specific code
 
-def _hashable(obj):
-    if isinstance(obj, Variable):
-        return obj.hashable()
-    return obj
+class Contrast(TransformerMixin, BaseEstimator):
+    """
+    Contrast encoding for categorical variables.
+    """
+
+    def __init__(self,
+                 method='drop'):
+
+        self.method = method
+
+    def fit(self, X):
+
+        self.encoder_ = OneHotEncoder(drop=None,
+                                      sparse=False).fit(X)
+        cats = self.encoder_.categories_[0]
+        column_names = [str(n) for n in cats]
+
+        cols = self.encoder_.transform(X)
+        if self.method == 'drop':
+            self.columns_ = column_names[1:]
+            self.contrast_matrix_ = np.zeros((len(cats), len(cats)-1))
+            self.contrast_matrix_[1:,:] = np.identity(len(cats)-1)
+        elif self.method == 'sum':
+            self.columns_ = column_names[1:]
+            self.contrast_matrix_ = np.zeros((len(cats), len(cats)-1))
+            self.contrast_matrix_[:-1,:] = np.identity(len(cats)-1)
+            self.contrast_matrix_[-1] = -1
+        elif callable(self.method):
+            self.contrast_matrix_ = self.method(len(cats))
+        elif self.method is None:
+            self.contrast_matrix_ = np.identity(len(cats))
+            self.columns_ = column_names
+        else:
+            raise ValueError('method must be one of ["drop", "sum", None] or a callable' +
+                             'that returns a contrast matrix and column names given the number' +
+                             ' of levels')
+        return self
+
+    def transform(self, X):
+        if not hasattr(self, 'encoder_'):
+            self.fit(X)
+        D = self.encoder_.transform(X)
+        value = D.dot(self.contrast_matrix_)
+
+        if isinstance(X, (pd.DataFrame, pd.Series)):
+            df = pd.DataFrame(value, columns=self.columns_)
+            df.index = X.index
+            return df
+        return value
+
+def contrast(col, method, *args, **kwargs):
+    """
+    Create PCA encoding of features
+    from a sequence of variables.
+    
+    Additional `args` and `kwargs`
+    are passed to `PCA`.
+
+    Parameters
+    ----------
+
+    variables : [column identifier, Column or Variable]
+        Sequence whose columns will be encoded by PCA.
+
+    Returns
+    -------
+
+    var : Variable
+
+    """
+
+    if isinstance(col, Column):
+        col = col.idx
+        name = col.name
+    else:
+        name = str(col)
+    encoder = Contrast(method)
+    return Column(col,
+                  name,
+                  is_categorical=True,
+                  encoder=encoder)
 
 class ModelMatrix(TransformerMixin, BaseEstimator):
 
@@ -46,7 +122,7 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
                  terms,
                  intercept=True,
                  categorical_features=None,
-                 default_encoders={'categorical': OneHotEncoder(drop='first', sparse=False),
+                 default_encoders={'categorical': Contrast(method='drop'),
                                    'ordinal': OrdinalEncoder()}
                  ):
 
@@ -157,15 +233,17 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
                 if type(term) == type((1,)): 
                     names = []
                     column_map = {}
+                    column_names = {}
                     idx = 0
                     for var in term:
                         if var in self.variables_:
                             var = self.variables_[var]
-                        cols = self.build_columns(var, X, fit=True) # these encoders won't have been fit yet
+                        cols, cur_names = self.build_columns(var, X, fit=True) # these encoders won't have been fit yet
                         column_map[var.name] = range(idx, idx + cols.shape[1])
+                        column_names[var.name] = cur_names
                         idx += cols.shape[1]                 
                         names.append(var.name)
-                    encoder_ = Interaction(names, column_map)
+                    encoder_ = Interaction(names, column_map, column_names)
                     self.variables_[term] = Variable(term, ':'.join(n for n in names), encoder_)
                 elif isinstance(term, Column):
                     self.variables_[term] = Variable((term,), term.name, None)
@@ -184,8 +262,8 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
             idx += 1 # intercept will be first column
         
         for term, term_ in zip(self.terms, self.terms_):
-            term_df = self.build_columns(term_, X)
-            self.column_names_[term] = term_df.columns
+            term_df, term_names = self.build_columns(term_, X)
+            self.column_names_[term] = term_names
             self.column_map_[term] = slice(idx, idx + term_df.shape[1])
             idx += term_df.shape[1]
     
@@ -233,15 +311,15 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
             dfs.append(pd.DataFrame({'intercept':np.ones(X.shape[0])}))
 
         for term_ in terms:
-            term_df = self.build_columns(term_, X)
+            term_df = self.build_columns(term_, X)[0]
             dfs.append(term_df)
 
-        df = pd.concat(dfs, axis=1)
         if isinstance(X, (pd.Series, pd.DataFrame)):
+            df = pd.concat(dfs, axis=1)
             df.index = X.index
             return df
         else:
-            return df.values
+            return np.column_stack(dfs)
 
     def fit_encoder(self, var, X):
         """
@@ -289,14 +367,18 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
             var = self.column_info_[var]
 
         if isinstance(var, Column):
-            cols = var.get_columns(X, fit=fit)
-            names = var.columns
+            cols, names = var.get_columns(X, fit=fit)
+            print(var, names, 'huh')
         elif isinstance(var, Variable):
             cols = []
+            names = []
             for v in var.variables:
-                cur = self.build_columns(v, X, fit=fit)
+                cur, cur_names = self.build_columns(v, X, fit=fit)
                 cols.append(cur)
+                names.extend(cur_names)
             cols = np.column_stack(cols)
+            if len(names) != cols.shape[1]:
+                names = ['{0}[{1}]'.format(var.name, j) for j in range(cols.shape[1])]
             
             if var.encoder:
                 try:
@@ -309,20 +391,22 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
                     else:
                         raise(e)
                 cols = var.encoder.transform(cols)
-
-            if not hasattr(cols, 'columns'):
-                if cols.shape[1] > 1:
-                    names = ['{0}[{1}]'.format(var.name, j) for j in range(cols.shape[1])]
+                if hasattr(var.encoder, 'columns_'):
+                    names = var.encoder.columns_
                 else:
-                    names = [var.name]
-            else:
-                names = cols.columns
+                    if cols.shape[1] > 1:
+                        names = ['{0}[{1}]'.format(var.name, j) for j in range(cols.shape[1])]
+                    else:
+                        names = [var.name]
+
+            
         else:
             raise ValueError('expecting either a column or a Variable')
         val = pd.DataFrame(np.asarray(cols), columns=names)
+
         if isinstance(X, (pd.DataFrame, pd.Series)):
             val.index = X.index
-        return val
+        return val, names
 
     def build_sequence(self, X):
         """
@@ -341,24 +425,24 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
             dfs.append(df_int)
 
         for term_ in self.terms_:
-            term_df = self.build_columns(term_, X)
+            term_df, _  = self.build_columns(term_, X)
             if isinstance(X, (pd.Series, pd.DataFrame)):
                 term_df.index = X.index
 
             dfs.append(term_df)
 
-        return (pd.concat(dfs[:i], axis=1) for i in range(1, len(dfs)+1))
+        if isinstance(X, (pd.Series, pd.DataFrame)):
+            return (pd.concat(dfs[:i], axis=1) for i in range(1, len(dfs)+1))
+        else:
+            return (np.column_stack(*dfs[:i]) for i in range(1, len(dfs)+1))
 
-def from_encoder(encoder, *variables, name=None):
+def derived_variable(*variables, encoder=None, name=None):
     """
-    Create a Variable
-    by applying a transform to some variables.
+    Create a Variable, optionally
+    applying an encoder to the stacked columns.
     
     Parameters
     ----------
-
-    encoder :  transform-like
-        Transform obeying sklearn fit/transform convention.
 
     variables : column identifier, Column, Variable
         Variables to apply transform to. Could be
@@ -367,6 +451,9 @@ def from_encoder(encoder, *variables, name=None):
 
     name : str (optional)
         Defaults to `str(encoder)`.
+
+    encoder :  transform-like (optional)
+        Transform obeying sklearn fit/transform convention.
 
     Returns
     -------
@@ -413,9 +500,9 @@ def poly(col, *args, intercept=False, name=None, **kwargs):
     encoder = klass(*args,
                     intercept=intercept,
                     **kwargs) 
-    return from_encoder(encoder,
-                        col,
-                        name=name)
+    return derived_variable(col,
+                            name=name,
+                            encoder=encoder)
 
 def ns(col, *args, intercept=False, name=None, **kwargs):
     """
@@ -452,9 +539,9 @@ def ns(col, *args, intercept=False, name=None, **kwargs):
     encoder = klass(*args,
                     intercept=intercept,
                     **kwargs) 
-    return from_encoder(encoder,
-                        col,
-                        name=name)
+    return derived_variable(col,
+                            name=name,
+                            encoder=encoder)
 
 def bs(col, *args, intercept=False, name=None, **kwargs):
     """
@@ -491,9 +578,9 @@ def bs(col, *args, intercept=False, name=None, **kwargs):
     encoder = klass(*args,
                     intercept=intercept,
                     **kwargs) 
-    return from_encoder(encoder,
-                        col,
-                        name=name)
+    return derived_variable(col,
+                            name=name,
+                            encoder=encoder)
 
 def pca(variables, name, *args, **kwargs):
     """
@@ -518,6 +605,8 @@ def pca(variables, name, *args, **kwargs):
     shortname, klass = 'pca', PCA
     encoder = klass(*args,
                     **kwargs) 
-    return from_encoder(encoder,
-                        *variables,
-                        name=f'{shortname}({name})')
+    return derived_variable(*variables,
+                            name=f'{shortname}({name})',
+                            encoder=encoder)
+
+    

@@ -2,20 +2,21 @@ import numpy as np, pandas as pd
 from sklearn.base import clone
 
 from ...transforms import Poly, NaturalSpline, BSpline, Interaction
-from ..model_matrix import ModelMatrix, Variable, ns, bs, poly, pca
+from ..model_matrix import ModelMatrix, Variable, ns, bs, poly, pca, contrast, Contrast
 
 from sklearn.preprocessing import (OneHotEncoder,
                                    OrdinalEncoder)
 from sklearn.decomposition import PCA
 
-default_encoders = {'categorical': OneHotEncoder(drop=None, sparse=False),
+default_encoders = {'categorical': Contrast(method=None),
                     'ordinal': OrdinalEncoder()}
 
 def test_interaction():
 
     I = Interaction(['V', 'U'],
                     {'V':[0,2],
-                     'U':[1,3,5]})
+                     'U':[1,3,5]},
+                    {'V':[0,1],'U':[0,1,2]})
     X = np.random.standard_normal((50,10))
     W = I.fit_transform(X)
 
@@ -96,7 +97,7 @@ def test_dataframe4():
     D['D'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
     D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
     
-    M = ModelMatrix(terms=['A', 'E', ('D','E')],
+    M = ModelMatrix(terms=['A', 'E', ('D','E'), 'D'],
                     default_encoders=default_encoders)
     MX = np.asarray(M.fit_transform(D))
 
@@ -110,6 +111,9 @@ def test_dataframe4():
     MX2 = M.transform(D)
     np.testing.assert_allclose(MX, MX2)
 
+    print(MX2.columns)
+    return M, D
+    
 def test_dataframe5():
     
     X = np.random.standard_normal((50,5))
@@ -243,6 +247,22 @@ def test_submodel():
     print(MX.columns)
     print(MXsub.columns)
 
+def test_contrast():
+    
+    X = np.random.standard_normal((50,5))
+    D = pd.DataFrame(X, columns=['A','B','C','D','E'])
+    D['C'] = pd.Categorical(np.random.choice(range(4,9), 50, replace=True))
+    for method in ['sum', 'drop', None, lambda p: np.identity(p)]:
+        M = ModelMatrix(terms=[poly('A', intercept=True, degree=3),
+                               contrast('C', method),
+                               bs('D', df=4)])
+
+        M.fit(D)
+        MX = M.transform(D)
+        MXsub = M.build_submodel(D, M.terms[:2])
+        print(method, MX.columns)
+    print(MXsub.columns)
+    
 def test_sequence():
     
     X = np.random.standard_normal((50,5))

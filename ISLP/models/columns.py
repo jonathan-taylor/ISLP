@@ -1,3 +1,4 @@
+
 from typing import NamedTuple, Any
 from copy import copy
 
@@ -46,15 +47,24 @@ class Column(NamedTuple):
             Evaluated columns -- if an encoder is used,
             several columns may be produced.
 
+        names : (str,)
+            Column names
         """
-        cols = _get_column(self.idx, X, twodim=self.encoder is not None)
 
+        cols = _get_column(self.idx, X, twodim=self.encoder is not None)
         if fit:
             self.fit_encoder(X)
 
         if self.encoder is not None:
             cols = self.encoder.transform(cols)
-        return np.asarray(cols)
+        cols = np.asarray(cols)
+        
+        names = self.columns
+        if hasattr(self.encoder, 'columns_'):
+            names = ['{0}[{1}]'.format(self.name, c) for c in self.encoder.columns_]
+        if not names:
+            names = ['{0}[{1}]'.format(self.name, i) for i in range(cols.shape[1])]
+        return cols, names
 
     def fit_encoder(self, X):
 
@@ -123,6 +133,10 @@ def _get_column_info(X,
             else:
                 encoder = clone(default_encoders['categorical'])
                 cols = encoder.fit_transform(Xcol)
+                if hasattr(encoder, 'columns_'):
+                    columns_ = encoder.columns_
+                else:
+                    columns_ = range(cols.shape[1])
                 columns = ['Cat({0})[{1}]'.format(col, c) for c in range(cols.shape[1])]
 
             column_info[col] = Column(col,

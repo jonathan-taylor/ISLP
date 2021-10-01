@@ -146,7 +146,8 @@ class Interaction(TransformerMixin, BaseEstimator):
 
     def __init__(self,
                  variables,
-                 columns):
+                 columns,
+                 column_names):
 
         '''
 
@@ -165,13 +166,17 @@ class Interaction(TransformerMixin, BaseEstimator):
         
         self.variables = variables
         self.columns = columns
+        self.column_names_ = {} 
         self.columns_ = []
 
         variable_names = []
         for variable in self.variables:
             cols = self.columns[variable]
+            col_names = ['{0}[{1}]'.format(variable, i) for i in range(len(self.columns[variable]))]
+            if variable in column_names:
+                col_names = [str(c) for c in column_names[variable]]
             if len(cols) > 1:
-                variable_names.append(['{0}[{1}]'.format(variable, i) for i, _ in enumerate(self.columns[variable])])
+                variable_names.append(col_names)
             else:
                 variable_names.append(['{0}'.format(variable)])
 
