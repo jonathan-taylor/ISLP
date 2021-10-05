@@ -10,8 +10,6 @@ class Poly(TransformerMixin, BaseEstimator):
     def __init__(self,
                  degree=1,
                  intercept=False,
-                 with_mean=True,
-                 with_scale=True,
                  raw=False):
 
         '''
@@ -25,21 +23,12 @@ class Poly(TransformerMixin, BaseEstimator):
         intercept : bool (optional)
             Include a column for intercept?
 
-        with_mean : bool (optional)
-            Center feature before evaluating polynomial?
-
-        with_scale : bool (optional)
-            Scale feature to have norm `X.shape[0]`?
-            Will result in `std` of 1 with `with_mean` is True.
-
         raw : bool (optional)
             If False, perform a QR decomposition on the resulting
             matrix of powers of centered and / or scaled features.
         '''
         
         self.degree = degree
-        self.with_mean = with_mean
-        self.with_scale = with_scale
         self.raw = raw
         self.intercept = intercept
         
@@ -66,22 +55,16 @@ class Poly(TransformerMixin, BaseEstimator):
         if X.reshape(-1).shape[0] != n:
             raise ValueError('expecting a single column feature')
 
-        if self.with_mean:
-            self.shift_ = X.mean()
-        else:
-            self.shift_ = 0
-        X -= self.shift_
+        self.mean_ = X.mean()
         
-        if self.with_scale:
-            self.scale_ = (np.linalg.norm(X) / np.sqrt(n))
-        else:
-            self.scale_ = 1.
-        X /= self.scale_
-
         if not self.raw:
-            powX = np.power.outer(X, np.arange(0, self.degree+1))
-            self.Q_, self.R_ = np.linalg.qr(powX)
-            self.Rinv_ = np.linalg.inv(self.R_)
+            powX = np.power.outer(X - self.mean_, np.arange(0, self.degree+1))
+            # Following R's poly construction
+            Q, R = np.linalg.qr(powX)
+            Z = Q * np.diag(R)[None,:]
+            self.norm2_ = (Z**2).sum(0)
+            self.alpha_ = ((X[:,None] * Z**2).sum(0) / self.norm2_)[:self.degree]
+            self.norm2_ = np.hstack([1, self.norm2_])
 
         # for pandas 
 
@@ -92,8 +75,10 @@ class Poly(TransformerMixin, BaseEstimator):
         if isinstance(X_orig, (pd.Series, pd.DataFrame)):
             if hasattr(X_orig, 'name'): # a pd.Series
                 name = X_orig.name
-                self.columns_ = ['poly(%s, %d)' % (name, d) 
-                                 for d in self.columns_]
+            else:
+                name = X_orig.columns[0]
+            self.columns_ = ['poly(%s, %d)' % (name, d) 
+                             for d in self.columns_]
 
         return self
     
@@ -122,12 +107,18 @@ class Poly(TransformerMixin, BaseEstimator):
         if X.reshape(-1).shape[0] != n:
             raise ValueError('expecting a single column feature')
 
-        X -= self.shift_
-        X /= self.scale_
-        
-        powX = np.power.outer(X, np.arange(0, self.degree+1))
         if not self.raw:
-            powX = powX.dot(self.Rinv_)
+            Z = np.ones((n, self.degree+1))
+            Z[:,1] = X - self.alpha_[0]
+
+            if self.degree > 1:
+                for i in range(1, self.degree):
+                    Z[:,i+1] = ((X - self.alpha_[i]) * Z[:,i] -
+                                self.norm2_[i+1] / self.norm2_[i] * Z[:,i-1])
+            Z /= np.sqrt(self.norm2_[1:])
+            powX = Z
+        else:
+            powX = np.power.outer(X, np.arange(0, self.degree+1))
 
         if not self.intercept:
             powX = powX[:,1:]
@@ -401,8 +392,10 @@ class BSpline(TransformerMixin, BaseEstimator):
         if isinstance(X_orig, (pd.Series, pd.DataFrame)):
             if hasattr(X_orig, 'name'): # a pd.Series
                 name = X_orig.name
-                self.columns_ = ['bs(%s, %d)' % (name, d) 
-                                 for d in self.columns_]
+            else:
+                name = X_orig.columns[0] # a pd.DataFrame
+            self.columns_ = ['bs(%s, %d)' % (name, d) 
+                             for d in self.columns_]
         return self
     
     def transform(self, X):
@@ -435,9 +428,7 @@ class BSpline(TransformerMixin, BaseEstimator):
                         ext=self.ext)
         if not self.intercept:
             value = value[:,1:]
-            columns_ = self.columns_[1:]
-        else:
-            columns_ = self.columns_
+        columns_ = self.columns_
 
         if isinstance(X_orig, (pd.Series, pd.DataFrame)):
             df = pd.DataFrame(value,
@@ -581,8 +572,10 @@ class NaturalSpline(TransformerMixin, BaseEstimator):
         if isinstance(X_orig, (pd.Series, pd.DataFrame)):
             if hasattr(X_orig, 'name'): # a pd.Series
                 name = X_orig.name
-                self.columns_ = ['ns(%s, %d)' % (name, d) 
-                                 for d in self.columns_]
+            else:
+                name = X_orig.columns[0] # a pd.DataFrame
+            self.columns_ = ['ns(%s, %d)' % (name, d) 
+                             for d in self.columns_]
         return self
     
     def transform(self, X):

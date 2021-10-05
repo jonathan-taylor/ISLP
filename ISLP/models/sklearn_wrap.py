@@ -13,7 +13,7 @@ class sklearn_sm(BaseEstimator,
 
     def __init__(self,
                  model_type,
-                 model_str='',
+                 model_matrix=None,
                  model_args={}):
         """
         Parameters
@@ -22,12 +22,11 @@ class sklearn_sm(BaseEstimator,
         model_type: class
             A model type from statsmodels, e.g. sm.OLS or sm.GLM
 
-        model_str: string (optional)
-            A string to be used to specify a formula.
+        model_matrix: ModelMatrix
+            Specify the design matrix.
 
-        model_args: dict
-            A dict of arguments passed to the
-            model_type's fit method when fitting.
+        model_args: dict (optional)
+            Arguments passed to the statsmodels model.
 
         Notes
         -----
@@ -39,13 +38,14 @@ class sklearn_sm(BaseEstimator,
 
         """
         self.model_type = model_type
-        self.model_str = model_str
+        self.model_matrix = model_matrix
         self.model_args = model_args
         
     def fit(self, X, y):
         """
         Fit a statsmodel model
-        with design matrix X and response y.
+        with design matrix 
+        determined from X and response y.
 
         Parameters
         ----------
@@ -57,13 +57,11 @@ class sklearn_sm(BaseEstimator,
             Response vector.
         """
 
-        if self.model_str:    # assume X and y are dataframes
-            D = pd.concat([y, X], axis=1) # reconstitute data
-            y, X = dmatrices(self.model_str,
-                             data=D,
-                             return_type='dataframe')
+        if self.model_matrix is not None:
+            self.model_matrix_ = self.model_matrix.fit(X)
+            X = self.model_matrix_.transform(X)
         self.model_ = self.model_type(y, X, **self.model_args)
-        self.results_ = self._model.fit()
+        self.results_ = self.model_.fit()
 
     def predict(self, X):
         """
@@ -77,10 +75,8 @@ class sklearn_sm(BaseEstimator,
             Design matrix.
 
         """
-        if self.model_str:
-            X = dmatrix(self.model_str.split('~')[1],
-                        data=X,
-                        return_type='dataframe')
+        if self.model_matrix is not None:
+            X = self.model_matrix_.transform(X)
         return self.results_.predict(exog=X)
  
     def score(self, X, y, sample_weight=None):

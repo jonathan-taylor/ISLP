@@ -308,7 +308,10 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
         dfs = []
 
         if self.intercept:
-            dfs.append(pd.DataFrame({'intercept':np.ones(X.shape[0])}))
+            df = pd.DataFrame({'intercept':np.ones(X.shape[0])})
+            if isinstance(X, (pd.Series, pd.DataFrame)):
+                df.index = X.index
+            dfs.append(df)
 
         for term_ in terms:
             term_df = self.build_columns(term_, X)[0]
@@ -368,7 +371,6 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
 
         if isinstance(var, Column):
             cols, names = var.get_columns(X, fit=fit)
-            print(var, names, 'huh')
         elif isinstance(var, Variable):
             cols = []
             names = []
@@ -379,7 +381,7 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
             cols = np.column_stack(cols)
             if len(names) != cols.shape[1]:
                 names = ['{0}[{1}]'.format(var.name, j) for j in range(cols.shape[1])]
-            
+
             if var.encoder:
                 try:
                     check_is_fitted(var.encoder)
@@ -387,7 +389,8 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
                         raise ValueError('encoder has already been fit previously')
                 except NotFittedError as e:
                     if fit:
-                        self.fit_encoder(var, cols)
+                        self.fit_encoder(var, pd.DataFrame(np.asarray(cols),
+                                                           columns=names))
                     else:
                         raise(e)
                 cols = var.encoder.transform(cols)

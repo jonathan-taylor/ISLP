@@ -27,6 +27,12 @@ def load_data(dataset):
                 'xtrain':xtrain,
                 'ytest':ytest,
                 'ytrain':ytrain}
+    elif dataset == 'Hitters':
+        filename = resource_filename('ISLP', pjoin('data', '%s.csv' % dataset))
+        df = pd.read_csv(filename)
+        for col in ['League', 'Division', 'NewLeague']:
+            df[col] = pd.Categorical(df[col])
+        return df
     elif dataset == 'Carseats':
         filename = resource_filename('ISLP', pjoin('data', '%s.csv' % dataset))
         df = pd.read_csv(filename)
@@ -35,9 +41,17 @@ def load_data(dataset):
         return df
     elif dataset == 'NYSE':
         filename = resource_filename('ISLP', pjoin('data', '%s.csv' % dataset))
-        return pd.read_csv(filename).set_index('date')
+        df = pd.read_csv(filename).set_index('date')
+        return df
+    elif dataset == 'Publication':
+        df = pd.read_csv(resource_filename('ISLP', pjoin('data', 'Publication.csv')))
+        for col in ['mech']:
+            df[col] = pd.Categorical(df[col])
+        return df
     elif dataset == 'BrainCancer':
         df = pd.read_csv(resource_filename('ISLP', pjoin('data', 'BrainCancer.csv')))
+        for col in ['sex', 'diagnosis', 'loc', 'stereo']:
+            df[col] = pd.Categorical(df[col])
         return df
     elif dataset == 'Wage':
         df = pd.read_csv(resource_filename('ISLP', pjoin('data', 'Wage.csv')))

@@ -212,7 +212,7 @@ def _check_categories(categorical_features, X):
 
     for f_idx in range(n_features):
         if is_categorical[f_idx]:
-            categories = np.unique(X_list[f_idx])
+            categories = np.array([v for v in set(X_list[f_idx])])
             missing = []
             for c in categories:
                 try:
@@ -221,7 +221,7 @@ def _check_categories(categorical_features, X):
                     missing.append(False)
             missing = np.array(missing)
             if missing.any():
-                categories = categories[~missing]
+                categories = sorted(categories[~missing])
 
         else:
             categories = None

@@ -1,8 +1,14 @@
 import numpy as np, pandas as pd
 
-from ..transforms import Poly
+from .model_matrix import (ModelMatrix,
+                           Column,
+                           Variable,
+                           poly,
+                           ns,
+                           bs,
+                           derived_variable,
+                           pca)
 
-from .model_matrix import ModelMatrix, Column, Variable
 from .sklearn_wrap import sklearn_sm
 
 def summarize(results,
@@ -39,12 +45,12 @@ def summarize(results,
         return results_table[results_table.columns[:-2]]
     return results_table
 
-def poly(X, degree):
-    """  
-    Create columns of design matrix
-    for orthogonal polynomial for a given series X
-    """
+# def poly(X, degree):
+#     """  
+#     Create columns of design matrix
+#     for orthogonal polynomial for a given series X
+#     """
 
-    result = Poly(degree=degree).fit_transform(X)
+#     result = Poly(degree=degree).fit_transform(X)
 
 
