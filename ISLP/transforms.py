@@ -70,14 +70,14 @@ class Poly(TransformerMixin, BaseEstimator):
 
         self.columns_ = range(self.degree+1)
         if not self.intercept:
-            self.columns_ = self.columns_[1:]
+            self.columns_ = self.columns_[:-1]
 
         if isinstance(X_orig, (pd.Series, pd.DataFrame)):
-            if hasattr(X_orig, 'name'): # a pd.Series
+            if isinstance(X_orig, pd.Series):
                 name = X_orig.name
             else:
                 name = X_orig.columns[0]
-            self.columns_ = ['poly(%s, %d)' % (name, d) 
+            self.columns_ = ['{0}[{1}]'.format(self, d)
                              for d in self.columns_]
 
         return self
@@ -387,14 +387,14 @@ class BSpline(TransformerMixin, BaseEstimator):
         self.columns_ = range(self.nbasis_)
 
         if not self.intercept:
-            self.columns_ = self.columns_[1:]
+            self.columns_ = self.columns_[:-1]
 
         if isinstance(X_orig, (pd.Series, pd.DataFrame)):
-            if hasattr(X_orig, 'name'): # a pd.Series
+            if isinstance(X_orig, pd.Series):
                 name = X_orig.name
             else:
                 name = X_orig.columns[0] # a pd.DataFrame
-            self.columns_ = ['bs(%s, %d)' % (name, d) 
+            self.columns_ = ['{0}[{1}]'.format(self, d)
                              for d in self.columns_]
         return self
     
@@ -567,14 +567,14 @@ class NaturalSpline(TransformerMixin, BaseEstimator):
         self.columns_ = range(self.nbasis_-2) # two constraints
 
         if not self.intercept:
-            self.columns_ = self.columns_[1:]
+            self.columns_ = self.columns_[:-1]
 
         if isinstance(X_orig, (pd.Series, pd.DataFrame)):
-            if hasattr(X_orig, 'name'): # a pd.Series
+            if isinstance(X_orig, pd.Series):
                 name = X_orig.name
             else:
                 name = X_orig.columns[0] # a pd.DataFrame
-            self.columns_ = ['ns(%s, %d)' % (name, d) 
+            self.columns_ = ['{0}[{1}]'.format(self, d)
                              for d in self.columns_]
         return self
     
