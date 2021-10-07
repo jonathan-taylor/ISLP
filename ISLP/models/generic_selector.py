@@ -444,7 +444,6 @@ class FeatureSelector(MetaEstimatorMixin):
                                         batch_results)
 
             results.extend(batch_results)
-            print(len(results), best)
 
             if cur[2] is not None and np.nanmean(cur[2]) > np.nanmean(best[2]):
                 best = cur
