@@ -8,6 +8,9 @@ from .model_matrix import (ModelMatrix,
                            bs,
                            derived_variable,
                            pca)
+from .strategy import (min_max as min_max_strategy,
+                       step as step_strategy)
+from .generic_selector import FeatureSelector
 
 from .sklearn_wrap import sklearn_sm
 

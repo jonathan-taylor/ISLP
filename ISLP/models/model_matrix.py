@@ -7,8 +7,10 @@ import numpy as np, pandas as pd
 from sklearn.base import TransformerMixin, BaseEstimator, clone
 from sklearn.utils.validation import check_is_fitted
 from sklearn.preprocessing import (OneHotEncoder,
-                                   OrdinalEncoder)
+                                   OrdinalEncoder,
+                                   StandardScaler)
 from sklearn.decomposition import PCA
+from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn.exceptions import NotFittedError
 
 from .columns import (_get_column_info,
@@ -31,7 +33,8 @@ class Variable(NamedTuple):
     variables: tuple
     name: str
     encoder: Any
-
+    use_transform: bool=True   # if False use the predict method
+    
 #### contrast specific code
 
 class Contrast(TransformerMixin, BaseEstimator):
@@ -40,10 +43,12 @@ class Contrast(TransformerMixin, BaseEstimator):
     """
 
     def __init__(self,
-                 method='drop'):
+                 method='drop',
+                 drop_level=None):
 
         self.method = method
-
+        self.drop_level = drop_level
+        
     def fit(self, X):
 
         self.encoder_ = OneHotEncoder(drop=None,
@@ -53,9 +58,17 @@ class Contrast(TransformerMixin, BaseEstimator):
 
         cols = self.encoder_.transform(X)
         if self.method == 'drop':
-            self.columns_ = column_names[1:]
-            self.contrast_matrix_ = np.zeros((len(cats), len(cats)-1))
-            self.contrast_matrix_[1:,:] = np.identity(len(cats)-1)
+            if self.drop_level is None:
+                drop_level = column_names[0]
+            else:
+                drop_level = self.drop_level
+            drop_idx = column_names.index(drop_level)
+            column_names.remove(drop_level)
+            self.columns_ = column_names
+            self.contrast_matrix_ = np.identity(len(cats))
+            keep = np.ones(len(cats), np.bool)
+            keep[drop_idx] = 0
+            self.contrast_matrix_ = self.contrast_matrix_[:,keep]
         elif self.method == 'sum':
             self.columns_ = column_names[1:]
             self.contrast_matrix_ = np.zeros((len(cats), len(cats)-1))
@@ -84,7 +97,7 @@ class Contrast(TransformerMixin, BaseEstimator):
             return df
         return value
 
-def contrast(col, method, *args, **kwargs):
+def contrast(col, method, drop_level=None):
     """
     Create PCA encoding of features
     from a sequence of variables.
@@ -95,8 +108,11 @@ def contrast(col, method, *args, **kwargs):
     Parameters
     ----------
 
-    variables : [column identifier, Column or Variable]
-        Sequence whose columns will be encoded by PCA.
+    col: column identifier
+
+    method: 
+
+    drop_level: level identifier
 
     Returns
     -------
@@ -110,7 +126,8 @@ def contrast(col, method, *args, **kwargs):
         name = col.name
     else:
         name = str(col)
-    encoder = Contrast(method)
+    encoder = Contrast(method,
+                       drop_level=drop_level)
     return Column(col,
                   name,
                   is_categorical=True,
@@ -224,7 +241,7 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
         for term in self.terms:
             if isinstance(term, Variable):
                 self.variables_[term] = term
-                self.build_columns(term, X, fit=True) # these encoders won't have been fit yet
+                self.build_columns(X, term, fit=True) # these encoders won't have been fit yet
                 for var in term.variables:
                     if var not in self.variables_ and isinstance(var, Variable):
                             self.variables_[var] = var
@@ -238,7 +255,7 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
                     for var in term:
                         if var in self.variables_:
                             var = self.variables_[var]
-                        cols, cur_names = self.build_columns(var, X, fit=True) # these encoders won't have been fit yet
+                        cols, cur_names = self.build_columns(X, var, fit=True) # these encoders won't have been fit yet
                         column_map[var.name] = range(idx, idx + cols.shape[1])
                         column_names[var.name] = cur_names
                         idx += cols.shape[1]                 
@@ -262,7 +279,7 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
             idx += 1 # intercept will be first column
         
         for term, term_ in zip(self.terms, self.terms_):
-            term_df, term_names = self.build_columns(term_, X)
+            term_df, term_names = self.build_columns(X, term_)
             self.column_names_[term] = term_names
             self.column_map_[term] = slice(idx, idx + term_df.shape[1])
             idx += term_df.shape[1]
@@ -314,7 +331,7 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
             dfs.append(df)
 
         for term_ in terms:
-            term_df = self.build_columns(term_, X)[0]
+            term_df = self.build_columns(X, term_)[0]
             dfs.append(term_df)
 
         if isinstance(X, (pd.Series, pd.DataFrame)):
@@ -342,23 +359,21 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
 
         """
 
-        if var.encoder in self.encoders_:
-            return var.encoder
-        else:
+        if var.encoder not in self.encoders_:
             self.encoders_[var] = var.encoder.fit(X)
-        
-    def build_columns(self, var, X, fit=False):
+            
+    def build_columns(self, X, var, fit=False):
         """
         Build columns for a Variable from X.
 
         Parameters
         ----------
 
-        var : Variable
-            Variable whose columns will be built.
-
         X : array-like
             X on which columns are evaluated.
+
+        var : Variable
+            Variable whose columns will be built.
 
         fit : bool (optional)
             If True, then try to fit encoder.
@@ -375,7 +390,7 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
             cols = []
             names = []
             for v in var.variables:
-                cur, cur_names = self.build_columns(v, X, fit=fit)
+                cur, cur_names = self.build_columns(X, v, fit=fit)
                 cols.append(cur)
                 names.extend(cur_names)
             cols = np.column_stack(cols)
@@ -391,13 +406,22 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
                     if fit:
                         self.fit_encoder(var, pd.DataFrame(np.asarray(cols),
                                                            columns=names))
+                    # known issue with Pipeline
+                    # https://github.com/scikit-learn/scikit-learn/issues/18648
+                    elif isinstance(var.encoder, Pipeline):  
+                        check_is_fitted(var.encoder, 'n_features_in_') 
                     else:
                         raise(e)
-                cols = var.encoder.transform(cols)
+                except Exception as e:  # was not the NotFitted
+                    raise ValueError(e)
+                if var.use_transform:
+                    cols = var.encoder.transform(cols)
+                else:
+                    cols = var.encoder.predict(cols)
                 if hasattr(var.encoder, 'columns_'):
                     names = var.encoder.columns_
                 else:
-                    if cols.shape[1] > 1:
+                    if cols.ndim > 1 and cols.shape[1] > 1:
                         names = ['{0}[{1}]'.format(var.name, j) for j in range(cols.shape[1])]
                     else:
                         names = [var.name]
@@ -411,7 +435,7 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
             val.index = X.index
         return val, names
 
-    def build_sequence(self, X):
+    def build_sequence(self, X, anova_type='sequential'):
         """
         Build implied sequence of submodels 
         based on successively including more terms.
@@ -426,20 +450,33 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
             if isinstance(X, (pd.Series, pd.DataFrame)):
                 df_int.index = X.index
             dfs.append(df_int)
+        else:
+            df_int = pd.DataFrame({'zero':np.zeros(X.shape[0])})
+            if isinstance(X, (pd.Series, pd.DataFrame)):
+                df_int.index = X.index
+            dfs.append(df_int)
 
         for term_ in self.terms_:
-            term_df, _  = self.build_columns(term_, X)
+            term_df, _  = self.build_columns(X, term_)
             if isinstance(X, (pd.Series, pd.DataFrame)):
                 term_df.index = X.index
 
             dfs.append(term_df)
 
-        if isinstance(X, (pd.Series, pd.DataFrame)):
-            return (pd.concat(dfs[:i], axis=1) for i in range(1, len(dfs)+1))
+        if anova_type == 'sequential':
+            if isinstance(X, (pd.Series, pd.DataFrame)):
+                return (pd.concat(dfs[:i], axis=1) for i in range(1, len(dfs)+1))
+            else:
+                return (np.column_stack(dfs[:i]) for i in range(1, len(dfs)+1))
+        elif anova_type == 'drop':
+            if isinstance(X, (pd.Series, pd.DataFrame)):
+                return (pd.concat([dfs[j] for j in range(len(dfs)) if j != i], axis=1) for i in range(len(dfs)))
+            else:
+                return (np.column_stack([dfs[j] for j in range(len(dfs)) if j != i]) for i in range(len(dfs)))
         else:
-            return (np.column_stack(*dfs[:i]) for i in range(1, len(dfs)+1))
+            raise ValueError('anova_type must be one of ["sequential", "drop"]')
 
-def derived_variable(*variables, encoder=None, name=None):
+def derived_variable(*variables, encoder=None, name=None, use_transform=True):
     """
     Create a Variable, optionally
     applying an encoder to the stacked columns.
@@ -466,7 +503,7 @@ def derived_variable(*variables, encoder=None, name=None):
 
     if name is None:
         name = str(encoder)
-    return Variable(variables, name, encoder)
+    return Variable(variables, name, encoder, use_transform=use_transform)
 
 def poly(col, *args, intercept=False, name=None, **kwargs):
     """
@@ -494,15 +531,15 @@ def poly(col, *args, intercept=False, name=None, **kwargs):
     var : Variable
     """
     shortname, klass = 'poly', Poly
+    encoder = klass(*args,
+                    intercept=intercept,
+                    **kwargs) 
     if name is None:
         if isinstance(col, Column):
             name = col.name
         else:
             name = str(col)
         name = f'{shortname}({name})'
-    encoder = klass(*args,
-                    intercept=intercept,
-                    **kwargs) 
     return derived_variable(col,
                             name=name,
                             encoder=encoder)
@@ -585,7 +622,7 @@ def bs(col, *args, intercept=False, name=None, **kwargs):
                             name=name,
                             encoder=encoder)
 
-def pca(variables, name, *args, **kwargs):
+def pca(variables, name, *args, scale=False, **kwargs):
     """
     Create PCA encoding of features
     from a sequence of variables.
@@ -608,8 +645,56 @@ def pca(variables, name, *args, **kwargs):
     shortname, klass = 'pca', PCA
     encoder = klass(*args,
                     **kwargs) 
+    if scale:
+        scaler = StandardScaler(with_mean=True,
+                                with_std=True)
+        encoder = make_pipeline(scaler, encoder)
+
     return derived_variable(*variables,
                             name=f'{shortname}({name})',
                             encoder=encoder)
+
+def clusterer(variables, name, transform, scale=False):
+    """
+    Create PCA encoding of features
+    from a sequence of variables.
+    
+    Additional `args` and `kwargs`
+    are passed to `PCA`.
+
+    Parameters
+    ----------
+
+    variables : [column identifier, Column or Variable]
+        Sequence whose columns will be encoded by PCA.
+
+    name: str
+        name for the Variable
+
+    transform: Transformer
+        A transform with a `predict` method.
+
+    Returns
+    -------
+
+    var : Variable
+
+    """
+
+    if scale:
+        scaler = StandardScaler(with_mean=True,
+                                with_std=True)
+        encoder = make_pipeline(scaler, transform)
+    else:
+        encoder = transform
+
+    intermed = Variable((derived_variable(*variables,
+                                          name='cluster_intermed',
+                                          encoder=encoder,
+                                          use_transform=False),),
+                            name=f'Cat({encoder}({name}))',
+                            encoder=Contrast(method='drop'))
+
+    return intermed
 
     
