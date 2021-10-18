@@ -34,6 +34,7 @@ class Variable(NamedTuple):
     name: str
     encoder: Any
     use_transform: bool=True   # if False use the predict method
+    pure_columns: bool=False
     
 #### contrast specific code
 
@@ -234,14 +235,19 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
         # so that their columns are built if needed
 
         for col_ in self.columns_:
-            self.variables_[col_] = Variable((col_,), str(col_), None) 
+            self.variables_[col_] = Variable((col_,), str(col_), None, pure_columns=True) 
 
         # find possible interactions and other variables
+
+        tmp_cache = {}
 
         for term in self.terms:
             if isinstance(term, Variable):
                 self.variables_[term] = term
-                self.build_columns(X, term, fit=True) # these encoders won't have been fit yet
+                self.build_columns(X,
+                                   term,
+                                   col_cache=tmp_cache,
+                                   fit=True) # these encoders won't have been fit yet
                 for var in term.variables:
                     if var not in self.variables_ and isinstance(var, Variable):
                             self.variables_[var] = var
@@ -255,7 +261,10 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
                     for var in term:
                         if var in self.variables_:
                             var = self.variables_[var]
-                        cols, cur_names = self.build_columns(X, var, fit=True) # these encoders won't have been fit yet
+                        cols, cur_names = self.build_columns(X,
+                                                             var,
+                                                             col_cache=tmp_cache,
+                                                             fit=True) # these encoders won't have been fit yet
                         column_map[var.name] = range(idx, idx + cols.shape[1])
                         column_names[var.name] = cur_names
                         idx += cols.shape[1]                 
@@ -263,7 +272,7 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
                     encoder_ = Interaction(names, column_map, column_names)
                     self.variables_[term] = Variable(term, ':'.join(n for n in names), encoder_)
                 elif isinstance(term, Column):
-                    self.variables_[term] = Variable((term,), term.name, None)
+                    self.variables_[term] = Variable((term,), term.name, None, pure_columns=True)
                 else:
                     raise ValueError('each element in a term should be a Variable, Column or identify a column')
                 
@@ -324,6 +333,8 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
 
         dfs = []
 
+        col_cache = {}  # avoid recomputing the same columns
+
         if self.intercept:
             df = pd.DataFrame({'intercept':np.ones(X.shape[0])})
             if isinstance(X, (pd.Series, pd.DataFrame)):
@@ -331,7 +342,10 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
             dfs.append(df)
 
         for term_ in terms:
-            term_df = self.build_columns(X, term_)[0]
+            term_df = self.build_columns(X,
+                                         term_,
+                                         col_cache=col_cache,
+                                         fit=False)[0]
             dfs.append(term_df)
 
         if isinstance(X, (pd.Series, pd.DataFrame)):
@@ -362,7 +376,7 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
         if var.encoder not in self.encoders_:
             self.encoders_[var] = var.encoder.fit(X)
             
-    def build_columns(self, X, var, fit=False):
+    def build_columns(self, X, var, col_cache={}, fit=False):
         """
         Build columns for a Variable from X.
 
@@ -375,6 +389,11 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
         var : Variable
             Variable whose columns will be built.
 
+        col_cache: 
+            Dict where columns will be stored --
+            if `var.name` in `col_cache` then just
+            returns those columns.
+
         fit : bool (optional)
             If True, then try to fit encoder.
             Will raise an error if encoder has already been fit.
@@ -384,13 +403,19 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
         if var in self.column_info_:
             var = self.column_info_[var]
 
+        if var.name in col_cache:
+            return col_cache[var.name]
+        
         if isinstance(var, Column):
             cols, names = var.get_columns(X, fit=fit)
         elif isinstance(var, Variable):
             cols = []
             names = []
             for v in var.variables:
-                cur, cur_names = self.build_columns(X, v, fit=fit)
+                cur, cur_names = self.build_columns(X,
+                                                    v,
+                                                    col_cache=col_cache,
+                                                    fit=fit)
                 cols.append(cur)
                 names.extend(cur_names)
             cols = np.column_stack(cols)
@@ -433,6 +458,8 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
 
         if isinstance(X, (pd.DataFrame, pd.Series)):
             val.index = X.index
+
+        col_cache[var.name] = (val, names)
         return val, names
 
     def build_sequence(self, X, anova_type='sequential'):
@@ -442,6 +469,8 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
         """
 
         check_is_fitted(self)
+
+        col_cache = {}  # avoid recomputing the same columns
 
         dfs = []
 
@@ -457,7 +486,10 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
             dfs.append(df_int)
 
         for term_ in self.terms_:
-            term_df, _  = self.build_columns(X, term_)
+            term_df, _  = self.build_columns(X,
+                                             term_,
+                                             col_cache=col_cache,
+                                             fit=False)
             if isinstance(X, (pd.Series, pd.DataFrame)):
                 term_df.index = X.index
 
