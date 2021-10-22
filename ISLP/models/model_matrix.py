@@ -404,14 +404,14 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
         if var in self.column_info_:
             var = self.column_info_[var]
 
-        if joblib_hash(var) in col_cache:
-            return col_cache[joblib_hash(var)]
+        if joblib_hash([var, X]) in col_cache:
+            return col_cache[joblib_hash([var, X])]
         
         if isinstance(var, Column):
-            if joblib_hash(var) not in col_cache:
+            if joblib_hash([var, X]) not in col_cache:
                 cols, names = var.get_columns(X, fit=fit)
-                col_cache[joblib_hash(var)] = cols, names
-            cols, name = col_cache[joblib_hash(var)]
+                col_cache[joblib_hash([var, X])] = cols, names
+            cols, name = col_cache[joblib_hash([var, X])]
         elif isinstance(var, Variable):
             cols = []
             names = []
@@ -463,7 +463,7 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
         if isinstance(X, (pd.DataFrame, pd.Series)):
             val.index = X.index
 
-        col_cache[joblib_hash(var.name)] = (val, names)
+        col_cache[joblib_hash([var.name, X])] = (val, names)
         return val, names
 
     def build_sequence(self, X, anova_type='sequential'):
