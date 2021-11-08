@@ -349,12 +349,21 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
                                          fit=False)[0]
             dfs.append(term_df)
 
-        if isinstance(X, (pd.Series, pd.DataFrame)):
-            df = pd.concat(dfs, axis=1)
-            df.index = X.index
-            return df
-        else:
-            return np.column_stack(dfs)
+        if len(dfs):
+            if isinstance(X, (pd.Series, pd.DataFrame)):
+                df = pd.concat(dfs, axis=1)
+                df.index = X.index
+                return df
+            else:
+                return np.column_stack(dfs)
+        else:  # return a 0 design
+            zero = np.zeros(X.shape[0])
+            if isinstance(X, (pd.Series, pd.DataFrame)):
+                df = pd.DataFrame({'zero': zero})
+                df.index = X.index
+                return df
+            else:
+                return zero
 
     def fit_encoder(self, var, X):
         """
