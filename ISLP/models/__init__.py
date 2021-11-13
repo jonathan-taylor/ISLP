@@ -9,10 +9,12 @@ from .model_matrix import (ModelMatrix,
                            derived_variable,
                            pca)
 from .strategy import (min_max as min_max_strategy,
-                       step as step_strategy)
+                       Stepwise)
 from .generic_selector import FeatureSelector
 
-from .sklearn_wrap import sklearn_sm
+from .sklearn_wrap import (sklearn_sm,
+                           sklearn_selected,
+                           sklearn_selection_path)
 
 def summarize(results,
               conf_int=False):

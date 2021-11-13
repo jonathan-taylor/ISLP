@@ -94,7 +94,7 @@ class MinMaxCandidates(object):
 
         self._have_already_run = False
 
-        if lower_terms is not None:
+        if lower_terms:
             lower_terms_ = []
             for term in lower_terms:
                 mm_terms = list(self.model_matrix.terms)
@@ -106,7 +106,7 @@ class MinMaxCandidates(object):
         else:
             self.lower_terms = set([])
 
-        if upper_terms is not None:
+        if upper_terms:
             upper_terms_ = []
             for term in upper_terms:
                 mm_terms = list(self.model_matrix.terms)
@@ -171,6 +171,7 @@ class MinMaxCandidates(object):
         
     def check_finished(self,
                        results,
+                       path,
                        best,
                        batch_results):
         """
@@ -190,7 +191,7 @@ class MinMaxCandidates(object):
         return new_best, True
 
 
-class StepCandidates(MinMaxCandidates):
+class Stepwise(MinMaxCandidates):
 
     def __init__(self,
                  model_matrix,
@@ -285,7 +286,7 @@ class StepCandidates(MinMaxCandidates):
                                           upper_terms.issuperset(state | set([c])) and
                                           is_valid(state | set([c]))))
         else:
-            forward = None
+            forward = []
 
         if len(state) > self.min_terms: # symmetric difference
             backward = (tuple(sorted(state ^ set([c])))
@@ -294,7 +295,7 @@ class StepCandidates(MinMaxCandidates):
                                            upper_terms.issuperset(state ^ set([c])) and
                                            is_valid(state ^ set([c]))))
         else:
-            backward = None
+            backward = []
 
         if self.direction == 'forward':
             return forward
@@ -302,30 +303,184 @@ class StepCandidates(MinMaxCandidates):
             return backward
         else:
             return chain.from_iterable([forward, backward])
-        
-    def check_finished(self,
-                       results,
-                       best,
-                       batch_results):
+
+    @staticmethod
+    def first_peak(model_matrix,
+                   direction='forward',
+                   min_terms=1,
+                   max_terms=1,
+                   random_state=0,
+                   lower_terms=[],
+                   upper_terms=[],
+                   initial_terms=[],
+                   validator=None,
+                   parsimonious=False):
         """
-        Check if we should continue or not. 
+        Parameters
+        ----------
+        X: {array-like, sparse matrix}, shape = [n_samples, n_features]
+            Training vectors, where n_samples is the number of samples and
+            n_features is the number of features.
+            New in v 0.13.0: pandas DataFrames are now also accepted as
+            argument for X.
+        direction: str
+            One of ['forward', 'backward', 'both']
+        min_terms: int (default: 1)
+            Minumum number of terms to select
+        max_terms: int (default: 1)
+            Maximum number of terms to select
+        lower_terms: [Variable]
+            Subset of terms to keep: smallest model.
+        upper_terms: [Variable]
+            Largest possible model.
+        initial_terms: column identifiers, default=[]
+            Subset of terms to be used to initialize when direction
+            is `both`. If None defaults to behavior of `forward`.
+            where `self.columns` will correspond to columns if X is a `pd.DataFrame`
+            or an array of integers if X is an `np.ndarray`
+        validator: callable
+            Callable taking a single argument: state,
+            returning whether this is a valid state.
+        parsimonious: bool
+            If True, use the 1sd rule: among the shortest models
+            within one standard deviation of the best score
+            pick the one with the best average score. 
 
-        For stepwise search we stop if we cannot improve
-        over our current best score.
+        Returns
+        -------
+
+        initial_state: tuple
+            (column_names, feature_idx)
+
+        state_generator: callable
+            Object that proposes candidates
+            based on current state. Takes a single 
+            argument `state`
+
+        build_submodel: callable
+            Candidate generator that enumerate
+            all valid subsets of columns.
+
+        check_finished: callable
+            Check whether to stop. Takes two arguments:
+            `best_result` a dict with keys of scores
+            and `state`.
 
         """
-        new_best = (None, None, None)
-        batch_best_score = -np.inf
 
-        for state, iteration, scores in batch_results:
-            avg_score = np.nanmean(scores)
-            if avg_score > batch_best_score:
-                new_best = (state, iteration, scores)
-                batch_best_score = avg_score
-                
-        finished = batch_best_score <= np.nanmean(best[2])
-        return new_best, finished
+        check_is_fitted(model_matrix)
 
+        step = Stepwise(model_matrix,
+                        direction=direction,
+                        min_terms=min_terms,
+                        max_terms=max_terms,
+                        lower_terms=lower_terms,
+                        upper_terms=upper_terms,
+                        validator=validator)
+
+        # pick an initial state
+
+        if initial_terms is not None:
+            initial_terms_ = []
+            for term in initial_terms:
+                mm_terms = list(model_matrix.terms)
+                if term in mm_terms:
+                    idx = mm_terms.index(term)
+                    term = model_matrix.terms_[idx]
+                initial_terms_.append(term)
+            initial_state = tuple(initial_terms_)
+        else:
+            initial_state = ()
+
+        if not parsimonious:
+            _postprocess = _postprocess_best
+        else:
+            _postprocess = _postprocess_best_1sd
+
+        return Strategy(initial_state,
+                        step.candidate_states,
+                        model_matrix.build_submodel,
+                        first_peak,
+                        _postprocess)
+
+    @staticmethod
+    def fixed_steps(model_matrix,
+                    n_steps,
+                    direction='forward',
+                    min_terms=0,
+                    max_terms=None,
+                    lower_terms=[],
+                    upper_terms=[],
+                    initial_terms=[],
+                    validator=None):
+        """
+        Strategy that stops first time
+        a given model size is reached.
+
+        Parameters
+        ----------
+        X: {array-like, sparse matrix}, shape = [n_samples, n_features]
+            Training vectors, where n_samples is the number of samples and
+            n_features is the number of features.
+            New in v 0.13.0: pandas DataFrames are now also accepted as
+            argument for X.
+        n_steps: int
+            How many steps to take in the search?
+        direction: str
+            One of ['forward', 'backward', 'both']
+        min_terms: int (default: 0)
+            Minumum number of terms to select
+        max_terms: int (default: None)
+            Maximum number of terms to select.
+            If None defaults to len(model_matrix.terms_)
+        lower_terms: [Variable]
+            Subset of terms to keep: smallest model.
+        upper_terms: [Variable]
+            Largest possible model.
+        initial_terms: column identifiers, default=[]
+            Subset of terms to be used to initialize.
+
+        Returns
+        -------
+
+        strategy : NamedTuple
+
+        """
+
+        step = Stepwise(model_matrix,
+                        direction=direction,
+                        min_terms=min_terms,
+                        max_terms=max_terms,
+                        lower_terms=lower_terms,
+                        upper_terms=upper_terms,
+                        validator=validator)
+
+        # pick an initial state
+
+        if initial_terms is not None:
+            initial_terms_ = []
+            for term in initial_terms:
+                mm_terms = list(model_matrix.terms)
+                if term in mm_terms:
+                    idx = mm_terms.index(term)
+                    term = model_matrix.terms_[idx]
+                initial_terms_.append(term)
+            initial_state = tuple(initial_terms_)
+        else:
+            initial_state = ()
+
+        if not step.lower_terms.issubset(initial_state):
+            raise ValueError('initial_state should contain %s' % str(step.lower_terms))
+
+        if not step.upper_terms.issuperset(initial_state):
+            raise ValueError('initial_state should be contained in %s' % str(step.upper_terms))
+
+        return Strategy(initial_state,
+                        step.candidate_states,
+                        model_matrix.build_submodel,
+                        partial(fixed_steps, n_steps),
+                        partial(_postprocess_fixed_steps, n_steps))
+    
 
 def min_max(model_matrix,
             min_terms=1,
@@ -401,110 +556,6 @@ def min_max(model_matrix,
                     strategy.check_finished,
                     _postprocess)
 
-def step(model_matrix,
-         direction='forward',
-         min_terms=1,
-         max_terms=1,
-         random_state=0,
-         lower_terms=None,
-         upper_terms=None,
-         initial_terms=None,
-         validator=None,
-         parsimonious=True):
-    """
-    Parameters
-    ----------
-    X: {array-like, sparse matrix}, shape = [n_samples, n_features]
-        Training vectors, where n_samples is the number of samples and
-        n_features is the number of features.
-        New in v 0.13.0: pandas DataFrames are now also accepted as
-        argument for X.
-    direction: str
-        One of ['forward', 'backward', 'both']
-    min_terms: int (default: 1)
-        Minumum number of terms to select
-    max_terms: int (default: 1)
-        Maximum number of terms to select
-    lower_terms: [Variable]
-        Subset of terms to keep: smallest model.
-    upper_terms: [Variable]
-        Largest possible model.
-    initial_terms: column identifiers, default=None
-        Subset of terms to be used to initialize when direction
-        is `both`. If None defaults to behavior of `forward`.
-        where `self.columns` will correspond to columns if X is a `pd.DataFrame`
-        or an array of integers if X is an `np.ndarray`
-    validator: callable
-        Callable taking a single argument: state,
-        returning whether this is a valid state.
-    parsimonious: bool
-        If True, use the 1sd rule: among the shortest models
-        within one standard deviation of the best score
-        pick the one with the best average score. 
-
-    Returns
-    -------
-
-    initial_state: tuple
-        (column_names, feature_idx)
-
-    state_generator: callable
-        Object that proposes candidates
-        based on current state. Takes a single 
-        argument `state`
-
-    build_submodel: callable
-        Candidate generator that enumerate
-        all valid subsets of columns.
-
-    check_finished: callable
-        Check whether to stop. Takes two arguments:
-        `best_result` a dict with keys of scores
-        and `state`.
-
-    """
-
-    step = StepCandidates(model_matrix,
-                          direction=direction,
-                          min_terms=min_terms,
-                          max_terms=max_terms,
-                          lower_terms=lower_terms,
-                          upper_terms=upper_terms,
-                          validator=validator)
-    
-    # pick an initial state
-
-    if direction in ['forward', 'both']:
-        forward_terms = sorted(step.lower_terms)
-        if initial_terms is None:
-            initial_terms = forward_terms
-    elif direction == 'backward':
-        if initial_terms is None:
-            random_state = check_random_state(random_state)
-            initial_idx = sorted(random_state.choice(np.arange(len(model_matrix.terms_)),
-                                                     step.max_terms,
-                                                     replace=False))
-            initial_terms = [model_matrix.terms_[i] for i in initial_idx]
-    initial_state = tuple(initial_terms)
-
-    if len(initial_terms) > step.max_terms:
-        raise ValueError('initial_terms should be of length <= %d' % step.max_terms)
-    if len(initial_terms) < step.min_terms:
-        raise ValueError('initial_terms should be of length >= %d' % step.min_terms)
-    if not step.lower_terms.issubset(initial_terms):
-        raise ValueError('initial_terms should contain %s' % str(step.lower_terms))
-
-    if not parsimonious:
-        _postprocess = _postprocess_best
-    else:
-        _postprocess = _postprocess_best_1sd
-
-    return Strategy(initial_state,
-                    step.candidate_states,
-                    model_matrix.build_submodel,
-                    step.check_finished,
-                    _postprocess)
-
 
 def validator_from_constraints(model_matrix,
                                constraints):
@@ -528,6 +579,54 @@ def validator_from_constraints(model_matrix,
 
     return partial(is_valid, model_matrix, constraints)
 
+
+def first_peak(results,
+               path,
+               best,
+               batch_results):
+    """
+    Check if we should continue or not. 
+
+    For first_peak search we stop if we cannot improve
+    over our current best score.
+
+    """
+    new_best = (None, None, None)
+    batch_best_score = -np.inf
+
+    for state, iteration, scores in batch_results:
+        avg_score = np.nanmean(scores)
+        if avg_score > batch_best_score:
+            new_best = (state, iteration, scores)
+            batch_best_score = avg_score
+
+    any_better = batch_best_score > np.nanmean(best[2])
+    return new_best, not any_better
+
+def fixed_steps(n_steps,
+                results,
+                path,
+                best,
+                batch_results):
+    """
+    Check if we should continue or not. 
+
+    For first_peak search we stop if we cannot improve
+    over our current best score.
+
+    """
+    new_best = (None, None, None)
+    batch_best_score = -np.inf
+
+    for state, iteration, scores in batch_results:
+        avg_score = np.nanmean(scores)
+        if avg_score > batch_best_score:
+            new_best = (state, iteration, scores)
+            batch_best_score = avg_score
+
+    any_better = batch_best_score > np.nanmean(best[2])
+    return new_best, len(new_best[0]) == n_steps
+
 # private functions
 
 
@@ -535,6 +634,28 @@ def _build_submodel(column_info, X, cols):
     return np.column_stack([column_info[col].get_columns(X, fit=True)[0] for col in cols])
 
     
+def _postprocess_fixed_steps(n_steps, results):
+    """
+    Find the best state from `results`
+    based on `avg_score`.
+
+    Return best state and results
+    """
+
+    best_state = None
+    best_score = -np.inf
+
+    new_results = {}
+    for (state, iteration, scores) in results:
+        new_state = tuple(state) # [v.name for v in state])
+        avg_score = np.nanmean(scores)
+        if avg_score > best_score and len(new_state) == n_steps:
+            best_state = new_state
+            best_score = avg_score
+        new_results[new_state] = avg_score
+    return best_state, new_results
+    
+
 def _postprocess_best(results):
     """
     Find the best state from `results`
@@ -554,6 +675,7 @@ def _postprocess_best(results):
             best_state = new_state
             best_score = avg_score
         new_results[new_state] = avg_score
+    
     return best_state, new_results
 
 def _postprocess_best_1sd(results):

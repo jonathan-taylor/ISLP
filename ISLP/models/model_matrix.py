@@ -24,6 +24,8 @@ from ..transforms import (Poly,
                           NaturalSpline,
                           Interaction)
 
+DOCACHE = False
+
 class Variable(NamedTuple):
 
     """
@@ -413,14 +415,17 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
         if var in self.column_info_:
             var = self.column_info_[var]
 
-        if joblib_hash([var, X]) in col_cache:
+        if DOCACHE and joblib_hash([var, X]) in col_cache:
             return col_cache[joblib_hash([var, X])]
         
         if isinstance(var, Column):
-            if joblib_hash([var, X]) not in col_cache:
+            if DOCACHE:
+                if joblib_hash([var, X]) not in col_cache:
+                    cols, names = var.get_columns(X, fit=fit)
+                    col_cache[joblib_hash([var, X])] = cols, names
+                cols, name = col_cache[joblib_hash([var, X])]
+            else:
                 cols, names = var.get_columns(X, fit=fit)
-                col_cache[joblib_hash([var, X])] = cols, names
-            cols, name = col_cache[joblib_hash([var, X])]
         elif isinstance(var, Variable):
             cols = []
             names = []
@@ -472,7 +477,8 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
         if isinstance(X, (pd.DataFrame, pd.Series)):
             val.index = X.index
 
-        col_cache[joblib_hash([var.name, X])] = (val, names)
+        if DOCACHE:
+            col_cache[joblib_hash([var.name, X])] = (val, names)
         return val, names
 
     def build_sequence(self, X, anova_type='sequential'):

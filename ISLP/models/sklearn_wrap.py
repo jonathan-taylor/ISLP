@@ -6,7 +6,7 @@ from sklearn.base import (BaseEstimator,
 from sklearn.utils.validation import check_is_fitted
 
 import statsmodels.api as sm
-from patsy import dmatrix, dmatrices
+from mlxtend.feature_selection.generic_selector import FeatureSelector
 
 class sklearn_sm(BaseEstimator,
                  RegressorMixin): 
@@ -119,4 +119,189 @@ class sklearn_sm(BaseEstimator,
                                                     freq_weights=sample_weight).mean()
 
                 return value / np.mean(sample_weight)
+
+           
+class sklearn_selected(sklearn_sm):
+
+    def __init__(self,
+                 model_type,
+                 strategy,
+                 model_args={},
+                 scoring=None,
+                 cv=None):
+        """
+        Parameters
+        ----------
+
+        model_type: class
+            A model type from statsmodels, e.g. sm.OLS or sm.GLM
+
+        model_matrix: ModelMatrix
+            Specify the design matrix.
+
+        model_args: dict (optional)
+            Arguments passed to the statsmodels model.
+
+        Notes
+        -----
+
+        If model_str is present, then X and Y are presumed
+        to be pandas objects that are placed
+        into a dataframe before formula is evaluated.
+        This affects `fit` and `predict` methods.
+
+        """
+        self.model_type = model_type
+        self.model_args = model_args
+
+        self.strategy = strategy
+        self.cv = cv
+        self.scoring = scoring
+
+                                     
+    def fit(self, X, y):
+        """
+        First, select a model
+        with design matrix 
+        determined from X and response y.
+        Then, fit selected model.
+
+        Parameters
+        ----------
+
+        X : array-like
+            Design matrix.
+
+        y : array-like
+            Response vector.
+        """
+
+        # first run the selection process
+
+        self.sm_ = sklearn_sm(self.model_type,
+                              model_args=self.model_args)
+        self.selector_ = FeatureSelector(self.sm_,
+                                         self.strategy,
+                                         cv=self.cv,
+                                         scoring=self.scoring)
+        self.selector_.fit(X, y)
+        self.selected_state_ = self.selector_.selected_state_
+
+        # now refit the model
+        
+        Xsel = self.selector_.fit_transform(X, y)
+        self.model_ = self.model_type(y, Xsel, **self.model_args)
+        self.results_ = self.model_.fit()
+
+    def predict(self, X):
+        """
+        Compute predictions
+        for design matrix X in selected model.
+
+        Parameters
+        ----------
+
+        X : array-like
+            Design matrix.
+
+        """
+        Xsel = self.selector_.transform(X)
+        return self.results_.predict(exog=Xsel)
+
+
+class sklearn_selection_path(sklearn_sm):
+
+    def __init__(self,
+                 model_type,
+                 strategy,
+                 model_args={},
+                 scoring=None,
+                 cv=None):
+        """
+        Parameters
+        ----------
+
+        model_type: class
+            A model type from statsmodels, e.g. sm.OLS or sm.GLM
+
+        model_matrix: ModelMatrix
+            Specify the design matrix.
+
+        model_args: dict (optional)
+            Arguments passed to the statsmodels model.
+
+        Notes
+        -----
+
+        If model_str is present, then X and Y are presumed
+        to be pandas objects that are placed
+        into a dataframe before formula is evaluated.
+        This affects `fit` and `predict` methods.
+
+        """
+        self.model_type = model_type
+        self.model_args = model_args
+
+        self.strategy = strategy
+        self.cv = cv
+        self.scoring = scoring
+
+    def fit(self, X, y):
+        """
+        First, select a model
+        with design matrix 
+        determined from X and response y.
+        Then, fit selected model.
+
+        Parameters
+        ----------
+
+        X : array-like
+            Design matrix.
+
+        y : array-like
+            Response vector.
+        """
+
+        # first run the selection process
+
+        self.sm_ = sklearn_sm(self.model_type,
+                              model_args=self.model_args)
+        self.selector_ = FeatureSelector(self.sm_,
+                                         self.strategy,
+                                         cv=self.cv,
+                                         scoring=self.scoring)
+        self.selector_.fit(X, y)
+        build_submodel = self.selector_.strategy.build_submodel
+        
+        self.models_ = []
+
+        for (state, _, _) in self.selector_.path_:
+            if state is not None:  # last state could be (None,)*3
+                Xstate = build_submodel(X, state)
+                model_ = self.model_type(y, Xstate, **self.model_args)
+                results_ = model_.fit()
+                self.models_.append((state, model_, results_))
+
+    def predict(self, X):
+        """
+        Compute predictions along selection path
+        for design matrix X.
+
+        Parameters
+        ----------
+
+        X : array-like
+            Design matrix.
+
+        """
+
+        build_submodel = self.selector_.strategy.build_submodel
+        predictions = []
+        for (state, _, _results) in self.models_:
+            Xstate = build_submodel(X, state)
+            predictions.append(_results.predict(exog=Xstate))
+
+        return np.array(predictions).T
+
 

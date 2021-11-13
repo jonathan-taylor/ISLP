@@ -103,7 +103,7 @@ class FeatureSelector(MetaEstimatorMixin):
                  strategy,
                  verbose=0,
                  scoring=None,
-                 cv=5,
+                 cv=None,
                  n_jobs=1,
                  pre_dispatch='2*n_jobs',
                  clone_estimator=True,
@@ -150,7 +150,7 @@ class FeatureSelector(MetaEstimatorMixin):
         # don't mess with this unless testing
         self._TESTING_INTERRUPT_MODE = False
 
-    def fit(self, X, y, custom_feature_names=None, groups=None, **fit_params):
+    def fit(self, X, y, groups=None, **fit_params):
         """Perform feature selection and learn model from training data.
 
         Parameters
@@ -164,10 +164,6 @@ class FeatureSelector(MetaEstimatorMixin):
             Target values.
             New in v 0.13.0: pandas DataFrames are now also accepted as
             argument for y.
-        custom_feature_names: None or tuple (default: tuple)
-            Custom feature names for `self.k_feature_names` and
-            `self.subsets_[i]['feature_names']`.
-            (new in v 0.13.0)
         groups: array-like, with shape (n_samples,), optional
             Group labels for the samples used while splitting the dataset into
             train/test set. Passed to the fit method of the cross-validator.
@@ -210,11 +206,12 @@ class FeatureSelector(MetaEstimatorMixin):
 
         # keep a running track of the best state
 
-        self.path_ = [deepcopy(_state)]
         iteration = 0
+        self.path_ = [deepcopy((_state, iteration, _scores))]
         cur = best = (_state, iteration, _scores)
 
         self.update_results_check(results_,
+                                  self.path_,
                                   cur,
                                   [(_state, iteration, _scores)],
                                   check_finished)
@@ -232,6 +229,7 @@ class FeatureSelector(MetaEstimatorMixin):
                                             **fit_params)
                 iteration += 1
                 cur, best_, self.finished_ = self.update_results_check(results_,
+                                                                       self.path_,
                                                                        best,
                                                                        batch_results,
                                                                        check_finished)
@@ -246,7 +244,6 @@ class FeatureSelector(MetaEstimatorMixin):
             sys.stderr.write('\nSTOPPING EARLY DUE TO KEYBOARD INTERRUPT...')
 
         self.selected_state_, self.results_ = postprocess(results_)
-
         self.fitted = True
         return self
 
@@ -348,7 +345,7 @@ class FeatureSelector(MetaEstimatorMixin):
 
     def _batch(self,
                iteration,
-               state,
+               cur_state,
                candidates,
                build_submodel,
                X,
@@ -388,6 +385,7 @@ class FeatureSelector(MetaEstimatorMixin):
 
     def update_results_check(self,
                              results,
+                             path,
                              best,
                              batch_results,
                              check_finished):
@@ -440,6 +438,7 @@ class FeatureSelector(MetaEstimatorMixin):
 
             (cur,
              finished) = check_finished(results,
+                                        path,
                                         best,
                                         batch_results)
 
@@ -458,7 +457,6 @@ class FeatureSelector(MetaEstimatorMixin):
 
 
 # private functions
-
 
 def _calc_score(estimator,
                 scorer,
@@ -486,7 +484,7 @@ def _calc_score(estimator,
     else:
         estimator.fit(X_state,
                       y,
-                          **fit_params)
+                      **fit_params)
         scores = np.array([scorer(estimator,
                                   X_state,
                                   y)])

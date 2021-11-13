@@ -6,7 +6,7 @@ import numpy as np, pandas as pd
 from sklearn.linear_model import LinearRegression
 
 from ISLP.models import ModelMatrix as MM
-from ISLP.models.strategy import min_max, step, validator_from_constraints
+from ISLP.models.strategy import min_max, Stepwise, validator_from_constraints
 from ISLP.models.generic_selector import FeatureSelector
 
 def test_min_max():
@@ -56,21 +56,62 @@ def test_step():
                                  [None, ['B','C', 'D', 'H', 'I']],
                                  [None, ['B', 'C']]):
 
-        strategy = step(model_matrix,
-                        direction=direction,
-                        min_terms=1,
-                        max_terms=len(model_matrix.terms),
-                        lower_terms=['B','C'])
+        strategy = Stepwise.first_peak(model_matrix,
+                                       direction=direction,
+                                       min_terms=1,
+                                       max_terms=len(model_matrix.terms),
+                                       initial_terms=['B','C'],
+                                       upper_terms=upper_terms,
+                                       lower_terms=lower_terms)
+        step_selector = FeatureSelector(LinearRegression(),
+                                        strategy,
+                                        cv=3)
+        step_selector.fit(D, Y)
+
+        strategy = Stepwise.first_peak(model_matrix,
+                                       direction=direction,
+                                       min_terms=1,
+                                       max_terms=len(model_matrix.terms),
+                                       initial_terms=['B','C'],
+                                       upper_terms=upper_terms,
+                                       lower_terms=lower_terms)
+        step_selector = FeatureSelector(LinearRegression(),
+                                        strategy,
+                                        cv=None)
+        step_selector.fit(D, Y)
+
+        strategy = Stepwise.fixed_size(model_matrix,
+                                       4,
+                                       direction=direction,
+                                       initial_terms=['B','C'],
+                                       upper_terms=upper_terms,
+                                       lower_terms=lower_terms)
 
         step_selector = FeatureSelector(LinearRegression(),
                                         strategy,
                                         cv=3)
-
         step_selector.fit(D, Y)
 
         print(step_selector.results_)
         print(step_selector.selected_state_)
-    
+        print('huh2')
+
+        strategy = Stepwise.fixed_size(model_matrix,
+                                       4,
+                                       direction=direction,
+                                       initial_terms=['B','C'],
+                                       upper_terms=upper_terms)
+
+        step_selector = FeatureSelector(LinearRegression(),
+                                        strategy,
+                                        cv=None)
+        step_selector.fit(D, Y)
+
+
+        print(step_selector.results_)
+        print(step_selector.selected_state_)
+        print('huh')
+        
 def test_constraint():
 
     n, p = 100, 7
