@@ -6,7 +6,7 @@ from sklearn.base import (BaseEstimator,
 from sklearn.utils.validation import check_is_fitted
 
 import statsmodels.api as sm
-from mlxtend.feature_selection.generic_selector import FeatureSelector
+from .generic_selector import FeatureSelector
 
 class sklearn_sm(BaseEstimator,
                  RegressorMixin): 
