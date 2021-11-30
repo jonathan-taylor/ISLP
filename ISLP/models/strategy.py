@@ -47,7 +47,7 @@ class Strategy(NamedTuple):
 class MinMaxCandidates(object):
 
     def __init__(self,
-                 model_matrix,
+                 model_spec,
                  min_terms=0,
                  max_terms=0,
                  lower_terms=None,
@@ -56,8 +56,8 @@ class MinMaxCandidates(object):
         """
         Parameters
         ----------
-        model_matrix: ModelMatrix
-            ModelMatrix describing the terms in the model.
+        model_spec: ModelSpec
+            ModelSpec describing the terms in the model.
         min_terms: int (default: 0)
             Minumum number of terms to select
         max_terms: int (default: 0)
@@ -72,8 +72,8 @@ class MinMaxCandidates(object):
   
         """
 
-        self.model_matrix = model_matrix
-        nterms = len(self.model_matrix.terms)
+        self.model_spec = model_spec
+        nterms = len(self.model_spec.terms)
 
         if (not isinstance(max_terms, int) or
                 (max_terms > nterms or max_terms < 0)):
@@ -97,10 +97,10 @@ class MinMaxCandidates(object):
         if lower_terms:
             lower_terms_ = []
             for term in lower_terms:
-                mm_terms = list(self.model_matrix.terms)
+                mm_terms = list(self.model_spec.terms)
                 if term in mm_terms:
                     idx = mm_terms.index(term)
-                    term = self.model_matrix.terms_[idx]
+                    term = self.model_spec.terms_[idx]
                 lower_terms_.append(term)
             self.lower_terms = set(lower_terms_)
         else:
@@ -109,14 +109,14 @@ class MinMaxCandidates(object):
         if upper_terms:
             upper_terms_ = []
             for term in upper_terms:
-                mm_terms = list(self.model_matrix.terms)
+                mm_terms = list(self.model_spec.terms)
                 if term in mm_terms:
                     idx = mm_terms.index(term)
-                    term = self.model_matrix.terms_[idx]
+                    term = self.model_spec.terms_[idx]
                 upper_terms_.append(term)
             self.upper_terms = set(upper_terms_)
         else:
-            self.upper_terms = set(self.model_matrix.terms_)
+            self.upper_terms = set(self.model_spec.terms_)
 
         if not self.lower_terms.issubset(self.upper_terms):
             raise ValueError('lower_terms should be a subset of upper_terms')
@@ -148,8 +148,8 @@ class MinMaxCandidates(object):
 
         """
 
-        check_is_fitted(self.model_matrix)
-        terms = self.model_matrix.terms_
+        check_is_fitted(self.model_spec)
+        terms = self.model_spec.terms_
 
         if self.validator is None:
             is_valid = lambda c: True
@@ -194,7 +194,7 @@ class MinMaxCandidates(object):
 class Stepwise(MinMaxCandidates):
 
     def __init__(self,
-                 model_matrix,
+                 model_spec,
                  direction='forward',
                  min_terms=1,
                  max_terms=1,
@@ -204,8 +204,8 @@ class Stepwise(MinMaxCandidates):
         """
         Parameters
         ----------
-        model_matrix: ModelMatrix
-            ModelMatrix describing the terms in the model.
+        model_spec: ModelSpec
+            ModelSpec describing the terms in the model.
         direction: str
             One of ['forward', 'backward', 'both']
         min_terms: int (default: 1)
@@ -226,7 +226,7 @@ class Stepwise(MinMaxCandidates):
 
         self.direction = direction
         MinMaxCandidates.__init__(self,
-                                  model_matrix=model_matrix,
+                                  model_spec=model_spec,
                                   min_terms=min_terms,
                                   max_terms=max_terms,
                                   lower_terms=lower_terms,
@@ -270,7 +270,7 @@ class Stepwise(MinMaxCandidates):
         """
 
         state = set(state)
-        terms = self.model_matrix.terms_
+        terms = self.model_spec.terms_
         lower_terms = self.lower_terms
         upper_terms = self.upper_terms
         
@@ -305,7 +305,7 @@ class Stepwise(MinMaxCandidates):
             return chain.from_iterable([forward, backward])
 
     @staticmethod
-    def first_peak(model_matrix,
+    def first_peak(model_spec,
                    direction='forward',
                    min_terms=1,
                    max_terms=1,
@@ -368,9 +368,9 @@ class Stepwise(MinMaxCandidates):
 
         """
 
-        check_is_fitted(model_matrix)
+        check_is_fitted(model_spec)
 
-        step = Stepwise(model_matrix,
+        step = Stepwise(model_spec,
                         direction=direction,
                         min_terms=min_terms,
                         max_terms=max_terms,
@@ -383,10 +383,10 @@ class Stepwise(MinMaxCandidates):
         if initial_terms is not None:
             initial_terms_ = []
             for term in initial_terms:
-                mm_terms = list(model_matrix.terms)
+                mm_terms = list(model_spec.terms)
                 if term in mm_terms:
                     idx = mm_terms.index(term)
-                    term = model_matrix.terms_[idx]
+                    term = model_spec.terms_[idx]
                 initial_terms_.append(term)
             initial_state = tuple(initial_terms_)
         else:
@@ -399,16 +399,14 @@ class Stepwise(MinMaxCandidates):
 
         return Strategy(initial_state,
                         step.candidate_states,
-                        model_matrix.build_submodel,
+                        model_spec.build_submodel,
                         first_peak,
                         _postprocess)
 
     @staticmethod
-    def fixed_steps(model_matrix,
+    def fixed_steps(model_spec,
                     n_steps,
                     direction='forward',
-                    min_terms=0,
-                    max_terms=None,
                     lower_terms=[],
                     upper_terms=[],
                     initial_terms=[],
@@ -432,7 +430,7 @@ class Stepwise(MinMaxCandidates):
             Minumum number of terms to select
         max_terms: int (default: None)
             Maximum number of terms to select.
-            If None defaults to len(model_matrix.terms_)
+            If None defaults to len(model_spec.terms_)
         lower_terms: [Variable]
             Subset of terms to keep: smallest model.
         upper_terms: [Variable]
@@ -447,10 +445,10 @@ class Stepwise(MinMaxCandidates):
 
         """
 
-        step = Stepwise(model_matrix,
+        step = Stepwise(model_spec,
                         direction=direction,
-                        min_terms=min_terms,
-                        max_terms=max_terms,
+                        min_terms=n_steps,
+                        max_terms=n_steps,
                         lower_terms=lower_terms,
                         upper_terms=upper_terms,
                         validator=validator)
@@ -460,10 +458,10 @@ class Stepwise(MinMaxCandidates):
         if initial_terms is not None:
             initial_terms_ = []
             for term in initial_terms:
-                mm_terms = list(model_matrix.terms)
+                mm_terms = list(model_spec.terms)
                 if term in mm_terms:
                     idx = mm_terms.index(term)
-                    term = model_matrix.terms_[idx]
+                    term = model_spec.terms_[idx]
                 initial_terms_.append(term)
             initial_state = tuple(initial_terms_)
         else:
@@ -477,12 +475,12 @@ class Stepwise(MinMaxCandidates):
 
         return Strategy(initial_state,
                         step.candidate_states,
-                        model_matrix.build_submodel,
+                        model_spec.build_submodel,
                         partial(fixed_steps, n_steps),
                         partial(_postprocess_fixed_steps, n_steps))
     
 
-def min_max(model_matrix,
+def min_max(model_spec,
             min_terms=1,
             max_terms=1,
             lower_terms=None,
@@ -492,8 +490,8 @@ def min_max(model_matrix,
     """
     Parameters
     ----------
-    model_matrix: ModelMatrix
-        ModelMatrix describing the terms in the model.
+    model_spec: ModelSpec
+        ModelSpec describing the terms in the model.
     min_terms: int (default: 1)
         Minumum number of terms to select
     max_terms: int (default: 1)
@@ -532,7 +530,7 @@ def min_max(model_matrix,
 
     """
 
-    strategy = MinMaxCandidates(model_matrix,
+    strategy = MinMaxCandidates(model_spec,
                                 min_terms=min_terms,
                                 max_terms=max_terms,
                                 lower_terms=lower_terms,
@@ -552,20 +550,20 @@ def min_max(model_matrix,
 
     return Strategy(initial_state,
                     strategy.candidate_states,
-                    model_matrix.build_submodel,
+                    model_spec.build_submodel,
                     strategy.check_finished,
                     _postprocess)
 
 
-def validator_from_constraints(model_matrix,
+def validator_from_constraints(model_spec,
                                constraints):
 
-    def is_valid(model_matrix,
+    def is_valid(model_spec,
                  constraints,
                  state):
 
-        check_is_fitted(model_matrix)
-        terms_ = model_matrix.terms_
+        check_is_fitted(model_spec)
+        terms_ = model_spec.terms_
 
         if constraints.shape != (len(terms_),)*2:
             raise ValueError('constraint should have shape (nterms, nterms)')
@@ -577,7 +575,7 @@ def validator_from_constraints(model_matrix,
             parents_included.append(np.all([terms_[j] in state for j in parents]))
         return np.all(parents_included)
 
-    return partial(is_valid, model_matrix, constraints)
+    return partial(is_valid, model_spec, constraints)
 
 
 def first_peak(results,

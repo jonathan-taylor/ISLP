@@ -137,7 +137,7 @@ def contrast(col, method, drop_level=None):
                   is_categorical=True,
                   encoder=encoder)
 
-class ModelMatrix(TransformerMixin, BaseEstimator):
+class ModelSpec(TransformerMixin, BaseEstimator):
 
     def __init__(self,
                  terms,
@@ -312,7 +312,7 @@ class ModelMatrix(TransformerMixin, BaseEstimator):
         """
         return self.build_submodel(X, self.terms_)
     
-    # ModelMatrix specific methods
+    # ModelSpec specific methods
 
     def build_submodel(self, X, terms):
 

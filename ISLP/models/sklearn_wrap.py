@@ -13,7 +13,7 @@ class sklearn_sm(BaseEstimator,
 
     def __init__(self,
                  model_type,
-                 model_matrix=None,
+                 model_spec=None,
                  model_args={}):
         """
         Parameters
@@ -22,7 +22,7 @@ class sklearn_sm(BaseEstimator,
         model_type: class
             A model type from statsmodels, e.g. sm.OLS or sm.GLM
 
-        model_matrix: ModelMatrix
+        model_spec: ModelSpec
             Specify the design matrix.
 
         model_args: dict (optional)
@@ -38,7 +38,7 @@ class sklearn_sm(BaseEstimator,
 
         """
         self.model_type = model_type
-        self.model_matrix = model_matrix
+        self.model_spec = model_spec
         self.model_args = model_args
         
     def fit(self, X, y):
@@ -57,9 +57,9 @@ class sklearn_sm(BaseEstimator,
             Response vector.
         """
 
-        if self.model_matrix is not None:
-            self.model_matrix_ = self.model_matrix.fit(X)
-            X = self.model_matrix_.transform(X)
+        if self.model_spec is not None:
+            self.model_spec_ = self.model_spec.fit(X)
+            X = self.model_spec_.transform(X)
         self.model_ = self.model_type(y, X, **self.model_args)
         self.results_ = self.model_.fit()
 
@@ -75,8 +75,8 @@ class sklearn_sm(BaseEstimator,
             Design matrix.
 
         """
-        if self.model_matrix is not None:
-            X = self.model_matrix_.transform(X)
+        if self.model_spec is not None:
+            X = self.model_spec_.transform(X)
         return self.results_.predict(exog=X)
  
     def score(self, X, y, sample_weight=None):
@@ -136,7 +136,7 @@ class sklearn_selected(sklearn_sm):
         model_type: class
             A model type from statsmodels, e.g. sm.OLS or sm.GLM
 
-        model_matrix: ModelMatrix
+        model_spec: ModelSpec
             Specify the design matrix.
 
         model_args: dict (optional)
@@ -224,7 +224,7 @@ class sklearn_selection_path(sklearn_sm):
         model_type: class
             A model type from statsmodels, e.g. sm.OLS or sm.GLM
 
-        model_matrix: ModelMatrix
+        model_spec: ModelSpec
             Specify the design matrix.
 
         model_args: dict (optional)

@@ -5,7 +5,7 @@ import pytest
 import numpy as np, pandas as pd
 from sklearn.linear_model import LinearRegression
 
-from ISLP.models import ModelMatrix as MM
+from ISLP.models import ModelSpec as MS
 from ISLP.models.strategy import min_max, Stepwise, validator_from_constraints
 from ISLP.models.generic_selector import FeatureSelector
 
@@ -17,12 +17,12 @@ def test_min_max():
     D = pd.DataFrame(X, columns=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'][:p])
     D['A'] = pd.Categorical(np.random.choice(range(5), (n,), replace=True))
 
-    model_matrix = MM(list(D.columns))
-    model_matrix.fit(D)
+    model_spec = MS(list(D.columns))
+    model_spec.fit(D)
 
-    strategy = min_max(model_matrix,
+    strategy = min_max(model_spec,
                        min_terms=1,
-                       max_terms=len(model_matrix.terms),
+                       max_terms=len(model_spec.terms),
                        lower_terms=['B','C'],
                        upper_terms=['B','C', 'D', 'H', 'I'])
 
@@ -45,8 +45,8 @@ def test_step():
     D = pd.DataFrame(X, columns=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'][:p])
     D['A'] = pd.Categorical(np.random.choice(range(5), (n,), replace=True))
 
-    model_matrix = MM(list(D.columns))
-    model_matrix.fit(D)
+    model_spec = MS(list(D.columns))
+    model_spec.fit(D)
 
     for (direction,
          upper_terms,
@@ -56,10 +56,10 @@ def test_step():
                                  [None, ['B','C', 'D', 'H', 'I']],
                                  [None, ['B', 'C']]):
 
-        strategy = Stepwise.first_peak(model_matrix,
+        strategy = Stepwise.first_peak(model_spec,
                                        direction=direction,
                                        min_terms=1,
-                                       max_terms=len(model_matrix.terms),
+                                       max_terms=len(model_spec.terms),
                                        initial_terms=['B','C'],
                                        upper_terms=upper_terms,
                                        lower_terms=lower_terms)
@@ -68,10 +68,10 @@ def test_step():
                                         cv=3)
         step_selector.fit(D, Y)
 
-        strategy = Stepwise.first_peak(model_matrix,
+        strategy = Stepwise.first_peak(model_spec,
                                        direction=direction,
                                        min_terms=1,
-                                       max_terms=len(model_matrix.terms),
+                                       max_terms=len(model_spec.terms),
                                        initial_terms=['B','C'],
                                        upper_terms=upper_terms,
                                        lower_terms=lower_terms)
@@ -80,12 +80,12 @@ def test_step():
                                         cv=None)
         step_selector.fit(D, Y)
 
-        strategy = Stepwise.fixed_size(model_matrix,
-                                       4,
-                                       direction=direction,
-                                       initial_terms=['B','C'],
-                                       upper_terms=upper_terms,
-                                       lower_terms=lower_terms)
+        strategy = Stepwise.fixed_steps(model_spec,
+                                        4,
+                                        direction=direction,
+                                        initial_terms=['B','C'],
+                                        upper_terms=upper_terms,
+                                        lower_terms=lower_terms)
 
         step_selector = FeatureSelector(LinearRegression(),
                                         strategy,
@@ -96,11 +96,11 @@ def test_step():
         print(step_selector.selected_state_)
         print('huh2')
 
-        strategy = Stepwise.fixed_size(model_matrix,
-                                       4,
-                                       direction=direction,
-                                       initial_terms=['B','C'],
-                                       upper_terms=upper_terms)
+        strategy = Stepwise.fixed_steps(model_spec,
+                                        4,
+                                        direction=direction,
+                                        initial_terms=['B','C'],
+                                        upper_terms=upper_terms)
 
         step_selector = FeatureSelector(LinearRegression(),
                                         strategy,
@@ -120,18 +120,18 @@ def test_constraint():
     D = pd.DataFrame(X, columns=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'][:p])
     D['A'] = pd.Categorical(np.random.choice(range(5), (n,), replace=True))
 
-    model_matrix = MM(list(D.columns))
-    model_matrix.fit(D)
+    model_spec = MS(list(D.columns))
+    model_spec.fit(D)
 
-    constraints = np.zeros((len(model_matrix.terms),)*2)
+    constraints = np.zeros((len(model_spec.terms),)*2)
     constraints[3,4] = 1
     constraints[4,5] = 1
-    validator = validator_from_constraints(model_matrix,
+    validator = validator_from_constraints(model_spec,
                                            constraints)
                                            
-    strategy = min_max(model_matrix,
+    strategy = min_max(model_spec,
                        min_terms=1,
-                       max_terms=len(model_matrix.terms),
+                       max_terms=len(model_spec.terms),
                        lower_terms=['B','C'],
                        validator=validator)
 

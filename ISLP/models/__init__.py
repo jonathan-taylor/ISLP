@@ -1,13 +1,13 @@
 import numpy as np, pandas as pd
 
-from .model_matrix import (ModelMatrix,
-                           Column,
-                           Variable,
-                           poly,
-                           ns,
-                           bs,
-                           derived_variable,
-                           pca)
+from .model_spec import (ModelSpec,
+                         Column,
+                         Variable,
+                         poly,
+                         ns,
+                         bs,
+                         derived_variable,
+                         pca)
 from .strategy import (min_max as min_max_strategy,
                        Stepwise)
 from .generic_selector import FeatureSelector

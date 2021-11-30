@@ -2,7 +2,7 @@ import numpy as np, pandas as pd
 from sklearn.base import clone
 
 from ...transforms import Poly, NaturalSpline, BSpline, Interaction
-from ..model_matrix import ModelMatrix, Variable, ns, bs, poly, pca, contrast, Contrast
+from ..model_spec import ModelSpec, Variable, ns, bs, poly, pca, contrast, Contrast
 
 from sklearn.preprocessing import (OneHotEncoder,
                                    OrdinalEncoder)
@@ -33,8 +33,8 @@ def test_ndarray():
     
     X = np.random.standard_normal((50,5))
 
-    M = ModelMatrix(terms=[1, (3,2)],
-                    default_encoders=default_encoders)
+    M = ModelSpec(terms=[1, (3,2)],
+                  default_encoders=default_encoders)
     M.fit(X)
     MX = M.transform(X)
 
@@ -46,8 +46,8 @@ def test_dataframe1():
     X = np.random.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
     
-    M = ModelMatrix(terms=['A','D',('D','E')],
-                    default_encoders=default_encoders)
+    M = ModelSpec(terms=['A','D',('D','E')],
+                  default_encoders=default_encoders)
     clone(M)
     MX = np.asarray(M.fit_transform(D))
 
@@ -60,8 +60,8 @@ def test_dataframe2():
     X = np.random.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['V','B','A','D','E'])
     
-    M = ModelMatrix(terms=['A', 'D', 'B', ('D','E'), 'V'],
-                    default_encoders=default_encoders)
+    M = ModelSpec(terms=['A', 'D', 'B', ('D','E'), 'V'],
+                  default_encoders=default_encoders)
     clone(M)
 
     MX = M.fit_transform(D)
@@ -76,8 +76,8 @@ def test_dataframe3():
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
     D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
     
-    M = ModelMatrix(terms=['A', 'E', ('D','E')],
-                    default_encoders=default_encoders)
+    M = ModelSpec(terms=['A', 'E', ('D','E')],
+                  default_encoders=default_encoders)
     MX = np.asarray(M.fit_transform(D))
     M2 = clone(M)
 
@@ -97,8 +97,8 @@ def test_dataframe4():
     D['D'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
     D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
     
-    M = ModelMatrix(terms=['A', 'E', ('D','E'), 'D'],
-                    default_encoders=default_encoders)
+    M = ModelSpec(terms=['A', 'E', ('D','E'), 'D'],
+                  default_encoders=default_encoders)
     MX = np.asarray(M.fit_transform(D))
 
     DE = pd.get_dummies(D['E'])
@@ -121,8 +121,8 @@ def test_dataframe5():
     D['D'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
     D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
     
-    M = ModelMatrix(terms=['A', 'E', ('D','E')],
-                    default_encoders=default_encoders)
+    M = ModelSpec(terms=['A', 'E', ('D','E')],
+                  default_encoders=default_encoders)
     MX = np.asarray(M.fit_transform(D))
 
     # check they agree on copy of dataframe
@@ -139,8 +139,8 @@ def test_dataframe6():
     D['D'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
     D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
     
-    M = ModelMatrix(terms=['A',W,(W,'D',)],
-                    default_encoders=default_encoders)
+    M = ModelSpec(terms=['A',W,(W,'D',)],
+                  default_encoders=default_encoders)
     MX = M.fit_transform(D)
 
     MX = np.asarray(MX)
@@ -152,8 +152,8 @@ def test_dataframe7():
     D['Ddd'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
     D['Eee'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
         
-    M = ModelMatrix(terms=D.columns.drop(['Y','C']),
-                    default_encoders=default_encoders)
+    M = ModelSpec(terms=D.columns.drop(['Y','C']),
+                  default_encoders=default_encoders)
     MX = M.fit_transform(D)
     print(MX.columns)
     MX = np.asarray(MX)
@@ -168,8 +168,8 @@ def test_dataframe8():
     poly =  Poly(degree=3)
     # raises a ValueError because poly will have been already fit -- need new instance of Poly
     W = Variable(('A',), 'poly(A)', poly)
-    M = ModelMatrix(terms=list(D.columns.drop(['Y','C'])) + [(W,'E')],
-                    default_encoders=default_encoders)
+    M = ModelSpec(terms=list(D.columns.drop(['Y','C'])) + [(W,'E')],
+                  default_encoders=default_encoders)
     MX = M.fit_transform(D)
 
     print(MX.columns)
@@ -186,8 +186,8 @@ def test_dataframe9():
     # raises a ValueError because poly will have been already fit -- need new instance of Poly
     W = Variable(('A',), 'poly(A)', poly)
     U = Variable(('B',), 'poly(B)', clone(poly))
-    M = ModelMatrix(terms=list(D.columns.drop(['Y','C'])) + [W,U],
-                    default_encoders=default_encoders)
+    M = ModelSpec(terms=list(D.columns.drop(['Y','C'])) + [W,U],
+                  default_encoders=default_encoders)
     MX = M.fit_transform(D)
 
     print(MX.columns)
@@ -202,8 +202,8 @@ def test_dataframe10():
     D['D'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
     D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
     
-    M = ModelMatrix(terms=['A', 'E', 'C', W, (W, 'D',), U],
-                    default_encoders=default_encoders)
+    M = ModelSpec(terms=['A', 'E', 'C', W, (W, 'D',), U],
+                  default_encoders=default_encoders)
     MX = M.fit_transform(D)
     print(MX.columns)
     MX = np.asarray(MX)
@@ -219,15 +219,15 @@ def test_poly_ns_bs():
     X = np.random.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
     
-    M = ModelMatrix(terms=[poly('A', intercept=True, degree=3),
-                           ns('E', df=5),
-                           bs('D', df=4)])
+    M = ModelSpec(terms=[poly('A', intercept=True, degree=3),
+                         ns('E', df=5),
+                         bs('D', df=4)])
 
     MX = M.fit_transform(D)
     A =  M.column_info_['A']
-    M2 = ModelMatrix(terms=[poly(A, intercept=True, degree=3),
-                           ns('E', df=5),
-                           bs('D', df=4)])
+    M2 = ModelSpec(terms=[poly(A, intercept=True, degree=3),
+                          ns('E', df=5),
+                          bs('D', df=4)])
     MX2 = M2.fit_transform(D)
     print(MX.columns)
     print(MX2.columns)
@@ -237,9 +237,9 @@ def test_submodel():
     X = np.random.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
     
-    M = ModelMatrix(terms=[poly('A', intercept=True, degree=3),
-                           ns('E', df=5),
-                           bs('D', df=4)])
+    M = ModelSpec(terms=[poly('A', intercept=True, degree=3),
+                         ns('E', df=5),
+                         bs('D', df=4)])
 
     M.fit(D)
     MX = M.transform(D)
@@ -253,9 +253,9 @@ def test_contrast():
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
     D['C'] = pd.Categorical(np.random.choice(range(4,9), 50, replace=True))
     for method in ['sum', 'drop', None, lambda p: np.identity(p)]:
-        M = ModelMatrix(terms=[poly('A', intercept=True, degree=3),
-                               contrast('C', method),
-                               bs('D', df=4)])
+        M = ModelSpec(terms=[poly('A', intercept=True, degree=3),
+                             contrast('C', method),
+                             bs('D', df=4)])
 
         M.fit(D)
         MX = M.transform(D)
@@ -268,9 +268,9 @@ def test_sequence():
     X = np.random.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
     
-    M = ModelMatrix(terms=[poly('A', intercept=True, degree=3),
-                           ns('E', df=5),
-                           bs('D', df=4)])
+    M = ModelSpec(terms=[poly('A', intercept=True, degree=3),
+                         ns('E', df=5),
+                         bs('D', df=4)])
     M.fit(D)
     for df in M.build_sequence(D):
         print(df.columns)
@@ -280,7 +280,7 @@ def test_poly_ns_bs2():
     X = np.random.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
     D['C'] = pd.Categorical(np.random.choice(range(4,9), 50, replace=True))
-    M = ModelMatrix(terms=[(poly('A', intercept=True, degree=3),'C')])
+    M = ModelSpec(terms=[(poly('A', intercept=True, degree=3),'C')])
     MX = M.fit_transform(D)
     print(MX.columns)
 
@@ -291,13 +291,13 @@ def test_pca():
     D = pd.DataFrame(X, columns=['A','B','C','D','E', 'F', 'G', 'H'])
     
     pca_ = Variable(('A','B','C','D'), 'pca(ABCD)', PCA(n_components=2))
-    M = ModelMatrix(terms=[poly('F', intercept=True, degree=3),
-                           pca_])
+    M = ModelSpec(terms=[poly('F', intercept=True, degree=3),
+                         pca_])
 
     MX = M.fit_transform(D)
 
-    M2 = ModelMatrix(terms=[poly('F', intercept=True, degree=3),
-                            pca(['A','B','C','D'], 'ABCD', n_components=2)])
+    M2 = ModelSpec(terms=[poly('F', intercept=True, degree=3),
+                          pca(['A','B','C','D'], 'ABCD', n_components=2)])
     MX2 = M2.fit_transform(D)
 
     np.testing.assert_allclose(MX, MX2)
