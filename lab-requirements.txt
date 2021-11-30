@@ -1,3 +1,0 @@
-statsmodels 
-patsy       
-lifelines
