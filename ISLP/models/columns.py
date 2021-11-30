@@ -260,9 +260,13 @@ def _categorical_from_df(df):
     is_ordinal = []
     for c in df.columns:
         try:
-            is_categorical.append(df[c].dtype == 'category')
-            is_ordinal.append(df[c].cat.ordered)
-        except TypeError:
+            if df[c].dtype == 'category':
+                is_categorical.append(True)
+                is_ordinal.append(df[c].cat.ordered)
+            else:
+                is_categorical.append(False)
+                is_ordinal.append(False)
+        except (TypeError, AttributeError):
             is_categorical.append(False)
             is_ordinal.append(False)
     is_categorical = np.asarray(is_categorical)
