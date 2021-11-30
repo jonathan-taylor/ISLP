@@ -1,5 +1,6 @@
 numpy>=1.7.1
 scipy>=0.16.0
+jupyter
 pandas
 sklearn
 joblib
