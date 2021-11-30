@@ -2,7 +2,10 @@ numpy>=1.7.1
 scipy>=0.16.0
 jupyter
 pandas
+lxml # pandas needs this for html
 sklearn
 joblib
 statsmodels 
 lifelines
+l0bnb # for bestsubsets
+pygam # for GAM in Ch7
