@@ -1,5 +1,5 @@
-numpy>=1.7.1
-scipy>=0.16.0
+numpy
+scipy
 jupyter
 pandas
 lxml # pandas needs this for html
