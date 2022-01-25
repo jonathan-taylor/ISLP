@@ -61,3 +61,6 @@ def load_data(dataset):
         filename = resource_filename('ISLP', pjoin('data', '%s.csv' % dataset))
         return pd.read_csv(filename)
 
+
+from . import _version
+__version__ = _version.get_versions()['version']

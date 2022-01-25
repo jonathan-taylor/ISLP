@@ -20,7 +20,6 @@ import versioneer
 from distutils.core import setup
 from distutils.extension import Extension
 
-from cythexts import cyproc_exts, get_pyx_sdist
 from setup_helpers import (SetupDependency, read_vars_from,
                            make_np_ext_builder)
 
@@ -43,20 +42,6 @@ extra_setuptools_args = dict(
 # Define extensions
 EXTS = []
 
-# Cython is a dependency for building extensions, iff we don't have stamped
-# up pyx and c files.
-build_ext, need_cython = cyproc_exts(EXTS,
-                                     info.CYTHON_MIN_VERSION,
-                                     'pyx-stamps')
-
-# Add numpy includes when building extension.
-build_ext = make_np_ext_builder(build_ext)
-
-# Check dependencies, maybe add to setuptools lists
-if need_cython:
-    SetupDependency('Cython', info.CYTHON_MIN_VERSION,
-                    req_type='install_requires',
-                    heavy=False).check_fill(extra_setuptools_args)
 SetupDependency('numpy', info.NUMPY_MIN_VERSION,
                 req_type='install_requires',
                 heavy=True).check_fill(extra_setuptools_args)
@@ -65,9 +50,6 @@ SetupDependency('scipy', info.SCIPY_MIN_VERSION,
                 heavy=True).check_fill(extra_setuptools_args)
 
 cmdclass=versioneer.get_cmdclass()
-cmdclass.update(dict(
-    build_ext=build_ext,
-    sdist=get_pyx_sdist()))
 
 # get long_description
 

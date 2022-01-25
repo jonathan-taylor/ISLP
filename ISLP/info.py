@@ -71,5 +71,8 @@ REQUIRES            = ["numpy (>=%s)" % NUMPY_MIN_VERSION,
                        "scipy (>=%s)" % SCIPY_MIN_VERSION,
                        "statsmodels (>=%s)" % STATSMODELS_MIN_VERSION,
                        "pandas (>=%s)" % PANDAS_MIN_VERSION,
-                       "sklearn (>=%s)" % SKLEARN_MIN_VERSION
+                       "sklearn (>=%s)" % SKLEARN_MIN_VERSION,
+                       "lifelines",
+                       "joblib",
+                       "pygam"
                        ]
