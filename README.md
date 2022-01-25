@@ -1,4 +1,4 @@
-Python package for Introduction to Statistical Learning in Python
------------------------------------------------------------------
+# ISLP
 
-Need a better README
+This package collects data sets and various helper functions
+for ISLP.
