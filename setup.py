@@ -48,13 +48,13 @@ SetupDependency('numpy', info.NUMPY_MIN_VERSION,
 SetupDependency('scipy', info.SCIPY_MIN_VERSION,
                 req_type='install_requires',
                 heavy=True).check_fill(extra_setuptools_args)
-requirements = open('requirements.txt').read().split('\n')
+requirements = open('requirements.txt').read().strip().split('\n')
 for req in requirements:
     req = req.split('#')[0]
+    import sys; sys.stderr.write(req+'\n')
     SetupDependency(req, "0.0",
                     req_type='install_requires',
-                    heavy=True)
-    
+                    heavy=True).check_fill(extra_setuptools_args)
 
 cmdclass=versioneer.get_cmdclass()
 
