@@ -3,7 +3,7 @@ scipy
 jupyter
 pandas
 lxml # pandas needs this for html
-sklearn
+scikit-learn
 joblib
 statsmodels 
 lifelines
