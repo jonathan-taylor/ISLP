@@ -57,7 +57,7 @@ SetupDependency('pandas', info.PANDAS_MIN_VERSION,
 SetupDependency('statsmodels', info.STATSMODELS_MIN_VERSION,
                 req_type='install_requires',
                 heavy=True).check_fill(extra_setuptools_args)
-SetupDependency('sklearn', info.SKLEARN_MIN_VERSION,
+SetupDependency('scikit-learn', info.SKLEARN_MIN_VERSION,
                 req_type='install_requires',
                 heavy=True).check_fill(extra_setuptools_args)
 requirements = open('requirements.txt').read().strip().split('\n')
