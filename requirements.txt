@@ -5,7 +5,6 @@ pandas
 lxml # pandas needs this for html
 scikit-learn
 joblib
-statsmodels 
 lifelines
 l0bnb # for bestsubsets
 pygam # for GAM in Ch7
