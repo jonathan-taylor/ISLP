@@ -43,10 +43,10 @@ a fixed lambda test for the LASSO.
 # versions
 NUMPY_MIN_VERSION='1.7.1'
 SCIPY_MIN_VERSION = '0.9'
-CYTHON_MIN_VERSION = '0.20.5'
 PANDAS_MIN_VERSION = "0.20"
 SKLEARN_MIN_VERSION = '0.19'
 STATSMODELS_MIN_VERSION = '0.9.0'
+MATPLOTLIB_MIN_VERSION = '3.3.3'
 
 NAME                = 'ISLP'
 MAINTAINER          = "Jonathan Taylor"
