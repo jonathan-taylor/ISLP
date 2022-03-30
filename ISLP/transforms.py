@@ -157,6 +157,7 @@ class Interaction(TransformerMixin, BaseEstimator):
         
         self.variables = variables
         self.columns = columns
+        self.column_names = column_names
         self.column_names_ = {} 
         self.columns_ = []
 
