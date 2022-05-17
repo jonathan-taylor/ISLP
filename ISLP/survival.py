@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.optimize import root
 
-def sim_time(linpred, cum_hazard, cutoff=1000):
+def sim_time(linpred, cum_hazard):
     """
     Simulate a survival time for a 
     cumulative hazard function $H$ with actual hazard
