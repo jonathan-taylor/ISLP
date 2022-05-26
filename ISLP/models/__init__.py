@@ -7,7 +7,8 @@ from .model_spec import (ModelSpec,
                          ns,
                          bs,
                          derived_variable,
-                         pca)
+                         pca,
+                         contrast)
 from .strategy import (min_max as min_max_strategy,
                        Stepwise)
 from .generic_selector import FeatureSelector

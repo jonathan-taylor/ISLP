@@ -52,12 +52,17 @@ class Column(NamedTuple):
             Column names
         """
 
-        cols = _get_column(self.idx, X, twodim=self.encoder is not None)
+        cols = _get_column(self.idx, X, ndarray=False) 
         if fit:
             self.fit_encoder(X)
 
         if self.encoder is not None:
-            cols = self.encoder.transform(cols)
+            try:
+                cols = self.encoder.transform(cols)
+            except ValueError:
+                # commonly raised for transformers given pd.Seriies
+                # try casting to a 2-d ndarray
+                cols = self.encoder.transform(np.asarray(cols).reshape((-1,1)))
         cols = np.asarray(cols)
 
         names = self.columns
@@ -83,7 +88,7 @@ class Column(NamedTuple):
         -------
         None
         """
-        cols = _get_column(self.idx, X, twodim=self.encoder is not None)
+        cols = _get_column(self.idx, X, ndarray=False)
         if self.encoder is not None:
             try:
                 check_is_fitted(self.encoder)
@@ -95,7 +100,11 @@ class Column(NamedTuple):
 # private functions
 
 
-def _get_column(idx, X, twodim=False, loc=True):
+def _get_column(idx,
+                X,
+                twodim=False,
+                loc=True,
+                ndarray=True):
     """
     Extract column `idx` from `X`,
     optionally making it two-dimensional
@@ -112,9 +121,12 @@ def _get_column(idx, X, twodim=False, loc=True):
     else:
         raise ValueError('expecting an ndarray or a ' +
                          '"loc/iloc" methods, got %s' % str(X))
-    if twodim and np.asarray(col).ndim == 1:
-        return np.asarray(col).reshape((-1, 1))
-    return np.asarray(col)
+    if ndarray:
+        if twodim and np.asarray(col).ndim == 1:
+            return np.asarray(col).reshape((-1, 1))
+        return np.asarray(col)
+    else:
+        return col
 
     
 def _get_column_info(X,
@@ -123,8 +135,7 @@ def _get_column_info(X,
                      is_ordinal,
                      default_encoders={
                          'ordinal': OrdinalEncoder(),
-                         'categorical': OneHotEncoder(drop='first',
-                                                      sparse=False)
+                         'categorical': OneHotEncoder()
                          }
                      ):
 
@@ -145,13 +156,14 @@ def _get_column_info(X,
             name = f'X{col}'
         else:
             name = str(col)
-        Xcol = _get_column(col, X, twodim=True)
         if is_categorical[i]:
             if is_ordinal[i]:
+                Xcol = _get_column(col, X, twodim=True)
                 encoder = clone(default_encoders['ordinal'])
                 encoder.fit(Xcol)
                 columns = ['{0}'.format(col)]
             else:
+                Xcol = _get_column(col, X, ndarray=False)
                 encoder = clone(default_encoders['categorical'])
                 cols = encoder.fit_transform(Xcol)
                 if hasattr(encoder, 'columns_'):
@@ -160,7 +172,6 @@ def _get_column_info(X,
                     columns_ = range(cols.shape[1])
                 columns = ['{0}[{1}]'.format(col, c)
                            for c in columns_]
-
             column_info[col] = Column(col,
                                       name,
                                       is_categorical[i],
@@ -168,6 +179,7 @@ def _get_column_info(X,
                                       tuple(columns),
                                       encoder)
         else:
+            Xcol = _get_column(col, X, twodim=True)
             column_info[col] = Column(col,
                                       name,
                                       columns=(name,))

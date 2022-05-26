@@ -1,6 +1,7 @@
 from collections import namedtuple
 from itertools import product
 from typing import NamedTuple, Any
+from copy import copy
 
 import numpy as np, pandas as pd
 
@@ -55,29 +56,46 @@ class Contrast(TransformerMixin, BaseEstimator):
         
     def fit(self, X):
 
+        Xa = np.asarray(X).reshape((-1,1))
         self.encoder_ = OneHotEncoder(drop=None,
-                                      sparse=False).fit(X)
+                                      sparse=False).fit(Xa)
         cats = self.encoder_.categories_[0]
         column_names = [str(n) for n in cats]
 
-        cols = self.encoder_.transform(X)
+        if X.dtype == 'category':
+            Xcats = list(X.dtype.categories)
+        else:
+            Xcats = copy(column_names)
+        if self.drop_level is None:
+            if self.method == 'drop': # these defaults consistent with R
+                drop_level = Xcats[0]
+            elif self.method == 'sum':
+                drop_level = Xcats[-1]
+        else:
+            drop_level = self.drop_level
+
+        if self.method in ['drop', 'sum']:
+            drop_idx = column_names.index(str(drop_level))
+            Xcats.remove(drop_level)
+            column_names.pop(drop_idx)
+
+        colmap = [column_names.index(str(j)) for j in Xcats]
+        cols = self.encoder_.transform(Xa)
+
         if self.method == 'drop':
-            if self.drop_level is None:
-                drop_level = column_names[0]
-            else:
-                drop_level = self.drop_level
-            drop_idx = column_names.index(drop_level)
-            column_names.remove(drop_level)
-            self.columns_ = column_names
+            self.columns_ = [column_names[j] for j in colmap]
             self.contrast_matrix_ = np.identity(len(cats))
             keep = np.ones(len(cats), np.bool)
             keep[drop_idx] = 0
             self.contrast_matrix_ = self.contrast_matrix_[:,keep]
+            self.contrast_matrix_ = self.contrast_matrix_[:,colmap]            
         elif self.method == 'sum':
-            self.columns_ = column_names[1:]
+            self.columns_ = [column_names[j] for j in colmap]
             self.contrast_matrix_ = np.zeros((len(cats), len(cats)-1))
-            self.contrast_matrix_[:-1,:] = np.identity(len(cats)-1)
-            self.contrast_matrix_[-1] = -1
+            self.contrast_matrix_[:drop_idx][:,:drop_idx] = np.identity(drop_idx)
+            self.contrast_matrix_[drop_idx+1:,drop_idx:] = np.identity(len(cats) - drop_idx - 1)
+            self.contrast_matrix_[drop_idx] = -1
+            self.contrast_matrix_ = self.contrast_matrix_[:,colmap]
         elif callable(self.method):
             self.contrast_matrix_ = self.method(len(cats))
         elif self.method is None:
@@ -92,7 +110,8 @@ class Contrast(TransformerMixin, BaseEstimator):
     def transform(self, X):
         if not hasattr(self, 'encoder_'):
             self.fit(X)
-        D = self.encoder_.transform(X)
+        Xa = np.asarray(X).reshape((-1,1))
+        D = self.encoder_.transform(Xa)
         value = D.dot(self.contrast_matrix_)
 
         if isinstance(X, (pd.DataFrame, pd.Series)):
