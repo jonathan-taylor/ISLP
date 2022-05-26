@@ -53,6 +53,23 @@ def load_data(dataset):
         for col in ['sex', 'diagnosis', 'loc', 'stereo']:
             df[col] = pd.Categorical(df[col])
         return df
+    elif dataset == 'Bikeshare':
+        filename = resource_filename('ISLP', pjoin('data', '%s.csv' % dataset))
+        df = pd.read_csv(filename)
+        df['weathersit'] = pd.Categorical(df['weathersit'], ordered=False)
+        # setting order to avoid alphabetical
+        df['mnth'] = pd.Categorical(df['mnth'],
+                                    ordered=False,
+                                    categories=['Jan', 'Feb',
+                                                'March', 'April',
+                                                'May', 'June',
+                                                'July', 'Aug',
+                                                'Sept', 'Oct',
+                                                'Nov', 'Dec'])
+        df['hr'] = pd.Categorical(df['hr'],
+                                  ordered=False,
+                                  categories=range(24))
+        return df
     elif dataset == 'Wage':
         df = pd.read_csv(resource_filename('ISLP', pjoin('data', 'Wage.csv')))
         df['education'] = pd.Categorical(df['education'], ordered=True)
@@ -61,6 +78,26 @@ def load_data(dataset):
         filename = resource_filename('ISLP', pjoin('data', '%s.csv' % dataset))
         return pd.read_csv(filename)
 
+from sklearn.metrics import confusion_matrix as _confusion_matrix
+
+def confusion_matrix(predicted_labels,
+                     true_labels):
+    """
+    Return a data frame version of confusion 
+    matrix with rows given by predicted label
+    and columns the truth.
+    """
+
+    labels = sorted(np.unique(list(true_labels) +
+                              list(predicted_labels)))
+    C = _confusion_matrix(true_labels,
+                          predicted_labels,
+                          labels=labels)
+    df = pd.DataFrame(C.T, columns=labels) # swap rows and columns
+    df.index = pd.Index(labels, name='Predicted')
+    df.columns.name = 'Truth'
+    return df
+        
 
 from . import _version
 __version__ = _version.get_versions()['version']
