@@ -186,7 +186,20 @@ SetupDependency('statsmodels', info.STATSMODELS_MIN_VERSION,
 SetupDependency('scikit-learn', info.SKLEARN_MIN_VERSION,
                 req_type='install_requires',
                 heavy=True).check_fill(extra_setuptools_args)
-requirements = open('requirements.txt').read().strip().split('\n')
+
+#requirements = open('requirements.txt').read().strip().split('\n')
+
+requirements = '''numpy
+scipy
+jupyter
+pandas
+lxml # pandas needs this for html
+scikit-learn
+joblib
+lifelines
+l0bnb # for bestsubsets
+pygam # for GAM in Ch7'''.split('\n')
+
 for req in requirements:
     req = req.split('#')[0]
     import sys; sys.stderr.write(req+'\n')
