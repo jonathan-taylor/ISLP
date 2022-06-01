@@ -80,8 +80,8 @@ def load_data(dataset):
 
 from sklearn.metrics import confusion_matrix as _confusion_matrix
 
-def confusion_matrix(predicted_labels,
-                     true_labels):
+def confusion_table(predicted_labels,
+                    true_labels):
     """
     Return a data frame version of confusion 
     matrix with rows given by predicted label
