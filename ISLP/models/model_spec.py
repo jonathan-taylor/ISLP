@@ -39,7 +39,7 @@ class Variable(NamedTuple):
     encoder: Any
     use_transform: bool=True   # if False use the predict method
     pure_columns: bool=False
-    override_encoder_colnames: bool=True
+    override_encoder_colnames: bool=False
     
 #### contrast specific code
 
@@ -574,7 +574,11 @@ def derived_variable(*variables, encoder=None, name=None, use_transform=True):
 
     if name is None:
         name = str(encoder)
-    var = Variable(variables, name, encoder, use_transform=use_transform)
+    var = Variable(variables,
+                   name,
+                   encoder,
+                   use_transform=use_transform,
+                   override_encoder_colnames=True)
     return var
 
 def poly(col, *args, intercept=False, name=None, **kwargs):
