@@ -14,6 +14,6 @@
 #
 #   Modified for ISLP by Jonathan Taylor 2021
 
-from .pgbart import PGBART
+from .bart import BART
 
-__all__ = ["PGBART"]
+__all__ = ["BART"]
