@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+#
+#   Modified for ISLP by Jonathan Taylor 2021
 
 import math
 from copy import deepcopy
@@ -184,6 +186,7 @@ class Tree:
         new_tree = Tree(tree_id, len(idx_data_points))
         new_tree[0] = LeafNode(index=0, value=leaf_node_value, idx_data_points=idx_data_points)
         return new_tree
+
 
 class BaseNode(object):
     def __init__(self, index):

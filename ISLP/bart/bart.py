@@ -96,7 +96,8 @@ class BART(BaseEnsemble, RegressorMixin):
         available_predictors = list(range(self.num_variates_))
 
         sum_trees_output = np.full_like(Y, init_mean)
-        self.init_tree_ = Tree.init_tree(
+
+        self.base_tree_ = Tree.init_tree(
             tree_id=0,
             leaf_node_value=init_mean / self.m,
             idx_data_points=np.arange(self.num_observations_, dtype="int32"),
@@ -122,20 +123,19 @@ class BART(BaseEnsemble, RegressorMixin):
 
         self.all_particles_ = []
         for i in range(self.m):
-            self.init_tree_.tree_id = i
-            p = ParticleTree(
-                self.init_tree_.copy(),
-                self.init_log_weight_,
-                self.init_likelihood_,
-                missing_data,
-                prior_prob_leaf_node,
-                ssv,
-                available_predictors,
-                self.m,
-                self.sigma_,
-                self.mu_mean_,
-                self.mu_std_
-            )
+            new_tree = self.base_tree_.copy()
+            new_tree.tree_id = i
+            p = ParticleTree(new_tree,
+                             np.nan,
+                             missing_data,
+                             prior_prob_leaf_node,
+                             ssv,
+                             available_predictors,
+                             self.m,
+                             self.sigma_,
+                             self.mu_mean_,
+                             self.mu_std_)
+
             self.all_particles_.append(p)
 
     # Private methods
@@ -163,33 +163,37 @@ class BART(BaseEnsemble, RegressorMixin):
             # Generate an initial set of SMC particles
             # at the end of the algorithm we return one of these particles as the new tree
 
-            particles = self.init_particles(tree_id,
-                                            init_log_weight,
-                                            init_likelihood)
-
             # Compute the sum of trees without the tree we are attempting to replace
 
-            sum_trees_output_noi = sum_trees_output - particles[0].tree.predict_output()
+            base_particle = self.all_particles_[tree_id]
+            print(base_particle.log_weight, 'bas weight')
+            sum_trees_output_noi = sum_trees_output - base_particle.tree.predict_output()
+            resid_noi = Y - sum_trees_output_noi
             self._idx += 1
 
-            # The old tree is not growing so we update the weights only once.
-            particles[0].update_weight(Y,
-                                       sum_trees_output_noi)
+            particles = self.init_particles(base_particle,
+                                            resid_noi)
 
             for t in range(self.max_stages):
                 # sample each particle (try to grow each tree)
                 for p in particles[1:]:
-                    tree_grew = p.sample_tree_sequential(
+                    # this is log_likelihood_ratio for the split if there was one
+                    # so if tree does not grow this is just 0
+                    # line 9 of Algorithm 2 of Lakshminarayanan
+                    tree_grew, left_node, right_node = p.sample_tree_sequential(
                         X,
-                        Y,
-                        sum_trees_output,
+                        resid_noi,
                     )
+                    # line 12 of Algorithm 2 of Lakshminarayanan
                     if tree_grew:
-                        p.update_weight(Y,
-                                        sum_trees_output_noi)
+                        p.log_weight += p.increment_loglikelihood(resid_noi,
+                                                                  left_node,
+                                                                  right_node)
 
+                # line 13 of Algorithm 2 of Lakshminarayanan
                 W_t, normalized_weights = _normalize(particles)
 
+                # line 14-15 of Algorithm 2 of Lakshminarayanan
                 # Resample all but first particle
                 re_n_w = normalized_weights[1:] / normalized_weights[1:].sum()
                 new_indices = np.random.choice(self.indices_, size=len(self.indices_), p=re_n_w)
@@ -210,10 +214,13 @@ class BART(BaseEnsemble, RegressorMixin):
             # Get the new tree and update
             new_particle = np.random.choice(particles, p=normalized_weights)
             new_tree = new_particle.tree
-            new_particle.log_weight = new_particle.old_likelihood_logp - np.log(len(particles))
+            new_particle.log_weight = W_t - np.log(len(particles))
             self.all_particles_[new_tree.tree_id] = new_particle
             sum_trees_output = sum_trees_output_noi + new_tree.predict_output()
 
+            # now sample the mean parameters within each leaf
+            new_particle.sample_values(resid_noi)
+            print(new_particle.log_weight, 'weight')
             # if self.tune:
             #     for index in new_particle.used_variates:
             #         self.split_prior[index] += 1
@@ -233,24 +240,24 @@ class BART(BaseEnsemble, RegressorMixin):
         return sum_trees_output, [stats]
 
     def init_particles(self,
-                       tree_id: int,
-                       init_log_weight: float,
-                       init_likelihood: float) -> np.ndarray:
+                       base_particle: ParticleTree,
+                       resid: np.ndarray) -> np.ndarray:
         """
         Initialize particles
         """
-        p = self.all_particles_[tree_id]
-        p.log_weight = self.init_log_weight_
-        p.old_likelihood_logp = self.init_likelihood_
+        p = base_particle
+
+        init_loglikelihood = p.marginal_loglikelihood(resid)
+        p.log_weight = init_loglikelihood
         particles = [p]
 
         for _ in self.indices_:
-            self.init_tree_.tree_id = tree_id
+            new_tree = self.base_tree_.copy()
+            new_tree.tree_id = p.tree.tree_id
             particles.append(
                 ParticleTree(
-                    self.init_tree_.copy(),
-                    init_log_weight,
-                    init_likelihood,
+                    new_tree,
+                    init_loglikelihood,
                     p.missing_data,
                     p.prior_prob_leaf_node,
                     p.ssv,
