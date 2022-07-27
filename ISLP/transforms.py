@@ -31,7 +31,7 @@ class Poly(TransformerMixin, BaseEstimator):
         self.degree = degree
         self.raw = raw
         self.intercept = intercept
-        
+
     def fit(self, X, y=None):
 
         """
@@ -357,7 +357,7 @@ class BSpline(TransformerMixin, BaseEstimator):
             self.df = order - 1 + self.intercept
 
         if self.df < order - 1 + self.intercept:
-            raise ValueError('df must be greater than or equal to %d' % order - 1 + self.intercept)
+            raise ValueError('df must be greater than or equal to %d' % (order - 1 + self.intercept))
         ninternal = self.df - (order - 1 + self.intercept)
         if self.internal_knots is None:
             if self.df is None:
@@ -523,7 +523,7 @@ class NaturalSpline(TransformerMixin, BaseEstimator):
             self.df = order - 1 + self.intercept - 2 # -2 for constraints
 
         if self.df < order:
-            raise ValueError('df must be greater than or equal to %d' % order - 1 + self.intercept - 2)
+            raise ValueError('df must be greater than or equal to %d' % (order - 1 + self.intercept - 2))
         ninternal = self.df - (order - 1 + self.intercept - 2)
         if self.internal_knots is None:
             if self.df is None:

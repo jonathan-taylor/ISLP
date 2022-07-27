@@ -39,6 +39,7 @@ class Variable(NamedTuple):
     encoder: Any
     use_transform: bool=True   # if False use the predict method
     pure_columns: bool=False
+    override_encoder_colnames: bool=True
     
 #### contrast specific code
 
@@ -480,7 +481,7 @@ class ModelSpec(TransformerMixin, BaseEstimator):
                     cols = var.encoder.transform(cols)
                 else:
                     cols = var.encoder.predict(cols)
-                if hasattr(var.encoder, 'columns_'):
+                if hasattr(var.encoder, 'columns_') and not var.override_encoder_colnames:
                     names = var.encoder.columns_
                 else:
                     if cols.ndim > 1 and cols.shape[1] > 1:
@@ -573,7 +574,8 @@ def derived_variable(*variables, encoder=None, name=None, use_transform=True):
 
     if name is None:
         name = str(encoder)
-    return Variable(variables, name, encoder, use_transform=use_transform)
+    var = Variable(variables, name, encoder, use_transform=use_transform)
+    return var
 
 def poly(col, *args, intercept=False, name=None, **kwargs):
     """
@@ -609,7 +611,13 @@ def poly(col, *args, intercept=False, name=None, **kwargs):
             name = col.name
         else:
             name = str(col)
+
+        _args = _argstring(*args, **kwargs)
+        if _args:
+            name = ', '.join([name, _args])
+
         name = f'{shortname}({name})'
+
     return derived_variable(col,
                             name=name,
                             encoder=encoder)
@@ -645,6 +653,11 @@ def ns(col, *args, intercept=False, name=None, **kwargs):
             name = col.name
         else:
             name = str(col)
+
+        _args = _argstring(*args, **kwargs)
+        if _args:
+            name = ', '.join([name, _args])
+
         name = f'{shortname}({name})'
     encoder = klass(*args,
                     intercept=intercept,
@@ -684,6 +697,11 @@ def bs(col, *args, intercept=False, name=None, **kwargs):
             name = col.name
         else:
             name = str(col)
+
+        _args = _argstring(*args, **kwargs)
+        if _args:
+            name = ', '.join([name, _args])
+
         name = f'{shortname}({name})'
     encoder = klass(*args,
                     intercept=intercept,
@@ -719,6 +737,10 @@ def pca(variables, name, *args, scale=False, **kwargs):
         scaler = StandardScaler(with_mean=True,
                                 with_std=True)
         encoder = make_pipeline(scaler, encoder)
+
+    _args = _argstring(*args, **kwargs)
+    if _args:
+        name = ', '.join([name, _args])
 
     return derived_variable(*variables,
                             name=f'{shortname}({name})',
@@ -767,4 +789,5 @@ def clusterer(variables, name, transform, scale=False):
 
     return intermed
 
-    
+def _argstring(*args, **kwargs):
+    return ', '.join([str(a) for a in args]) + ', '.join([f'{k}={v}' for k, v in kwargs.items()])
