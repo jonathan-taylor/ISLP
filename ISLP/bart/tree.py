@@ -183,7 +183,7 @@ class Tree:
 class BaseNode(object):
     def __init__(self, index):
         self.index = index
-        self.depth = int(math.floor(math.log(index + 1, 2)))
+        self.depth = int(np.floor(math.log(index + 1, 2)))
 
     def get_idx_parent_node(self):
         return (self.index - 1) // 2
@@ -204,7 +204,7 @@ class SplitNode(BaseNode):
 
 
 class LeafNode(BaseNode):
-    def __init__(self, index, value, idx_data_points, linear_params=None):
+    def __init__(self, index, value, idx_data_points):
         super().__init__(index)
         self.value = value
         self.idx_data_points = idx_data_points

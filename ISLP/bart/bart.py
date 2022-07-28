@@ -1,3 +1,4 @@
+
 #   Copyright 2020 The PyMC Developers
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,16 +61,16 @@ class BART(BaseEnsemble, RegressorMixin):
 
     def __init__(self,
                  num_particles=10,
-                 max_stages=100,
+                 max_stages=5000,
                  batch="auto",
                  m=200,
                  alpha_split=0.95,
                  beta_split=2,
                  k=2,
                  split_prior=None,
-                 ndraw=50,
-                 burnin=20,
-                 keep_every=5,
+                 ndraw=100,
+                 burnin=100,
+                 keep_every=1,
                  sigma_prior_A=3,
                  sigma_prior_q=0.9):
 
@@ -99,22 +100,22 @@ class BART(BaseEnsemble, RegressorMixin):
         self.variable_inclusion_ = []
 
         missing_data = np.any(np.isnan(X))
-        init_mean = Y.mean()    
 
-        # if data is binary
-        Y_unique = np.unique(Y)
-        if Y_unique.size == 2 and np.all(Y_unique == [0, 1]):
-            self.mu_prior_std_ = 6 / (self.k * self.m ** 0.5)
-        # maybe we need to check for count data
-        else:
-            self.mu_prior_std_ = Y.std() / (self.k * self.m ** 0.5)
+        # Chipman's defaults according to Lakshminarayanan
+        self._Y_min, self._Y_max = np.nanmin(Y), np.nanmax(Y)
+        self._forward = lambda y: ((y - self._Y_min) / (self._Y_max - self._Y_min) - 0.5)
+        self._inverse = lambda out: (out + 0.5) * (self._Y_max - self._Y_min) + self._Y_min
+        Y_shift = self._forward(Y)
+        init_mean = Y_shift.mean()    
+       
+        self.mu_prior_std_ = 0.5 / (self.k * np.sqrt(self.m))
         self.mu_prior_mean_ = 0 # mean of prior for mu
 
         self.num_observations_ = X.shape[0]
         self.num_variates_ = X.shape[1]
         available_predictors = list(range(self.num_variates_))
 
-        sum_trees_output = np.full_like(Y, init_mean)
+        sum_trees_output = np.full_like(Y_shift, init_mean)
 
         self.base_tree_ = Tree.init_tree(
             tree_id=0,
@@ -122,16 +123,12 @@ class BART(BaseEnsemble, RegressorMixin):
             idx_data_points=np.arange(self.num_observations_, dtype="int32"),
         )
 
-        self.tune = True
-        self.counter = 0
-        self.sum_trees = []
-
         self.indices_ = list(range(1, self.num_particles))
 
         split_prior = self.split_prior or np.ones(X.shape[1])
         ssv = SampleSplittingVariable(split_prior)
 
-        sigma = np.std(Y)
+        sigma = np.std(Y_shift)
         sigma_prior_B = invgamma(self.sigma_prior_A, 0, 1).ppf(self.sigma_prior_q) * sigma
 
         # instantiate the particles
@@ -141,7 +138,7 @@ class BART(BaseEnsemble, RegressorMixin):
         for i in range(self.m):
             new_tree = self.base_tree_.copy()
             new_tree.tree_id = i
-            log_weight = marginal_loglikelihood(Y - Y.mean(),
+            log_weight = marginal_loglikelihood(Y_shift - init_mean * (self.m - 1) / self.m,
                                                 sigma,
                                                 self.mu_prior_mean_,
                                                 self.mu_prior_std_)
@@ -164,12 +161,11 @@ class BART(BaseEnsemble, RegressorMixin):
         self.trees_sample_ = []
         while True:
             trees, sum_trees_output, stats = self._gibbs_step_tree_value(X,
-                                                                         Y,
+                                                                         Y_shift,
                                                                          sigma,
                                                                          sum_trees_output)
-            sigma = self._gibbs_step_sigma(Y - sum_trees_output,
+            sigma = self._gibbs_step_sigma(Y_shift - sum_trees_output,
                                            sigma_prior_B)
-            print(sigma)
             if counter >= self.burnin and ((counter - self.burnin) % self.keep_every == 0):
                 self.trees_sample_.append(trees)
             if counter - self.burnin >= self.ndraw * self.keep_every:
@@ -189,11 +185,11 @@ class BART(BaseEnsemble, RegressorMixin):
         output = np.zeros(X.shape[0], np.float)
 
         for trees in self.trees_sample_:
-            print(len(trees), len(self.trees_sample_))
             for tree in trees:
                 tree_fit = np.array([tree.predict_out_of_sample(x) for x in X])
                 output += tree_fit
-        return output / nsample
+        output = output / nsample
+        return self._inverse(output)
 
     # Private methods
 
@@ -281,7 +277,6 @@ class BART(BaseEnsemble, RegressorMixin):
             self.all_particles_[new_tree.tree_id] = new_particle
             sum_trees_output = sum_trees_output_noi + new_tree.predict_output()
 
-            self.counter += 1
             for index in new_particle.used_variates:
                 variable_inclusion[index] += 1
 

@@ -55,20 +55,20 @@ import numpy as np
 
 def marginal_loglikelihood(response,
                            sigma,
-                           mu_mean,
-                           mu_std):
+                           mu_prior_mean,
+                           mu_prior_std):
     response_mean = response.mean()
 
     n = response.shape[0]
 
-    sigma_bar = np.sqrt(n / sigma**2 + 1 / mu_std**2)
-    mu_bar = (n * response_mean / sigma**2 + mu_mean / mu_std**2) / sigma_bar**2
+    sigma_bar = 1 / np.sqrt(n / sigma**2 + 1 / mu_prior_std**2)
+    mu_bar = (n * response_mean / sigma**2 + mu_prior_mean / mu_prior_std**2) * sigma_bar**2
 
-    logL = (-0.5 * (response**2).sum() / sigma**2
-            -0.5 * mu_mean**2 / mu_std**2 +
-            np.log(sigma_bar / mu_std) +
+    logL = (np.log(sigma_bar / mu_prior_std) +
             0.5 * (mu_bar / sigma_bar)**2)
     logL -= n * np.log(sigma)
-            
+    logL -= (0.5 * (response**2).sum() / sigma**2
+             + 0.5 * mu_prior_mean**2 / mu_prior_std**2)
+                
     return logL
 

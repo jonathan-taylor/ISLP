@@ -62,7 +62,7 @@ class ParticleTree(object):
                     new_indexes = self.tree.idx_leaf_nodes[-2:]
                     self.expansion_nodes.extend(new_indexes)
                     self.used_variates.append(index_selected_predictor)
-
+                 
         return tree_grew, left_node, right_node
 
     def increment_loglikelihood(self,
@@ -119,7 +119,6 @@ class ParticleTree(object):
                 mean = linear / quad
                 std = 1. / np.sqrt(quad)
                 leaf_node.value = np.random.normal() * std + mean
-                #print(mean, std, resid[leaf_node.idx_data_points].mean(), quad * self.sigma**2, linear * self.sigma**2, self.sigma**2, 'sample')
             else:
                 leaf_node.value = np.random.normal() * self.mu_prior_std + self.mu_prior_mean
 
