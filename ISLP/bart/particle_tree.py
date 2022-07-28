@@ -1,8 +1,9 @@
 
+
 import numpy as np
 
 from .tree import LeafNode, SplitNode, Tree
-from .likelihood import marginal_loglikelihood
+from .likelihood import marginal_loglikelihood, incremental_loglikelihood
 
 class ParticleTree(object):
     """
@@ -81,26 +82,13 @@ class ParticleTree(object):
             len(left_node.idx_data_points) == 0):
             return 0
 
-        right = marginal_loglikelihood(resid[right_node.idx_data_points],
-                                       self.sigmasq,
-                                       self.mu_prior_mean,
-                                       self.mu_prior_var,
-                                       incremental=True)
+        return incremental_loglikelihood(resid,
+                                         left_node.idx_data_points,
+                                         right_node.idx_data_points,
+                                         self.sigmasq,
+                                         self.mu_prior_mean,
+                                         self.mu_prior_var)
 
-        left = marginal_loglikelihood(resid[left_node.idx_data_points],
-                                      self.sigmasq,
-                                      self.mu_prior_mean,
-                                      self.mu_prior_var,
-                                      incremental=True)
-
-        full_idx = np.hstack([left_node.idx_data_points, right_node.idx_data_points])
-        full = marginal_loglikelihood(resid[full_idx],
-                                      self.sigmasq,
-                                      self.mu_prior_mean,
-                                      self.mu_prior_var,
-                                      incremental=True)
-        return left + right - full
-        
     def marginal_loglikelihood(self,
                                resid):
         logL = 0

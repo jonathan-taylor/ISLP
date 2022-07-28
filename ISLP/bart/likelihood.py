@@ -74,3 +74,45 @@ def marginal_loglikelihood(response,
                 
     return logL
 
+def incremental_loglikelihood(response,
+                              idx_1,
+                              idx_2,
+                              sigmasq,
+                              mu_prior_mean,
+                              mu_prior_var):
+    r_1 = response[idx_1]
+    r_2 = response[idx_2]
+    n_1, n_2 = r_1.shape[0], r_2.shape[0]
+    sum_1, sum_2 = r_1.sum(), r_2.sum()
+    sum_f = sum_1 + sum_2
+    
+    # for idx_1
+
+    sigmasq_bar_1 = 1 / (n_1 / sigmasq + 1 / mu_prior_var)
+    mu_bar_1 = (sum_1 / sigmasq + mu_prior_mean / mu_prior_var) * sigmasq_bar_1
+
+    logL_1 = (0.5 * np.log(sigmasq_bar_1 / mu_prior_var) +
+            0.5 * (mu_bar_1**2 / sigmasq_bar_1))
+    logL_1 -= 0.5 * mu_prior_mean**2 / mu_prior_var
+                
+    # for idx_2
+
+    sigmasq_bar_2 = 1 / (n_2 / sigmasq + 1 / mu_prior_var)
+    mu_bar_2 = (sum_2 / sigmasq + mu_prior_mean / mu_prior_var) * sigmasq_bar_2
+
+    logL_2 = (0.5 * np.log(sigmasq_bar_2 / mu_prior_var) +
+            0.5 * (mu_bar_2**2 / sigmasq_bar_2))
+    logL_2 -= 0.5 * mu_prior_mean**2 / mu_prior_var
+                
+    # for full: union of idx_1 and idx_2
+
+    sigmasq_bar_f = 1 / ((n_1 + n_2) / sigmasq + 1 / mu_prior_var)
+    mu_bar_f = (sum_f / sigmasq + mu_prior_mean / mu_prior_var) * sigmasq_bar_f
+
+    logL_f = (0.5 * np.log(sigmasq_bar_f / mu_prior_var) +
+            0.5 * (mu_bar_f**2 / sigmasq_bar_f))
+    logL_f -= 0.5 * mu_prior_mean**2 / mu_prior_var
+
+    return logL_1 + logL_2 - logL_f
+
+
