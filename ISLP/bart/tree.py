@@ -94,7 +94,7 @@ class Tree:
 
         return output.astype(np.float)
 
-    def predict_out_of_sample(self, X, m):
+    def predict_out_of_sample(self, X):
         """
         Predict output of tree for an unobserved point x.
 
@@ -102,8 +102,6 @@ class Tree:
         ----------
         X : numpy array
             Unobserved point
-        m : int
-            Number of trees
 
         Returns
         -------
@@ -111,13 +109,7 @@ class Tree:
             Value of the leaf value where the unobserved point lies.
         """
         leaf_node, split_variable = self._traverse_tree(X, node_index=0)
-        linear_params = leaf_node.linear_params
-        if linear_params is None:
-            return leaf_node.value
-        else:
-            x = X[split_variable].item()
-            y_x = (linear_params[0] + linear_params[1] * x) / m
-            return y_x + linear_params[2]
+        return leaf_node.value
 
     def _traverse_tree(self, x, node_index=0, split_variable=None):
         """

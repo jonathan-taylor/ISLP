@@ -1,7 +1,7 @@
 import numpy as np
 
 from .tree import LeafNode, SplitNode, Tree
-from .utils import marginal_loglikelihood
+from .likelihood import marginal_loglikelihood
 
 class ParticleTree(object):
     """
@@ -17,8 +17,8 @@ class ParticleTree(object):
                  available_predictors,
                  m,
                  sigma,
-                 mu_mean,
-                 mu_std):
+                 mu_prior_mean,
+                 mu_prior_std):
 
         self.tree = tree.copy()  # keeps the tree that we care at the moment
         self.expansion_nodes = [0]
@@ -30,8 +30,8 @@ class ParticleTree(object):
         self.available_predictors = available_predictors
         self.m = m
         self.sigma = sigma
-        self.mu_std = mu_std
-        self.mu_mean = mu_mean
+        self.mu_prior_std = mu_prior_std
+        self.mu_prior_mean = mu_prior_mean
 
     def sample_tree_sequential(
             self,
@@ -67,20 +67,27 @@ class ParticleTree(object):
                                 left_node,
                                 right_node):
 
+        # this could happen if a split value was the largest or smallest in a leaf
+        
+        if (len(right_node.idx_data_points) == 0 or
+            len(left_node.idx_data_points) == 0):
+            return 0
+
         right = marginal_loglikelihood(resid[right_node.idx_data_points],
                                        self.sigma,
-                                       self.mu_std,
-                                       self.mu_mean)
+                                       self.mu_prior_mean,
+                                       self.mu_prior_std)
+
         left = marginal_loglikelihood(resid[left_node.idx_data_points],
                                       self.sigma,
-                                      self.mu_std,
-                                      self.mu_mean)
+                                      self.mu_prior_mean,
+                                      self.mu_prior_std)
 
         full_idx = np.hstack([left_node.idx_data_points, right_node.idx_data_points])
         full = marginal_loglikelihood(resid[full_idx],
                                       self.sigma,
-                                      self.mu_std,
-                                      self.mu_mean)
+                                      self.mu_prior_mean,
+                                      self.mu_prior_std)
         return left + right - full
         
     def marginal_loglikelihood(self,
@@ -88,10 +95,11 @@ class ParticleTree(object):
         logL = 0
         for leaf_id in self.tree.idx_leaf_nodes:
             leaf_node = self.tree.get_node(leaf_id)
-            logL += marginal_loglikelihood(resid[leaf_node.idx_data_points],
-                                           self.sigma,
-                                           self.mu_std,
-                                           self.mu_mean)
+            if len(leaf_node.idx_data_points) > 0:
+                logL += marginal_loglikelihood(resid[leaf_node.idx_data_points],
+                                               self.sigma,
+                                               self.mu_prior_mean,
+                                               self.mu_prior_std)
         return logL
 
     def sample_values(self,
@@ -99,16 +107,18 @@ class ParticleTree(object):
         
         for leaf_id in self.tree.idx_leaf_nodes:
             leaf_node = self.tree.get_node(leaf_id)
-            resid_mean = resid[leaf_node.idx_data_points].mean()
-            nleaf = len(leaf_node.idx_data_points)
+            if len(leaf_node.idx_data_points) > 0:
+                nleaf = len(leaf_node.idx_data_points)
 
-            quad = nleaf + 1 / self.mu_std**2
-            linear = resid[leaf_node.idx_data_points].sum() + self.mu_mean / self.mu_std**2
+                quad = nleaf / self.sigma**2 + 1 / self.mu_prior_std**2
+                linear = resid[leaf_node.idx_data_points].sum() / self.sigma**2 + self.mu_prior_mean / self.mu_prior_std**2
 
-            mean = linear / quad
-            std = 1. / np.sqrt(quad)
-            leaf_node.value = np.random.normal() * std + mean
-  
+                mean = linear / quad
+                std = 1. / np.sqrt(quad)
+                leaf_node.value = np.random.normal() * std + mean
+            else:
+                leaf_node.value = np.random.normal() * self.mu_prior_std + self.mu_prior_mean
+                
 # Section 2.5 of Lakshminarayanan
 
 def grow_tree(
@@ -143,7 +153,7 @@ def grow_tree(
     new_split_node = SplitNode(
         index=index_leaf_node,
         idx_split_variable=selected_predictor,
-        split_value=np.nan,
+        split_value=split_value,
     )
 
     new_left_node = LeafNode(
@@ -170,24 +180,6 @@ def get_new_idx_data_points(split_value, idx_data_points, selected_predictor, X)
 
     return left_node_idx_data_points, right_node_idx_data_points
 
-
-def draw_leaf_value(Y_mu_pred,
-                    X_mu,
-                    m,
-                    mu_std,
-                    response):
-    """Draw Gaussian distributed leaf values"""
-
-    if Y_mu_pred.size == 0:
-        return 0
-    else:
-        norm = np.random.normal() * mu_std
-        if Y_mu_pred.size == 1:
-            mu_mean = Y_mu_pred.item() / m
-        elif response == "constant":
-            mu_mean = Y_mu_pred.mean() / m
-        draw = norm + mu_mean
-        return draw
 
 def discrete_uniform_sampler(upper_value):
     """Draw an integer from the uniform distribution with bounds [0, upper_value).

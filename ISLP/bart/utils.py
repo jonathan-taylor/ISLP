@@ -18,13 +18,6 @@ class SampleSplittingVariable(object):
             if r <= v:
                 return i
 
-def marginal_loglikelihood(resid,
-                           sigma,
-                           mu_std,
-                           mu_mean):
-    n = resid.shape[0]
-    return 0 # - n / 2 * np.log(2 * np.pi * sigma**2) - 0.5 * np.sum((resid - mu)**2) / sigma**2
-
 def compute_prior_probability(alpha):
     """
     Calculate the probability of the node being a LeafNode (1 - p(being SplitNode)).
