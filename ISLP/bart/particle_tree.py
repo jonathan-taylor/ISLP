@@ -19,7 +19,8 @@ class ParticleTree(object):
                  m,
                  sigma,
                  mu_prior_mean,
-                 mu_prior_std):
+                 mu_prior_std,
+                 random_state):
 
         self.tree = tree.copy()  # keeps the tree that we care at the moment
         self.alpha_split = alpha_split
@@ -34,11 +35,12 @@ class ParticleTree(object):
         self.sigma = sigma
         self.mu_prior_std = mu_prior_std
         self.mu_prior_mean = mu_prior_mean
+        self.random_state = random_state
         
-    def sample_tree_sequential(
-            self,
-            X,
-            resid):
+    def sample_tree_sequential(self,
+                               X,
+                               X_quantiles,
+                               resid):
 
         tree_grew, left_node, right_node = False, None, None
         if self.expansion_nodes:
@@ -47,7 +49,7 @@ class ParticleTree(object):
             depth = self.tree[index_leaf_node].depth
             prob_split = self.alpha_split / (1 + depth)**self.beta_split
 
-            if np.random.random() < prob_split:
+            if self.random_state.random() < prob_split:
                 (tree_grew,
                  index_selected_predictor,
                  left_node,
@@ -57,7 +59,9 @@ class ParticleTree(object):
                      self.ssv,
                      self.available_predictors,
                      X,
-                     self.missing_data)
+                     X_quantiles,
+                     self.missing_data,
+                     self.random_state)
                 if tree_grew:
                     new_indexes = self.tree.idx_leaf_nodes[-2:]
                     self.expansion_nodes.extend(new_indexes)
@@ -121,9 +125,9 @@ class ParticleTree(object):
 
                 mean = linear / quad
                 std = 1. / np.sqrt(quad)
-                leaf_node.value = np.random.normal() * std + mean
+                leaf_node.value = self.random_state.normal() * std + mean
             else:
-                leaf_node.value = np.random.normal() * self.mu_prior_std + self.mu_prior_mean
+                leaf_node.value = self.random_state.normal() * self.mu_prior_std + self.mu_prior_mean
 
 # Section 2.5 of Lakshminarayanan
 
@@ -133,28 +137,32 @@ def grow_tree(
         split_prior,
         available_predictors,
         X,
-        missing_data):
+        X_quantiles,
+        missing_data,
+        random_state):
 
     current_node = tree.get_node(index_leaf_node)
     idx_data_points = current_node.idx_data_points
 
     index_selected_predictor = split_prior.rvs()
     selected_predictor = available_predictors[index_selected_predictor]
-    available_splitting_values = X[idx_data_points, selected_predictor]
-    if missing_data:
-        _keep = ~np.isnan(available_splitting_values)
-        idx_data_points = idx_data_points[_keep]
-        available_splitting_values = available_splitting_values[_keep]
+    X_select = X[:, selected_predictor]
+    if X_quantiles is not None:
+        available_splitting_values = X_quantiles[:, selected_predictor]
+    else:
+        available_splitting_values = X_select[idx_data_points]
+        if missing_data:
+            _keep = ~np.isnan(available_splitting_values)
+            idx_data_points = idx_data_points[_keep]
+            available_splitting_values = available_splitting_values[_keep]
 
     if available_splitting_values.size == 0:
         return False, None, None, None
 
-    idx_selected_splitting_values = discrete_uniform_sampler(len(available_splitting_values))
-    split_value = available_splitting_values[idx_selected_splitting_values]
+    split_value = random_state.choice(available_splitting_values)
 
     left_node_idx_data_points, right_node_idx_data_points = get_new_idx_data_points(
-        split_value, idx_data_points, selected_predictor, X
-    )
+        split_value, idx_data_points, X_select)
 
     new_split_node = SplitNode(
         index=index_leaf_node,
@@ -167,6 +175,7 @@ def grow_tree(
         value=np.nan,
         idx_data_points=left_node_idx_data_points,
     )
+
     new_right_node = LeafNode(
         index=current_node.get_idx_right_child(),
         value=np.nan,
@@ -178,20 +187,12 @@ def grow_tree(
     return True, index_selected_predictor, new_left_node, new_right_node
 
 
-def get_new_idx_data_points(split_value, idx_data_points, selected_predictor, X):
+def get_new_idx_data_points(split_value, idx_data_points, X_select):
 
-    left_idx = X[idx_data_points, selected_predictor] <= split_value
+    left_idx = X_select[idx_data_points] <= split_value
     left_node_idx_data_points = idx_data_points[left_idx]
     right_node_idx_data_points = idx_data_points[~left_idx]
 
     return left_node_idx_data_points, right_node_idx_data_points
-
-
-def discrete_uniform_sampler(upper_value):
-    """Draw an integer from the uniform distribution with bounds [0, upper_value).
-
-    This is the same and np.random.randint(upper_value) but faster.
-    """
-    return int(np.random.random() * upper_value)
 
 __all__ = ['ParticleTree']
