@@ -1,3 +1,4 @@
+
 import numpy as np
 
 from .tree import LeafNode, SplitNode, Tree
@@ -17,12 +18,12 @@ class ParticleTree(object):
                  ssv,
                  available_predictors,
                  m,
-                 sigma,
+                 sigmasq,
                  mu_prior_mean,
-                 mu_prior_std,
+                 mu_prior_var,
                  random_state):
 
-        self.tree = tree.copy()  # keeps the tree that we care at the moment
+        self.tree = tree # keeps the tree that we care at the moment
         self.alpha_split = alpha_split
         self.beta_split = beta_split
         self.expansion_nodes = [0]
@@ -32,8 +33,8 @@ class ParticleTree(object):
         self.ssv = ssv
         self.available_predictors = available_predictors
         self.m = m
-        self.sigma = sigma
-        self.mu_prior_std = mu_prior_std
+        self.sigmasq = sigmasq
+        self.mu_prior_var = mu_prior_var
         self.mu_prior_mean = mu_prior_mean
         self.random_state = random_state
         
@@ -81,22 +82,22 @@ class ParticleTree(object):
             return 0
 
         right = marginal_loglikelihood(resid[right_node.idx_data_points],
-                                       self.sigma,
+                                       self.sigmasq,
                                        self.mu_prior_mean,
-                                       self.mu_prior_std,
+                                       self.mu_prior_var,
                                        incremental=True)
 
         left = marginal_loglikelihood(resid[left_node.idx_data_points],
-                                      self.sigma,
+                                      self.sigmasq,
                                       self.mu_prior_mean,
-                                      self.mu_prior_std,
+                                      self.mu_prior_var,
                                       incremental=True)
 
         full_idx = np.hstack([left_node.idx_data_points, right_node.idx_data_points])
         full = marginal_loglikelihood(resid[full_idx],
-                                      self.sigma,
+                                      self.sigmasq,
                                       self.mu_prior_mean,
-                                      self.mu_prior_std,
+                                      self.mu_prior_var,
                                       incremental=True)
         return left + right - full
         
@@ -107,9 +108,9 @@ class ParticleTree(object):
             leaf_node = self.tree.get_node(leaf_id)
             if len(leaf_node.idx_data_points) > 0:
                 logL += marginal_loglikelihood(resid[leaf_node.idx_data_points],
-                                               self.sigma,
+                                               self.sigmasq,
                                                self.mu_prior_mean,
-                                               self.mu_prior_std)
+                                               self.mu_prior_var)
         return logL
 
     def sample_values(self,
@@ -120,14 +121,14 @@ class ParticleTree(object):
             if len(leaf_node.idx_data_points) > 0:
                 nleaf = len(leaf_node.idx_data_points)
 
-                quad = nleaf / self.sigma**2 + 1 / self.mu_prior_std**2
-                linear = resid[leaf_node.idx_data_points].sum() / self.sigma**2 + self.mu_prior_mean / self.mu_prior_std**2
+                quad = nleaf / self.sigmasq + 1 / self.mu_prior_var
+                linear = resid[leaf_node.idx_data_points].sum() / self.sigmasq + self.mu_prior_mean / self.mu_prior_var
 
                 mean = linear / quad
                 std = 1. / np.sqrt(quad)
                 leaf_node.value = self.random_state.normal() * std + mean
             else:
-                leaf_node.value = self.random_state.normal() * self.mu_prior_std + self.mu_prior_mean
+                leaf_node.value = self.random_state.normal() * np.sqrt(self.mu_prior_var) + self.mu_prior_mean
 
 # Section 2.5 of Lakshminarayanan
 

@@ -176,7 +176,9 @@ class Tree:
 
         """
         new_tree = Tree(tree_id, len(idx_data_points))
-        new_tree[0] = LeafNode(index=0, value=leaf_node_value, idx_data_points=idx_data_points)
+        new_tree.set_node(0, LeafNode(index=0,
+                                      value=leaf_node_value,
+                                      idx_data_points=idx_data_points))
         return new_tree
 
 

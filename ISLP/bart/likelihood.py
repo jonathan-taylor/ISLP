@@ -54,23 +54,23 @@ Or, setting $$ \bar{\mu} = \frac{\frac{\bar{R} \cdot n}{\sigma^2} +
 import numpy as np
 
 def marginal_loglikelihood(response,
-                           sigma,
+                           sigmasq,
                            mu_prior_mean,
-                           mu_prior_std,
+                           mu_prior_var,
                            incremental=False):
     response_mean = response.mean()
 
     n = response.shape[0]
 
-    sigma_bar = 1 / np.sqrt(n / sigma**2 + 1 / mu_prior_std**2)
-    mu_bar = (n * response_mean / sigma**2 + mu_prior_mean / mu_prior_std**2) * sigma_bar**2
+    sigmasq_bar = 1 / (n / sigmasq + 1 / mu_prior_var)
+    mu_bar = (n * response_mean / sigmasq + mu_prior_mean / mu_prior_var) * sigmasq_bar
 
-    logL = (np.log(sigma_bar / mu_prior_std) +
-            0.5 * (mu_bar / sigma_bar)**2)
-    logL -= 0.5 * mu_prior_mean**2 / mu_prior_std**2
+    logL = (0.5 * np.log(sigmasq_bar / mu_prior_var) +
+            0.5 * (mu_bar**2 / sigmasq_bar))
+    logL -= 0.5 * mu_prior_mean**2 / mu_prior_var
     if not incremental:
-        logL -= n * np.log(sigma)
-        logL -= 0.5 * (response**2).sum() / sigma**2
+        logL -= n * 0.5 * np.log(sigmasq)
+        logL -= 0.5 * (response**2).sum() / sigmasq
                 
     return logL
 
