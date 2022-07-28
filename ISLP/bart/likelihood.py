@@ -56,7 +56,8 @@ import numpy as np
 def marginal_loglikelihood(response,
                            sigma,
                            mu_prior_mean,
-                           mu_prior_std):
+                           mu_prior_std,
+                           incremental=False):
     response_mean = response.mean()
 
     n = response.shape[0]
@@ -66,9 +67,10 @@ def marginal_loglikelihood(response,
 
     logL = (np.log(sigma_bar / mu_prior_std) +
             0.5 * (mu_bar / sigma_bar)**2)
-    logL -= n * np.log(sigma)
-    logL -= (0.5 * (response**2).sum() / sigma**2
-             + 0.5 * mu_prior_mean**2 / mu_prior_std**2)
+    logL -= 0.5 * mu_prior_mean**2 / mu_prior_std**2
+    if not incremental:
+        logL -= n * np.log(sigma)
+        logL -= 0.5 * (response**2).sum() / sigma**2
                 
     return logL
 
