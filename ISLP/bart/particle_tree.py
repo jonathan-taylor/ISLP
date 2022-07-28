@@ -10,10 +10,11 @@ class ParticleTree(object):
 
     def __init__(self,
                  tree,
+                 alpha_split,
+                 beta_split,
                  log_weight,
                  missing_data,
                  ssv,
-                 prior_prob_leaf_node,
                  available_predictors,
                  m,
                  sigma,
@@ -21,18 +22,19 @@ class ParticleTree(object):
                  mu_prior_std):
 
         self.tree = tree.copy()  # keeps the tree that we care at the moment
+        self.alpha_split = alpha_split
+        self.beta_split = beta_split
         self.expansion_nodes = [0]
         self.log_weight = log_weight
         self.missing_data = missing_data
         self.used_variates = []
         self.ssv = ssv
-        self.prior_prob_leaf_node = prior_prob_leaf_node
         self.available_predictors = available_predictors
         self.m = m
         self.sigma = sigma
         self.mu_prior_std = mu_prior_std
         self.mu_prior_mean = mu_prior_mean
-
+        
     def sample_tree_sequential(
             self,
             X,
@@ -42,9 +44,10 @@ class ParticleTree(object):
         if self.expansion_nodes:
             index_leaf_node = self.expansion_nodes.pop(0)
             # Probability that this node will remain a leaf node
-            prob_leaf = self.prior_prob_leaf_node[self.tree[index_leaf_node].depth]
+            depth = self.tree[index_leaf_node].depth
+            prob_split = self.alpha_split / (1 + depth)**self.beta_split
 
-            if prob_leaf < np.random.random():
+            if np.random.random() < prob_split:
                 (tree_grew,
                  index_selected_predictor,
                  left_node,
@@ -116,9 +119,10 @@ class ParticleTree(object):
                 mean = linear / quad
                 std = 1. / np.sqrt(quad)
                 leaf_node.value = np.random.normal() * std + mean
+                #print(mean, std, resid[leaf_node.idx_data_points].mean(), quad * self.sigma**2, linear * self.sigma**2, self.sigma**2, 'sample')
             else:
                 leaf_node.value = np.random.normal() * self.mu_prior_std + self.mu_prior_mean
-                
+
 # Section 2.5 of Lakshminarayanan
 
 def grow_tree(
