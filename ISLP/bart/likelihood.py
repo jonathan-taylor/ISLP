@@ -57,62 +57,79 @@ def marginal_loglikelihood(response,
                            sigmasq,
                            mu_prior_mean,
                            mu_prior_var,
-                           incremental=False):
-    response_mean = response.mean()
+                           incremental=False,
+                           response_moments=None):
+    if response_moments is None:
+        response_sum = response.sum()
+        if not incremental:
+            responsesq_sum = (response**2).sum()
+        else:
+            responsesq_sum = None
+        response_moments = (response_sum, responsesq_sum)
+    else:
+        response_sum, responsesq_sum = response_moments
+    if response_sum is None:
+        response_sum = response.sum()
 
     n = response.shape[0]
 
     sigmasq_bar = 1 / (n / sigmasq + 1 / mu_prior_var)
-    mu_bar = (n * response_mean / sigmasq + mu_prior_mean / mu_prior_var) * sigmasq_bar
+    mu_bar = (response_sum / sigmasq + mu_prior_mean / mu_prior_var) * sigmasq_bar
 
     logL = (0.5 * np.log(sigmasq_bar / mu_prior_var) +
             0.5 * (mu_bar**2 / sigmasq_bar))
     logL -= 0.5 * mu_prior_mean**2 / mu_prior_var
+
     if not incremental:
+        if responsesq_sum is None:
+            responsesq_sum = (response**2).sum()
+
         logL -= n * 0.5 * np.log(sigmasq)
-        logL -= 0.5 * (response**2).sum() / sigmasq
+        logL -= 0.5 * responsesq_sum / sigmasq
                 
-    return logL
+    return logL, response_moments
 
 def incremental_loglikelihood(response,
-                              idx_1,
-                              idx_2,
+                              idx_L,
+                              idx_R,
                               sigmasq,
                               mu_prior_mean,
                               mu_prior_var):
-    r_1 = response[idx_1]
-    r_2 = response[idx_2]
-    n_1, n_2 = r_1.shape[0], r_2.shape[0]
-    sum_1, sum_2 = r_1.sum(), r_2.sum()
-    sum_f = sum_1 + sum_2
+    r_L = response[idx_L]
+    r_R = response[idx_R]
+    n_L, n_R = r_L.shape[0], r_R.shape[0]
+    sum_L, sum_R = r_L.sum(), r_R.sum()
+    sumsq_L, sumsq_R = None, None # (r_L**2).sum(), (r_R**2).sum()
+
+    sum_f = sum_L + sum_R
     
-    # for idx_1
+    # for idx_L
 
-    sigmasq_bar_1 = 1 / (n_1 / sigmasq + 1 / mu_prior_var)
-    mu_bar_1 = (sum_1 / sigmasq + mu_prior_mean / mu_prior_var) * sigmasq_bar_1
+    sigmasq_bar_L = 1 / (n_L / sigmasq + 1 / mu_prior_var)
+    mu_bar_L = (sum_L / sigmasq + mu_prior_mean / mu_prior_var) * sigmasq_bar_L
 
-    logL_1 = (0.5 * np.log(sigmasq_bar_1 / mu_prior_var) +
-            0.5 * (mu_bar_1**2 / sigmasq_bar_1))
-    logL_1 -= 0.5 * mu_prior_mean**2 / mu_prior_var
+    logL_L = (0.5 * np.log(sigmasq_bar_L / mu_prior_var) +
+              0.5 * (mu_bar_L**2 / sigmasq_bar_L))
+    logL_L -= 0.5 * mu_prior_mean**2 / mu_prior_var
                 
-    # for idx_2
+    # for idx_R
 
-    sigmasq_bar_2 = 1 / (n_2 / sigmasq + 1 / mu_prior_var)
-    mu_bar_2 = (sum_2 / sigmasq + mu_prior_mean / mu_prior_var) * sigmasq_bar_2
+    sigmasq_bar_R = 1 / (n_R / sigmasq + 1 / mu_prior_var)
+    mu_bar_R = (sum_R / sigmasq + mu_prior_mean / mu_prior_var) * sigmasq_bar_R
 
-    logL_2 = (0.5 * np.log(sigmasq_bar_2 / mu_prior_var) +
-            0.5 * (mu_bar_2**2 / sigmasq_bar_2))
-    logL_2 -= 0.5 * mu_prior_mean**2 / mu_prior_var
+    logL_R = (0.5 * np.log(sigmasq_bar_R / mu_prior_var) +
+            0.5 * (mu_bar_R**2 / sigmasq_bar_R))
+    logL_R -= 0.5 * mu_prior_mean**2 / mu_prior_var
                 
-    # for full: union of idx_1 and idx_2
+    # for full: union of idx_L and idx_R
 
-    sigmasq_bar_f = 1 / ((n_1 + n_2) / sigmasq + 1 / mu_prior_var)
+    sigmasq_bar_f = 1 / ((n_L + n_R) / sigmasq + 1 / mu_prior_var)
     mu_bar_f = (sum_f / sigmasq + mu_prior_mean / mu_prior_var) * sigmasq_bar_f
 
     logL_f = (0.5 * np.log(sigmasq_bar_f / mu_prior_var) +
             0.5 * (mu_bar_f**2 / sigmasq_bar_f))
     logL_f -= 0.5 * mu_prior_mean**2 / mu_prior_var
 
-    return logL_1 + logL_2 - logL_f
+    return logL_L + logL_R - logL_f, (sum_L, sumsq_L), (sum_R, sumsq_R)
 
 

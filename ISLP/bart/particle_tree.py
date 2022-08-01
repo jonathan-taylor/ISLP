@@ -82,12 +82,17 @@ class ParticleTree(object):
             len(left_node.idx_data_points) == 0):
             return 0
 
-        return incremental_loglikelihood(resid,
-                                         left_node.idx_data_points,
-                                         right_node.idx_data_points,
-                                         self.sigmasq,
-                                         self.mu_prior_mean,
-                                         self.mu_prior_var)
+        (logL_increment,
+         left_moments,
+         right_moments) =  incremental_loglikelihood(resid,
+                                                     left_node.idx_data_points,
+                                                     right_node.idx_data_points,
+                                                     self.sigmasq,
+                                                     self.mu_prior_mean,
+                                                     self.mu_prior_var)
+        left_node._response_moments = left_moments
+        right_node._response_moments = right_moments
+        return logL_increment
 
     def marginal_loglikelihood(self,
                                resid):
@@ -95,10 +100,18 @@ class ParticleTree(object):
         for leaf_id in self.tree.idx_leaf_nodes:
             leaf_node = self.tree.get_node(leaf_id)
             if len(leaf_node.idx_data_points) > 0:
-                logL += marginal_loglikelihood(resid[leaf_node.idx_data_points],
-                                               self.sigmasq,
-                                               self.mu_prior_mean,
-                                               self.mu_prior_var)
+                response_moments = None
+                if hasattr(leaf_node, "_response_moments"):
+                    response_moments = leaf_node._response_moments
+                leaf_logL, response_moments =  marginal_loglikelihood(resid[leaf_node.idx_data_points],
+                                                                      self.sigmasq,
+                                                                      self.mu_prior_mean,
+                                                                      self.mu_prior_var,
+                                                                      response_moments=response_moments,
+                                                                      incremental=True) # we can use this to avoid computing sum(response**2)
+                logL += leaf_logL
+                leaf_node._response_moments = response_moments
+                
         return logL
 
     def sample_values(self,
@@ -119,6 +132,14 @@ class ParticleTree(object):
                 leaf_node.value = self.random_state.normal() * np.sqrt(self.mu_prior_var) + self.mu_prior_mean
 
 # Section 2.5 of Lakshminarayanan
+
+def discrete_uniform_sampler(upper_value,
+                             random_state):
+    """Draw an integer from the uniform distribution with bounds [0, upper_value).
+    This is the same and np.random.randit(upper_value) but faster.
+    """
+    return int(random_state.random() * upper_value)
+
 
 def grow_tree(
         tree,
@@ -148,7 +169,9 @@ def grow_tree(
     if available_splitting_values.size == 0:
         return False, None, None, None
 
-    split_value = random_state.choice(available_splitting_values)
+    split_idx = discrete_uniform_sampler(available_splitting_values.shape[0],
+                                         random_state)
+    split_value = available_splitting_values[split_idx]
 
     left_node_idx_data_points, right_node_idx_data_points = get_new_idx_data_points(
         split_value, idx_data_points, X_select)

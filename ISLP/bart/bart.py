@@ -251,12 +251,15 @@ class BART(BaseEnsemble, RegressorMixin):
             # Compute the sum of trees without the tree we are attempting to replace
 
             cur_particle = self.all_particles_[tree_id]
+            cur_particle.sigmasq = sigmasq # update the partical sigmasq here
+
             sum_trees_output_noi = sum_trees_output - cur_particle.tree.predict_output()
             resid_noi = Y - sum_trees_output_noi
 
+            init_loglikelihood = cur_particle.marginal_loglikelihood(resid_noi)
+
             particles = self.init_particles(cur_particle,
-                                            sigmasq,
-                                            resid_noi)
+                                            init_loglikelihood)
 
             for t in range(self.max_stages):
                 # sample each particle (try to grow each tree)
@@ -317,14 +320,12 @@ class BART(BaseEnsemble, RegressorMixin):
 
     def init_particles(self,
                        base_particle: ParticleTree,
-                       sigmasq: float,
-                       resid: np.ndarray) -> np.ndarray:
+                       init_loglikelihood: float) -> np.ndarray:
         """
         Initialize particles
         """
         p = base_particle
 
-        init_loglikelihood = p.marginal_loglikelihood(resid)
         p.log_weight = init_loglikelihood
         particles = [p]
 
@@ -343,7 +344,7 @@ class BART(BaseEnsemble, RegressorMixin):
                     p.ssv,
                     p.available_predictors,
                     p.m,
-                    sigmasq,
+                    p.sigmasq,
                     p.mu_prior_mean,
                     p.mu_prior_var,
                     p.random_state
