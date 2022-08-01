@@ -46,21 +46,23 @@ class Tree:
     num_observations : int
         Number of observations used to fit BART.
 
-
     Parameters
     ----------
     tree_id : int, optional
     num_observations : int, optional
     """
 
-    def __init__(self, tree_id=0, num_observations=0):
+    def __init__(self,
+                 tree_id=0,
+                 num_observations=0):
         self.tree_structure = {}
         self.num_nodes = 0
         self.idx_leaf_nodes = []
         self.idx_prunable_split_nodes = []
         self.tree_id = tree_id
         self.num_observations = num_observations
-
+        self._max_depth = 0
+        
     def __getitem__(self, index):
         return self.get_node(index)
 
@@ -75,12 +77,14 @@ class Tree:
 
     def set_node(self, index, node):
         self.tree_structure[index] = node
+        self._max_depth = max(self._max_depth, node.depth)
         self.num_nodes += 1
         if isinstance(node, LeafNode):
             self.idx_leaf_nodes.append(index)
-
+            
     def delete_node(self, index):
         current_node = self.get_node(index)
+        self._max_depth = min(self._max_depth, current_node.depth)
         if isinstance(current_node, LeafNode):
             self.idx_leaf_nodes.remove(index)
         del self.tree_structure[index]
@@ -146,6 +150,7 @@ class Tree:
         new_left_node : LeafNode
         new_right_node : LeafNode
         """
+
         current_node = self.get_node(index_leaf_node)
 
         self.delete_node(index_leaf_node)
@@ -175,7 +180,8 @@ class Tree:
         -------
 
         """
-        new_tree = Tree(tree_id, len(idx_data_points))
+        new_tree = Tree(tree_id,
+                        len(idx_data_points))
         new_tree.set_node(0, LeafNode(index=0,
                                       value=leaf_node_value,
                                       idx_data_points=idx_data_points))

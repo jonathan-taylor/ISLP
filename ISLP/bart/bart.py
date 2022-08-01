@@ -60,10 +60,10 @@ class BART(BaseEnsemble, RegressorMixin):
     """
 
     def __init__(self,
+                 num_trees=200,
+                 batch="auto",
                  num_particles=10,
                  max_stages=5000,
-                 batch="auto",
-                 m=200,
                  alpha_split=0.95,
                  beta_split=2,
                  k=2,
@@ -79,7 +79,7 @@ class BART(BaseEnsemble, RegressorMixin):
         self.num_particles = num_particles
         self.max_stages = max_stages
         self.batch = batch
-        self.m = m
+        self.num_trees = num_trees
         self.alpha_split = alpha_split
         self.beta_split = beta_split
         self.k = k
@@ -113,7 +113,9 @@ class BART(BaseEnsemble, RegressorMixin):
             X_quantiles = None
 
         self.variable_inclusion_ = []
-
+        self.depths_ = []
+        self.num_leaves_ = []
+        
         missing_data = np.any(np.isnan(X))
 
         # Chipman's defaults according to Lakshminarayanan
@@ -125,7 +127,7 @@ class BART(BaseEnsemble, RegressorMixin):
         init_mean = Y_shift.mean()    
        
         # Chipman's default for prior
-        self.mu_prior_var_ = (0.5 / (self.k * np.sqrt(self.m)))**2
+        self.mu_prior_var_ = (0.5 / (self.k * np.sqrt(self.num_trees)))**2
         self.mu_prior_mean_ = 0 # mean of prior for mu
 
         self.num_observations_ = X.shape[0]
@@ -134,7 +136,7 @@ class BART(BaseEnsemble, RegressorMixin):
 
         sum_trees_output = np.full_like(Y_shift, init_mean)
 
-        self.init_value_ = init_mean / self.m
+        self.init_value_ = init_mean / self.num_trees
         self.init_idx_ = np.arange(self.num_observations_, dtype="int32")
         self.base_tree_ = Tree.init_tree(
             tree_id=0,
@@ -155,23 +157,28 @@ class BART(BaseEnsemble, RegressorMixin):
         
         self.all_particles_ = []
         sum_trees_output = 0
-        for i in range(self.m):
+
+        init_resid = Y_shift - init_mean * (self.num_trees - 1) / self.num_trees
+        for i in range(self.num_trees):
             new_tree = Tree.init_tree(
                 tree_id = i,
                 leaf_node_value=self.init_value_,
                 idx_data_points=np.arange(self.num_observations_, dtype="int32"))
-            log_weight = marginal_loglikelihood(Y_shift - init_mean * (self.m - 1) / self.m,
+
+            log_weight = marginal_loglikelihood(init_resid,
                                                 sigmasq,
                                                 self.mu_prior_mean_,
-                                                self.mu_prior_var_)
+                                                self.mu_prior_var_)[0]                             
+                                                
             p = ParticleTree(new_tree,
+                             init_resid,
+                             log_weight,
                              self.alpha_split,
                              self.beta_split,
-                             log_weight,
                              missing_data,
                              ssv,
                              available_predictors,
-                             self.m,
+                             self.num_trees,
                              sigmasq,
                              self.mu_prior_mean_,
                              self.mu_prior_var_,
@@ -197,8 +204,12 @@ class BART(BaseEnsemble, RegressorMixin):
             counter += 1
 
             self.variable_inclusion_.append(stats['variable_inclusion'])
+            self.depths_.append([tree._max_depth for tree in trees])
+            self.num_leaves_.append([len(tree.idx_leaf_nodes) for tree in trees])
 
         self.variable_inclusion_ = np.array(self.variable_inclusion_)
+        self.depths_ = np.array(self.depths_)
+        self.num_leaves_ = np.array(self.num_leaves_)
 
     def predict(self,
                 X):
@@ -236,30 +247,30 @@ class BART(BaseEnsemble, RegressorMixin):
                                sigmasq,
                                sum_trees_output):
 
-        variable_inclusion = np.zeros(self.num_variates_, dtype="int")
+        variable_inclusion = np.zeros(self.num_variates_, int)
 
         if self.batch == "auto":
-            batch = max(1, int(self.m * 0.1))
+            batch = max(1, int(self.num_trees * 0.1))
         else:
             batch = self.batch
 
         total_stages = 0
-        for tree_id in range(self.m):
+        for tree_id in range(self.num_trees):
             # Generate an initial set of SMC particles
             # at the end of the algorithm we return one of these particles as the new tree
 
             # Compute the sum of trees without the tree we are attempting to replace
 
             cur_particle = self.all_particles_[tree_id]
-            cur_particle.sigmasq = sigmasq # update the partical sigmasq here
 
             sum_trees_output_noi = sum_trees_output - cur_particle.tree.predict_output()
             resid_noi = Y - sum_trees_output_noi
 
-            init_loglikelihood = cur_particle.marginal_loglikelihood(resid_noi)
-
+            # set the resid and sigmasq of `cur_particle` to be current
+            # and instantiate particles: single leaf trees with the same resid
             particles = self.init_particles(cur_particle,
-                                            init_loglikelihood)
+                                            sigmasq,
+                                            resid_noi)
 
             for t in range(self.max_stages):
                 # sample each particle (try to grow each tree)
@@ -274,8 +285,7 @@ class BART(BaseEnsemble, RegressorMixin):
                     )
                     # line 12 of Algorithm 2 of Lakshminarayanan
                     if tree_grew:
-                        p.log_weight += p.increment_loglikelihood(resid_noi,
-                                                                  left_node,
+                        p.log_weight += p.increment_loglikelihood(left_node,
                                                                   right_node)
                         
                 # line 13 of Algorithm 2 of Lakshminarayanan
@@ -320,36 +330,49 @@ class BART(BaseEnsemble, RegressorMixin):
 
     def init_particles(self,
                        base_particle: ParticleTree,
-                       init_loglikelihood: float) -> np.ndarray:
+                       sigmasq: float,
+                       resid: np.ndarray) -> np.ndarray:
         """
         Initialize particles
         """
         p = base_particle
 
-        p.log_weight = init_loglikelihood
+        # update the residual and compute the marginal likelihood of the tree
+        p.set_resid(resid)
+        p.sigmasq = sigmasq
+        p.log_weight = p.marginal_loglikelihood()  
         particles = [p]
+
+        resid_sum = resid.sum()
+        root_weight = marginal_loglikelihood(resid,
+                                             sigmasq,
+                                             self.mu_prior_mean_,
+                                             self.mu_prior_var_)[0]                             
 
         for _ in self.particle_indices_:
             new_tree = Tree.init_tree(
                 tree_id = p.tree.tree_id,
                 leaf_node_value=self.init_value_,
                 idx_data_points=self.init_idx_)
-            particles.append(
-                ParticleTree(
-                    new_tree,
-                    p.alpha_split,
-                    p.beta_split,
-                    init_loglikelihood,
-                    p.missing_data,
-                    p.ssv,
-                    p.available_predictors,
-                    p.m,
-                    p.sigmasq,
-                    p.mu_prior_mean,
-                    p.mu_prior_var,
-                    p.random_state
-                )
-            )
+
+            new_root = new_tree.get_node(0)
+            new_root._response_moments = (resid.shape[0], resid_sum, None)
+
+            new_particle = ParticleTree(new_tree,
+                                        resid,
+                                        root_weight,
+                                        p.alpha_split,
+                                        p.beta_split,
+                                        p.missing_data,
+                                        p.ssv,
+                                        p.available_predictors,
+                                        p.m,
+                                        p.sigmasq,
+                                        p.mu_prior_mean,
+                                        p.mu_prior_var,
+                                        p.random_state)
+
+            particles.append(new_particle)
 
         return np.array(particles)
 

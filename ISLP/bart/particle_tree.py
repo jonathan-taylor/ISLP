@@ -1,5 +1,7 @@
 
 
+
+
 import numpy as np
 
 from .tree import LeafNode, SplitNode, Tree
@@ -12,9 +14,10 @@ class ParticleTree(object):
 
     def __init__(self,
                  tree,
+                 resid,
+                 log_weight,
                  alpha_split,
                  beta_split,
-                 log_weight,
                  missing_data,
                  ssv,
                  available_predictors,
@@ -28,7 +31,6 @@ class ParticleTree(object):
         self.alpha_split = alpha_split
         self.beta_split = beta_split
         self.expansion_nodes = [0]
-        self.log_weight = log_weight
         self.missing_data = missing_data
         self.used_variates = []
         self.ssv = ssv
@@ -38,6 +40,9 @@ class ParticleTree(object):
         self.mu_prior_var = mu_prior_var
         self.mu_prior_mean = mu_prior_mean
         self.random_state = random_state
+        
+        self.resid = resid
+        self.log_weight = log_weight
         
     def sample_tree_sequential(self,
                                X,
@@ -72,19 +77,22 @@ class ParticleTree(object):
         return tree_grew, left_node, right_node
 
     def increment_loglikelihood(self,
-                                resid,
                                 left_node,
                                 right_node):
 
         # this could happen if a split value was the largest or smallest in a leaf
         
+        # if (np.sum(right_node.idx_data_points) == 0 or
+        #     np.sum(left_node.idx_data_points) == 0):
+        #     return 0
+
         if (len(right_node.idx_data_points) == 0 or
             len(left_node.idx_data_points) == 0):
             return 0
 
         (logL_increment,
          left_moments,
-         right_moments) =  incremental_loglikelihood(resid,
+         right_moments) =  incremental_loglikelihood(self.resid,
                                                      left_node.idx_data_points,
                                                      right_node.idx_data_points,
                                                      self.sigmasq,
@@ -94,16 +102,17 @@ class ParticleTree(object):
         right_node._response_moments = right_moments
         return logL_increment
 
-    def marginal_loglikelihood(self,
-                               resid):
+    def marginal_loglikelihood(self):
+
         logL = 0
         for leaf_id in self.tree.idx_leaf_nodes:
             leaf_node = self.tree.get_node(leaf_id)
             if len(leaf_node.idx_data_points) > 0:
+#            if np.sum(leaf_node.idx_data_points) > 0:
                 response_moments = None
                 if hasattr(leaf_node, "_response_moments"):
                     response_moments = leaf_node._response_moments
-                leaf_logL, response_moments =  marginal_loglikelihood(resid[leaf_node.idx_data_points],
+                leaf_logL, response_moments =  marginal_loglikelihood(None, 
                                                                       self.sigmasq,
                                                                       self.mu_prior_mean,
                                                                       self.mu_prior_var,
@@ -120,16 +129,33 @@ class ParticleTree(object):
         for leaf_id in self.tree.idx_leaf_nodes:
             leaf_node = self.tree.get_node(leaf_id)
             if len(leaf_node.idx_data_points) > 0:
-                nleaf = len(leaf_node.idx_data_points)
+            # if np.sum(leaf_node.idx_data_points) > 0:
+            #     nleaf = np.sum(leaf_node.idx_data_points) 
+                if hasattr(leaf_node, "_response_moments"):
+                    nleaf, resid_sum = leaf_node._response_moments[:2]
+                else:
+                    resid_sum = resid[leaf_node.idx_data_points].sum()
+                    nleaf = len(leaf_node.idx_data_points)
 
                 quad = nleaf / self.sigmasq + 1 / self.mu_prior_var
-                linear = resid[leaf_node.idx_data_points].sum() / self.sigmasq + self.mu_prior_mean / self.mu_prior_var
+                linear = resid_sum / self.sigmasq + self.mu_prior_mean / self.mu_prior_var
 
                 mean = linear / quad
                 std = 1. / np.sqrt(quad)
                 leaf_node.value = self.random_state.normal() * std + mean
             else:
                 leaf_node.value = self.random_state.normal() * np.sqrt(self.mu_prior_var) + self.mu_prior_mean
+
+    def set_resid(self, resid):
+        self.resid = resid
+        
+        # set the sum of resid correctly in each leaf
+        for leaf_id in self.tree.idx_leaf_nodes:
+            leaf_node = self.tree.get_node(leaf_id)
+            resid_idx = self.resid[leaf_node.idx_data_points]
+            leaf_node._response_moments = (resid_idx.shape[0],
+                                           resid_idx.sum(),
+                                           0)
 
 # Section 2.5 of Lakshminarayanan
 

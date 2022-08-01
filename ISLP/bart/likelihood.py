@@ -60,18 +60,17 @@ def marginal_loglikelihood(response,
                            incremental=False,
                            response_moments=None):
     if response_moments is None:
+        n = response.shape[0]
         response_sum = response.sum()
         if not incremental:
             responsesq_sum = (response**2).sum()
         else:
             responsesq_sum = None
-        response_moments = (response_sum, responsesq_sum)
+        response_moments = (n, response_sum, responsesq_sum)
     else:
-        response_sum, responsesq_sum = response_moments
+        n, response_sum, responsesq_sum = response_moments
     if response_sum is None:
-        response_sum = response.sum()
-
-    n = response.shape[0]
+        n, response_sum = response.shape[0], response.sum()
 
     sigmasq_bar = 1 / (n / sigmasq + 1 / mu_prior_var)
     mu_bar = (response_sum / sigmasq + mu_prior_mean / mu_prior_var) * sigmasq_bar
@@ -83,7 +82,8 @@ def marginal_loglikelihood(response,
     if not incremental:
         if responsesq_sum is None:
             responsesq_sum = (response**2).sum()
-
+            response_moments = (n, response_sum, responseseq_sum)
+            
         logL -= n * 0.5 * np.log(sigmasq)
         logL -= 0.5 * responsesq_sum / sigmasq
                 
@@ -99,7 +99,7 @@ def incremental_loglikelihood(response,
     r_R = response[idx_R]
     n_L, n_R = r_L.shape[0], r_R.shape[0]
     sum_L, sum_R = r_L.sum(), r_R.sum()
-    sumsq_L, sumsq_R = None, None # (r_L**2).sum(), (r_R**2).sum()
+    sumsq_L, sumsq_R = None, None 
 
     sum_f = sum_L + sum_R
     
@@ -130,6 +130,6 @@ def incremental_loglikelihood(response,
             0.5 * (mu_bar_f**2 / sigmasq_bar_f))
     logL_f -= 0.5 * mu_prior_mean**2 / mu_prior_var
 
-    return logL_L + logL_R - logL_f, (sum_L, sumsq_L), (sum_R, sumsq_R)
+    return logL_L + logL_R - logL_f, (n_L, sum_L, sumsq_L), (n_R, sum_R, sumsq_R)
 
 
