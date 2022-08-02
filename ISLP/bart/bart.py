@@ -159,7 +159,7 @@ class BART(BaseEnsemble, RegressorMixin):
         Y_shift = _forward(Y)
 
         sigmasq = np.var(Y_shift)
-        sigma_prior_B = invgamma(self.sigma_prior_A, 0, 1).ppf(self.sigma_prior_q) * np.sqrt(sigmasq)
+        sigma_prior_B = invgamma(self.sigma_prior_A, 0, 1).ppf(self.sigma_prior_q) * sigmasq
 
         # args for each job
         args = (X,
@@ -230,7 +230,6 @@ class BART(BaseEnsemble, RegressorMixin):
         ssv = SampleSplittingVariable(split_prior, random_state)
 
         sigmasq = np.var(Y_shift)
-        sigma_prior_B = invgamma(self.sigma_prior_A, 0, 1).ppf(self.sigma_prior_q) * np.sqrt(sigmasq)
 
         # instantiate the particles
         
