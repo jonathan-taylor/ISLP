@@ -87,6 +87,10 @@ class BART(BaseEnsemble, RegressorMixin):
         self.random_state = random_state
         self.n_jobs = n_jobs
         
+        # Chipman's default for prior
+        self.mu_prior_var_ = (0.5 / (self.std_scale * np.sqrt(self.num_trees)))**2
+        self.mu_prior_mean_ = 0 
+
     def predict(self,
                 X):
 
@@ -125,6 +129,9 @@ class BART(BaseEnsemble, RegressorMixin):
             Y,
             sample_weight=None):
 
+        X = np.asarray(X)
+        Y = np.asarray(Y)
+
         random_state = check_random_state(self.random_state)
         n_jobs = self.n_jobs
         if self.n_jobs <= 0:
@@ -134,7 +141,35 @@ class BART(BaseEnsemble, RegressorMixin):
 
         parallel = Parallel(n_jobs=len(random_idx))
 
-        work = parallel(delayed(clone(self)._sample_trees)(X, Y, rs)
+        qvals = np.linspace(0, 100, self.num_quantile+2)[1:-1]
+        if self.num_quantile is not None:
+            X_quantiles = np.percentile(X,
+                                        qvals,
+                                        axis=0)
+        else:
+            X_quantiles = None
+
+        X_missing = np.any(np.isnan(X))
+
+        # Chipman's defaults according to Lakshminarayanan
+        # scale to range [-0.5,0.5] 
+        _Y_min, _Y_max = np.nanmin(Y), np.nanmax(Y)
+        _forward = lambda y: ((y - _Y_min) / (_Y_max - _Y_min) - 0.5)
+        self._inverse = lambda out: (out + 0.5) * (_Y_max - _Y_min) + _Y_min
+        Y_shift = _forward(Y)
+
+        sigmasq = np.var(Y_shift)
+        sigma_prior_B = invgamma(self.sigma_prior_A, 0, 1).ppf(self.sigma_prior_q) * np.sqrt(sigmasq)
+
+        # args for each job
+        args = (X,
+                X_quantiles,
+                X_missing,
+                _forward,
+                Y_shift,
+                sigma_prior_B)
+
+        work = parallel(delayed(clone(self)._sample_trees)(*(args + (rs,)))
                         for rs in random_idx)
 
         self.trees_sample_ = []
@@ -165,46 +200,26 @@ class BART(BaseEnsemble, RegressorMixin):
 
     def _sample_trees(self,
                       X,
-                      Y,
+                      X_quantiles,
+                      X_missing,
+                      _forward,
+                      Y_shift,
+                      sigma_prior_B,
                       random_state):
 
-        X = np.asarray(X)
-        Y = np.asarray(Y)
-
-        import sys
-        sys.stderr.write('{0},{1}'.format(random_state, 'random_state'))
         random_state = check_random_state(random_state)
-
-        qvals = np.linspace(0, 100, self.num_quantile+2)[1:-1]
-        if self.num_quantile is not None:
-            X_quantiles = np.percentile(X,
-                                        qvals,
-                                        axis=0)
-        else:
-            X_quantiles = None
 
         variable_inclusion = []
         depths = []
         num_leaves = []
         
-        missing_data = np.any(np.isnan(X))
 
-        # Chipman's defaults according to Lakshminarayanan
-        # scale to range [-0.5,0.5] 
-        _Y_min, _Y_max = np.nanmin(Y), np.nanmax(Y)
-        _forward = lambda y: ((y - _Y_min) / (_Y_max - _Y_min) - 0.5)
-        self._inverse = lambda out: (out + 0.5) * (_Y_max - _Y_min) + _Y_min
-        Y_shift = _forward(Y)
-        init_mean = Y_shift.mean()    
-       
-        # Chipman's default for prior
-        self.mu_prior_var_ = (0.5 / (self.std_scale * np.sqrt(self.num_trees)))**2
-        self.mu_prior_mean_ = 0 # mean of prior for mu
 
         num_observations_ = X.shape[0]
         self.num_variates_ = X.shape[1]
         available_predictors = list(range(self.num_variates_))
 
+        init_mean = Y_shift.mean()    
         sum_trees_output = np.full_like(Y_shift, init_mean)
 
         init_value_ = init_mean / self.num_trees
@@ -238,7 +253,7 @@ class BART(BaseEnsemble, RegressorMixin):
                              init_resid,
                              log_weight,
                              self.split_prob,
-                             missing_data,
+                             X_missing,
                              ssv,
                              available_predictors,
                              self.num_trees,
@@ -275,10 +290,7 @@ class BART(BaseEnsemble, RegressorMixin):
 
         variable_inclusion = np.array(variable_inclusion)
 
-        atts = {'_inverse': self._inverse,
-                'sigma_prior_B_': sigma_prior_B,
-                'mu_prior_var_': self.mu_prior_var_,
-                'mu_prior_mean_': self.mu_prior_mean_}
+        atts = {'sigma_prior_B_': sigma_prior_B}
 
         return (atts,
                 batch_trees,
@@ -417,7 +429,7 @@ class BART(BaseEnsemble, RegressorMixin):
                                         resid,
                                         root_weight,
                                         p.split_prob,
-                                        p.missing_data,
+                                        p.X_missing,
                                         p.ssv,
                                         p.available_predictors,
                                         p.m,

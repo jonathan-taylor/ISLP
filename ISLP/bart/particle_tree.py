@@ -18,7 +18,7 @@ class ParticleTree(object):
                  resid,
                  log_weight,
                  split_prob,
-                 missing_data,
+                 X_missing,
                  ssv,
                  available_predictors,
                  m,
@@ -30,7 +30,7 @@ class ParticleTree(object):
         self.tree = tree # keeps the tree that we care at the moment
         self.split_prob = split_prob
         self.expansion_nodes = [0]
-        self.missing_data = missing_data
+        self.X_missing = X_missing
         self.used_variates = []
         self.ssv = ssv
         self.available_predictors = available_predictors
@@ -65,7 +65,7 @@ class ParticleTree(object):
                      self.available_predictors,
                      X,
                      X_quantiles,
-                     self.missing_data,
+                     self.X_missing,
                      self.random_state)
                 if tree_grew:
                     new_indexes = self.tree.idx_leaf_nodes[-2:]
@@ -172,7 +172,7 @@ def grow_tree(
         available_predictors,
         X,
         X_quantiles,
-        missing_data,
+        X_missing,
         random_state):
 
     current_node = tree.get_node(index_leaf_node)
@@ -185,7 +185,7 @@ def grow_tree(
         available_splitting_values = X_quantiles[:, selected_predictor]
     else:
         available_splitting_values = X_select[idx_data_points]
-        if missing_data:
+        if X_missing:
             _keep = ~np.isnan(available_splitting_values)
             idx_data_points = idx_data_points[_keep]
             available_splitting_values = available_splitting_values[_keep]
