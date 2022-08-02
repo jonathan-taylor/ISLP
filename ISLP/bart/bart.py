@@ -63,9 +63,7 @@ class BART(BaseEnsemble, RegressorMixin):
                  split_prior=None,
                  ndraw=100,
                  burnin=100,
-                 keep_every=1,
-                 sigma_prior_A=3,
-                 sigma_prior_q=0.9,
+                 sigma_prior=(5, 0.9),
                  num_quantile=50,
                  random_state=None,
                  n_jobs=-1):
@@ -78,10 +76,8 @@ class BART(BaseEnsemble, RegressorMixin):
         self.split_prior = split_prior
         self.ndraw = ndraw
         self.burnin = burnin
-        self.keep_every = keep_every
 
-        self.sigma_prior_A = sigma_prior_A
-        self.sigma_prior_q = sigma_prior_q
+        self.sigma_prior = sigma_prior
         self.num_quantile = num_quantile
         
         self.random_state = random_state
@@ -159,7 +155,8 @@ class BART(BaseEnsemble, RegressorMixin):
         Y_shift = _forward(Y)
 
         sigmasq = np.var(Y_shift)
-        sigma_prior_B = invgamma(self.sigma_prior_A, 0, 1).ppf(self.sigma_prior_q) * sigmasq
+        A, q = self.sigma_prior
+        sigma_prior_B = invgamma(A, 0, 1).ppf(q) * sigmasq
 
         # args for each job
         args = (X,
@@ -169,14 +166,14 @@ class BART(BaseEnsemble, RegressorMixin):
                 Y_shift,
                 sigma_prior_B)
 
-        work = parallel(delayed(clone(self)._sample_trees)(*(args + (rs,)))
-                        for rs in random_idx)
-
         self.trees_sample_ = []
         self.variable_inclusion_ = []
         self.depths_ = []
         self.num_leaves_ = []
         
+        work = parallel(delayed(clone(self)._gibbs_sample)(*(args + (rs,)))
+                        for rs in random_idx)
+
         for (atts,
              batch_trees,
              variable_inclusion) in work:
@@ -198,7 +195,7 @@ class BART(BaseEnsemble, RegressorMixin):
 
     # Private methods
 
-    def _sample_trees(self,
+    def _gibbs_sample(self,
                       X,
                       X_quantiles,
                       X_missing,
@@ -213,8 +210,6 @@ class BART(BaseEnsemble, RegressorMixin):
         depths = []
         num_leaves = []
         
-
-
         num_observations_ = X.shape[0]
         self.num_variates_ = X.shape[1]
         available_predictors = list(range(self.num_variates_))
@@ -278,7 +273,7 @@ class BART(BaseEnsemble, RegressorMixin):
             sigmasq = self._gibbs_step_sigma(Y_shift - sum_trees_output,
                                              sigma_prior_B,
                                              random_state)
-            if counter >= self.burnin and ((counter - self.burnin) % self.keep_every == 0):
+            if counter >= self.burnin:
                 batch_trees.append(particle_trees)
                 variable_inclusion.append(stats['variable_inclusion'])
 
@@ -302,7 +297,7 @@ class BART(BaseEnsemble, RegressorMixin):
                           random_state):
 
         n = resid.shape[0]
-        A = self.sigma_prior_A + n / 2
+        A = self.sigma_prior[0] + n / 2
         B = sigma_prior_B + (resid**2).sum() / 2
         
         return invgamma(A,
