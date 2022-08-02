@@ -2,6 +2,7 @@
 
 
 
+
 import numpy as np
 
 from .tree import LeafNode, SplitNode, Tree
@@ -16,8 +17,7 @@ class ParticleTree(object):
                  tree,
                  resid,
                  log_weight,
-                 alpha_split,
-                 beta_split,
+                 split_prob,
                  missing_data,
                  ssv,
                  available_predictors,
@@ -28,8 +28,7 @@ class ParticleTree(object):
                  random_state):
 
         self.tree = tree # keeps the tree that we care at the moment
-        self.alpha_split = alpha_split
-        self.beta_split = beta_split
+        self.split_prob = split_prob
         self.expansion_nodes = [0]
         self.missing_data = missing_data
         self.used_variates = []
@@ -54,9 +53,8 @@ class ParticleTree(object):
             index_leaf_node = self.expansion_nodes.pop(0)
             # Probability that this node will remain a leaf node
             depth = self.tree[index_leaf_node].depth
-            prob_split = self.alpha_split / (1 + depth)**self.beta_split
 
-            if self.random_state.random() < prob_split:
+            if self.random_state.random() < self.split_prob(depth):
                 (tree_grew,
                  index_selected_predictor,
                  left_node,

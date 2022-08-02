@@ -20,10 +20,12 @@ from typing import Any, Dict, List, Tuple
 import numpy as np
 from scipy.stats import invgamma
 
-from sklearn.base import RegressorMixin
+from sklearn.base import RegressorMixin, clone
 from sklearn.ensemble import BaseEnsemble
 from sklearn.utils.validation import check_is_fitted
 from sklearn.utils import check_random_state
+
+from joblib import Parallel, delayed
 
 from .tree import Tree
 from .likelihood import marginal_loglikelihood
@@ -35,17 +37,10 @@ class BART(BaseEnsemble, RegressorMixin):
 
     Parameters
     ----------
-    vars: list
-        List of value variables for sampler
     num_particles : int
         Number of particles for the conditional SMC sampler. Defaults to 10
     max_stages : int
         Maximum number of iterations of the conditional SMC sampler. Defaults to 100.
-    batch : int
-        Number of trees fitted per step. Defaults to  "auto", which is the 10% of the `m` trees
-        during tuning and 20% after tuning.
-    model: PyMC Model
-        Optional model for sampling step. Defaults to None (taken from context).
 
     Note
     ----
@@ -61,12 +56,10 @@ class BART(BaseEnsemble, RegressorMixin):
 
     def __init__(self,
                  num_trees=200,
-                 batch="auto",
                  num_particles=10,
                  max_stages=5000,
-                 alpha_split=0.95,
-                 beta_split=2,
-                 k=2,
+                 split_prob=lambda depth: 0.95/(1+depth)**2,
+                 std_scale=2,
                  split_prior=None,
                  ndraw=100,
                  burnin=100,
@@ -74,15 +67,14 @@ class BART(BaseEnsemble, RegressorMixin):
                  sigma_prior_A=3,
                  sigma_prior_q=0.9,
                  num_quantile=50,
-                 random_state=None):
+                 random_state=None,
+                 n_jobs=-1):
 
         self.num_particles = num_particles
         self.max_stages = max_stages
-        self.batch = batch
         self.num_trees = num_trees
-        self.alpha_split = alpha_split
-        self.beta_split = beta_split
-        self.k = k
+        self.split_prob = split_prob
+        self.std_scale = std_scale
         self.split_prior = split_prior
         self.ndraw = ndraw
         self.burnin = burnin
@@ -93,124 +85,8 @@ class BART(BaseEnsemble, RegressorMixin):
         self.num_quantile = num_quantile
         
         self.random_state = random_state
-
-    def fit(self,
-            X,
-            Y,
-            sample_weight=None):
-
-        X = np.asarray(X)
-        Y = np.asarray(Y)
-
-        if self.random_state is not None:
-            self.random_state_ = check_random_state(self.random_state)
-
-        if self.num_quantile is not None:
-            X_quantiles = np.percentile(X,
-                                        np.linspace(0, 100, self.num_quantile+2)[1:-1],
-                                        axis=0)
-        else:
-            X_quantiles = None
-
-        self.variable_inclusion_ = []
-        self.depths_ = []
-        self.num_leaves_ = []
+        self.n_jobs = n_jobs
         
-        missing_data = np.any(np.isnan(X))
-
-        # Chipman's defaults according to Lakshminarayanan
-        # scale to range [-0.5,0.5] 
-        self._Y_min, self._Y_max = np.nanmin(Y), np.nanmax(Y)
-        self._forward = lambda y: ((y - self._Y_min) / (self._Y_max - self._Y_min) - 0.5)
-        self._inverse = lambda out: (out + 0.5) * (self._Y_max - self._Y_min) + self._Y_min
-        Y_shift = self._forward(Y)
-        init_mean = Y_shift.mean()    
-       
-        # Chipman's default for prior
-        self.mu_prior_var_ = (0.5 / (self.k * np.sqrt(self.num_trees)))**2
-        self.mu_prior_mean_ = 0 # mean of prior for mu
-
-        self.num_observations_ = X.shape[0]
-        self.num_variates_ = X.shape[1]
-        available_predictors = list(range(self.num_variates_))
-
-        sum_trees_output = np.full_like(Y_shift, init_mean)
-
-        self.init_value_ = init_mean / self.num_trees
-        self.init_idx_ = np.arange(self.num_observations_, dtype="int32")
-        self.base_tree_ = Tree.init_tree(
-            tree_id=0,
-            leaf_node_value=self.init_value_,
-            idx_data_points=self.init_idx_,
-        )
-        self.particle_indices_ = list(range(1, self.num_particles))
-
-        split_prior = self.split_prior or np.ones(X.shape[1])
-        ssv = SampleSplittingVariable(split_prior, self.random_state_)
-
-        sigmasq = np.var(Y_shift)
-        self.invgamma_ = invgamma(self.sigma_prior_A, 0, 1)
-        self.invgamma_.random_state = self.random_state_
-        sigma_prior_B = invgamma(self.sigma_prior_A, 0, 1).ppf(self.sigma_prior_q) * np.sqrt(sigmasq)
-
-        # instantiate the particles
-        
-        self.all_particles_ = []
-        sum_trees_output = 0
-
-        init_resid = Y_shift - init_mean * (self.num_trees - 1) / self.num_trees
-        for i in range(self.num_trees):
-            new_tree = Tree.init_tree(
-                tree_id = i,
-                leaf_node_value=self.init_value_,
-                idx_data_points=np.arange(self.num_observations_, dtype="int32"))
-
-            log_weight = marginal_loglikelihood(init_resid,
-                                                sigmasq,
-                                                self.mu_prior_mean_,
-                                                self.mu_prior_var_)[0]                             
-                                                
-            p = ParticleTree(new_tree,
-                             init_resid,
-                             log_weight,
-                             self.alpha_split,
-                             self.beta_split,
-                             missing_data,
-                             ssv,
-                             available_predictors,
-                             self.num_trees,
-                             sigmasq,
-                             self.mu_prior_mean_,
-                             self.mu_prior_var_,
-                             self.random_state_)
-
-            self.all_particles_.append(p)
-            sum_trees_output += p.tree.predict_output()
-            
-        counter = 0
-        self.trees_sample_ = []
-        while True:
-            trees, sum_trees_output, stats = self._gibbs_step_tree_value(X,
-                                                                         X_quantiles,
-                                                                         Y_shift,
-                                                                         sigmasq,
-                                                                         sum_trees_output)
-            sigmasq = self._gibbs_step_sigma(Y_shift - sum_trees_output,
-                                             sigma_prior_B)
-            if counter >= self.burnin and ((counter - self.burnin) % self.keep_every == 0):
-                self.trees_sample_.append(trees)
-            if counter - self.burnin >= self.ndraw * self.keep_every:
-                break
-            counter += 1
-
-            self.variable_inclusion_.append(stats['variable_inclusion'])
-            self.depths_.append([tree._max_depth for tree in trees])
-            self.num_leaves_.append([len(tree.idx_leaf_nodes) for tree in trees])
-
-        self.variable_inclusion_ = np.array(self.variable_inclusion_)
-        self.depths_ = np.array(self.depths_)
-        self.num_leaves_ = np.array(self.num_leaves_)
-
     def predict(self,
                 X):
 
@@ -226,11 +102,193 @@ class BART(BaseEnsemble, RegressorMixin):
         output = output / nsample
         return self._inverse(output)
 
+    def staged_predict(self,
+                       X,
+                       start_idx=0):
+
+        check_is_fitted(self)
+
+        trees_sample_ = self.trees_sample_[start_idx:]
+        nsample = len(trees_sample_)
+        output = np.zeros((nsample, X.shape[0]), np.float)
+
+        for nstep, trees in enumerate(trees_sample_):
+            for tree in trees:
+                tree_fit = np.array([tree.predict_out_of_sample(x) for x in X])
+                output[nstep] += tree_fit
+                
+        output = np.cumsum(output, 0) / (np.arange(nsample) + 1)[:,None]
+        return self._inverse(output)
+
+    def fit(self,
+            X,
+            Y,
+            sample_weight=None):
+
+        random_state = check_random_state(self.random_state)
+        n_jobs = self.n_jobs
+        if self.n_jobs <= 0:
+            n_jobs = 1
+
+        random_idx = random_state.randint(0,2**32-1,size=(n_jobs,))
+
+        parallel = Parallel(n_jobs=len(random_idx))
+
+        work = parallel(delayed(clone(self)._sample_trees)(X, Y, rs)
+                        for rs in random_idx)
+
+        self.trees_sample_ = []
+        self.variable_inclusion_ = []
+        self.depths_ = []
+        self.num_leaves_ = []
+        
+        for (atts,
+             batch_trees,
+             variable_inclusion) in work:
+            self.trees_sample_.extend(batch_trees)
+            self.variable_inclusion_.extend(variable_inclusion)
+
+        for key, value in atts.items():
+            setattr(self, key, value)
+
+        for particles in self.trees_sample_:
+            self.depths_.append([tree._max_depth for tree in particles])
+            self.num_leaves_.append([len(tree.idx_leaf_nodes) for tree in particles])
+
+        self.variable_inclusion_ = np.array(self.variable_inclusion_)
+        self.depths_ = np.array(self.depths_)
+        self.num_leaves_ = np.array(self.num_leaves_)
+        
+        return self
+
     # Private methods
+
+    def _sample_trees(self,
+                      X,
+                      Y,
+                      random_state):
+
+        X = np.asarray(X)
+        Y = np.asarray(Y)
+
+        import sys
+        sys.stderr.write('{0},{1}'.format(random_state, 'random_state'))
+        random_state = check_random_state(random_state)
+
+        qvals = np.linspace(0, 100, self.num_quantile+2)[1:-1]
+        if self.num_quantile is not None:
+            X_quantiles = np.percentile(X,
+                                        qvals,
+                                        axis=0)
+        else:
+            X_quantiles = None
+
+        variable_inclusion = []
+        depths = []
+        num_leaves = []
+        
+        missing_data = np.any(np.isnan(X))
+
+        # Chipman's defaults according to Lakshminarayanan
+        # scale to range [-0.5,0.5] 
+        _Y_min, _Y_max = np.nanmin(Y), np.nanmax(Y)
+        _forward = lambda y: ((y - _Y_min) / (_Y_max - _Y_min) - 0.5)
+        self._inverse = lambda out: (out + 0.5) * (_Y_max - _Y_min) + _Y_min
+        Y_shift = _forward(Y)
+        init_mean = Y_shift.mean()    
+       
+        # Chipman's default for prior
+        self.mu_prior_var_ = (0.5 / (self.std_scale * np.sqrt(self.num_trees)))**2
+        self.mu_prior_mean_ = 0 # mean of prior for mu
+
+        num_observations_ = X.shape[0]
+        self.num_variates_ = X.shape[1]
+        available_predictors = list(range(self.num_variates_))
+
+        sum_trees_output = np.full_like(Y_shift, init_mean)
+
+        init_value_ = init_mean / self.num_trees
+        self.init_idx_ = np.arange(num_observations_, dtype=int)
+        self.particle_indices_ = list(range(1, self.num_particles))
+
+        split_prior = self.split_prior or np.ones(X.shape[1])
+        ssv = SampleSplittingVariable(split_prior, random_state)
+
+        sigmasq = np.var(Y_shift)
+        sigma_prior_B = invgamma(self.sigma_prior_A, 0, 1).ppf(self.sigma_prior_q) * np.sqrt(sigmasq)
+
+        # instantiate the particles
+        
+        self.all_particles_ = []
+        sum_trees_output = 0
+
+        init_resid = Y_shift - init_mean * (self.num_trees - 1) / self.num_trees
+        for i in range(self.num_trees):
+            new_tree = Tree.init_tree(
+                tree_id = i,
+                leaf_node_value=init_value_,
+                idx_data_points=self.init_idx_)
+
+            log_weight = marginal_loglikelihood(init_resid,
+                                                sigmasq,
+                                                self.mu_prior_mean_,
+                                                self.mu_prior_var_)[0]                             
+                                                
+            p = ParticleTree(new_tree,
+                             init_resid,
+                             log_weight,
+                             self.split_prob,
+                             missing_data,
+                             ssv,
+                             available_predictors,
+                             self.num_trees,
+                             sigmasq,
+                             self.mu_prior_mean_,
+                             self.mu_prior_var_,
+                             random_state)
+
+            self.all_particles_.append(p)
+            sum_trees_output += p.tree.predict_output()
+            
+        counter = 0
+        batch_trees = []
+        while True:
+            (particle_trees,
+             sum_trees_output,
+             stats) = self._gibbs_step_tree_value(X,
+                                                  X_quantiles,
+                                                  Y_shift,
+                                                  sigmasq,
+                                                  sum_trees_output,
+                                                  random_state)
+            sigmasq = self._gibbs_step_sigma(Y_shift - sum_trees_output,
+                                             sigma_prior_B,
+                                             random_state)
+            if counter >= self.burnin and ((counter - self.burnin) % self.keep_every == 0):
+                batch_trees.append(particle_trees)
+                variable_inclusion.append(stats['variable_inclusion'])
+
+            if len(batch_trees) == self.ndraw:
+                break
+
+            counter += 1
+
+        variable_inclusion = np.array(variable_inclusion)
+
+        atts = {'_inverse': self._inverse,
+                'sigma_prior_B_': sigma_prior_B,
+                'mu_prior_var_': self.mu_prior_var_,
+                'mu_prior_mean_': self.mu_prior_mean_}
+
+        return (atts,
+                batch_trees,
+                variable_inclusion)
+                
 
     def _gibbs_step_sigma(self,
                           resid,
-                          sigma_prior_B):
+                          sigma_prior_B,
+                          random_state):
 
         n = resid.shape[0]
         A = self.sigma_prior_A + n / 2
@@ -238,21 +296,17 @@ class BART(BaseEnsemble, RegressorMixin):
         
         return invgamma(A,
                         0,
-                        B).rvs(random_state=self.random_state_)
+                        B).rvs(random_state=random_state)
     
     def _gibbs_step_tree_value(self,
                                X,
                                X_quantiles,
                                Y,
                                sigmasq,
-                               sum_trees_output):
+                               sum_trees_output,
+                               random_state):
 
         variable_inclusion = np.zeros(self.num_variates_, int)
-
-        if self.batch == "auto":
-            batch = max(1, int(self.num_trees * 0.1))
-        else:
-            batch = self.batch
 
         total_stages = 0
         for tree_id in range(self.num_trees):
@@ -274,6 +328,7 @@ class BART(BaseEnsemble, RegressorMixin):
 
             for t in range(self.max_stages):
                 # sample each particle (try to grow each tree)
+
                 for p in particles[1:]:
                     # this is log_likelihood_ratio for the split if there was one
                     # so if tree does not grow this is just 0
@@ -294,9 +349,9 @@ class BART(BaseEnsemble, RegressorMixin):
                 # line 14-15 of Algorithm 2 of Lakshminarayanan
                 # Resample all but first particle
                 re_n_w = normalized_weights[1:] / normalized_weights[1:].sum()
-                new_indices = self.random_state_.choice(self.particle_indices_,
-                                                        size=len(self.particle_indices_),
-                                                        p=re_n_w)
+                new_indices = random_state.choice(self.particle_indices_,
+                                                  size=len(self.particle_indices_),
+                                                  p=re_n_w)
                 particles[1:] = particles[new_indices]
 
                 # Set the new weights
@@ -313,7 +368,7 @@ class BART(BaseEnsemble, RegressorMixin):
             total_stages += t
             
             # Get the new tree and update
-            new_particle = self.random_state_.choice(particles, p=normalized_weights)
+            new_particle = random_state.choice(particles, p=normalized_weights)
             new_particle.sample_values(resid_noi)
             new_tree = new_particle.tree
             new_particle.log_weight = W_t - np.log(len(particles))
@@ -352,7 +407,7 @@ class BART(BaseEnsemble, RegressorMixin):
         for _ in self.particle_indices_:
             new_tree = Tree.init_tree(
                 tree_id = p.tree.tree_id,
-                leaf_node_value=self.init_value_,
+                leaf_node_value=resid_sum / (resid.shape[0] * self.num_trees),
                 idx_data_points=self.init_idx_)
 
             new_root = new_tree.get_node(0)
@@ -361,8 +416,7 @@ class BART(BaseEnsemble, RegressorMixin):
             new_particle = ParticleTree(new_tree,
                                         resid,
                                         root_weight,
-                                        p.alpha_split,
-                                        p.beta_split,
+                                        p.split_prob,
                                         p.missing_data,
                                         p.ssv,
                                         p.available_predictors,
