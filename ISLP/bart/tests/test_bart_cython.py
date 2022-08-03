@@ -9,7 +9,8 @@ from ISLP.bart.likelihood import (marginal_loglikelihood as marginal_loglikeliho
 
 class MyBuilder(SequentialTreeBuilder):
 
-    pass
+    def split_prob(self, depth):
+        return (depth <= 1)
 
 def test_apply(n=100, p=20):
     # make sure that the _apply_train attribute is tracked correctly
@@ -18,8 +19,8 @@ def test_apply(n=100, p=20):
 
     X = np.random.standard_normal((n, p))
     y = np.random.standard_normal(n)
-    tree = Tree(10, np.array([1,1]), 2)
-    builder = MyBuilder(X.shape[1], 0, sigmasq, mu_prior_mean, mu_prior_var)
+    tree = Tree(p, np.array([1]), 1)
+    builder = MyBuilder(p, 0, sigmasq, mu_prior_mean, mu_prior_var)
     _, logL1, leaves_train = builder.build(tree, X, y, np.ones_like(y))
 
     idx1 = tree.apply(X.astype(np.float32))
@@ -39,6 +40,8 @@ def test_apply(n=100, p=20):
     # the incremental should match the `marginal` approach
     
     assert np.allclose(logL1, logL2)
+
+    return tree
 
 def test_marginal_loglikelihood(n=40):
     # make sure that marginal_loglikelihood is correct in cython
