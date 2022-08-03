@@ -11,6 +11,7 @@ if exists('MANIFEST'): os.remove('MANIFEST')
 
 # Unconditionally require setuptools
 import setuptools
+from setup_helpers import make_np_ext_builder
 
 # Package for getting versions from git tags
 import versioneer
@@ -150,23 +151,38 @@ def version_error_msg(pkg_name, found_ver, min_ver):
     return 'We need {0} version {1}, but found version {2}'.format(
         pkg_name, found_ver, min_ver)
 
+# Define extensions
+from cythexts import cyproc_exts, get_pyx_sdist
+EXTS = []
+for modulename, other_sources in (
+        ('ISLP.bart.particle', []),
+        ):
+    pyx_src = pjoin(*modulename.split('.')) + '.pyx'
+    EXTS.append(Extension(modulename,[pyx_src] + other_sources))
 
+build_ext, need_cython = cyproc_exts(EXTS,
+                                     info.CYTHON_MIN_VERSION,
+                                     'pyx-stamps')
+
+# Add numpy includes when building extension.
+build_ext = make_np_ext_builder(build_ext)
+cmdclass = versioneer.get_cmdclass()
+cmdclass.update(dict(
+    build_ext=build_ext,
+    sdist=get_pyx_sdist()))
+
+extra_setuptools_args = {'zip_safe':False}
+if need_cython:
+    SetupDependency('Cython', info.CYTHON_MIN_VERSION,
+                    req_type='install_requires',
+                    heavy=False).check_fill(extra_setuptools_args)
+        
 
 # Try to preempt setuptools monkeypatching of Extension handling when Pyrex
 # is missing.  Otherwise the monkeypatched Extension will change .pyx
 # filenames to .c filenames, and we probably don't have the .c files.
-sys.path.insert(0, pjoin(dirname(__file__), 'fake_pyrex'))
+# sys.path.insert(0, pjoin(dirname(__file__), 'fake_pyrex'))
 # Set setuptools extra arguments
-extra_setuptools_args = dict(
-    tests_require=['nose'],
-    test_suite='nose.collector',
-    zip_safe=False,
-    extras_require = dict(
-        doc=['Sphinx>=1.0'],
-        test=['nose>=0.10.1']))
-
-# Define extensions
-EXTS = []
 
 SetupDependency('numpy', info.NUMPY_MIN_VERSION,
                 req_type='install_requires',
@@ -202,12 +218,9 @@ pygam # for GAM in Ch7'''.split('\n')
 
 for req in requirements:
     req = req.split('#')[0]
-    import sys; sys.stderr.write(req+'\n')
     SetupDependency(req, "0.0",
                     req_type='install_requires',
                     heavy=True).check_fill(extra_setuptools_args)
-
-cmdclass=versioneer.get_cmdclass()
 
 # get long_description
 

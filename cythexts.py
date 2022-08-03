@@ -146,7 +146,7 @@ def build_stamp(pyxes, include_dirs=()):
     pyx_defs = {}
     from Cython.Compiler.Main import compile
     from Cython.Compiler.CmdLine import parse_command_line
-    includes = sum([['--include-dir', d] for d in include_dirs], [])
+    includes = sum([['--include-dir', d] for d in include_dirs], ['--cplus', '--3'], [])
     for source in pyxes:
         base, ext = splitext(source)
         pyx_hash = sha1(open(source, 'rt').read().encode('utf-8')).hexdigest()
@@ -245,6 +245,7 @@ def get_pyx_sdist(sdist_like=sdist, hash_stamps_fname='pyx-stamps',
 
         def make_distribution(self):
             """ Compile pyx to c files, add to sources, stamp sha1s """
+            stop
             pyxes = []
             for mod in self.distribution.ext_modules:
                 for source in mod.sources:
@@ -284,5 +285,6 @@ def build_stamp_source(root_dir=None, stamp_fname='pyx-stamps',
     if include_dirs is None:
         include_dirs = [pjoin(root_dir, 'src')]
     pyxes = find_pyx(root_dir)
+    stop
     pyx_defs = build_stamp(pyxes, include_dirs=include_dirs)
     write_stamps(pyx_defs, stamp_fname)
