@@ -59,9 +59,10 @@ class BART(BaseEnsemble, RegressorMixin):
                  num_particles=10,
                  max_stages=5000,
                  split_prob=lambda depth: 0.95/(1+depth)**2,
+                 min_depth=0,
                  std_scale=2,
                  split_prior=None,
-                 ndraw=100,
+                 ndraw=10,
                  burnin=100,
                  sigma_prior=(5, 0.9),
                  num_quantile=50,
@@ -72,8 +73,10 @@ class BART(BaseEnsemble, RegressorMixin):
         self.max_stages = max_stages
         self.num_trees = num_trees
         self.split_prob = split_prob
+        self.min_depth = min_depth
         self.std_scale = std_scale
         self.split_prior = split_prior
+
         self.ndraw = ndraw
         self.burnin = burnin
 
@@ -85,7 +88,9 @@ class BART(BaseEnsemble, RegressorMixin):
         
         # Chipman's default for prior
         self.mu_prior_var_ = (0.5 / (self.std_scale * np.sqrt(self.num_trees)))**2
-        self.mu_prior_mean_ = 0 
+        self.mu_prior_mean_ = 0
+
+
 
     def predict(self,
                 X):
@@ -247,6 +252,7 @@ class BART(BaseEnsemble, RegressorMixin):
                              init_resid,
                              log_weight,
                              self.split_prob,
+                             self.min_depth,
                              X_missing,
                              ssv,
                              available_predictors,
@@ -261,15 +267,16 @@ class BART(BaseEnsemble, RegressorMixin):
             
         counter = 0
         batch_trees = []
+
         while True:
             (particle_trees,
              sum_trees_output,
-             stats) = self._gibbs_step_tree_value(X,
-                                                  X_quantiles,
-                                                  Y_shift,
-                                                  sigmasq,
-                                                  sum_trees_output,
-                                                  random_state)
+             stats) = self._gibbs_step_trees(X,
+                                             X_quantiles,
+                                             Y_shift,
+                                             sigmasq,
+                                             sum_trees_output,
+                                             random_state)
             sigmasq = self._gibbs_step_sigma(Y_shift - sum_trees_output,
                                              sigma_prior_B,
                                              random_state)
@@ -304,17 +311,18 @@ class BART(BaseEnsemble, RegressorMixin):
                         0,
                         B).rvs(random_state=random_state)
     
-    def _gibbs_step_tree_value(self,
-                               X,
-                               X_quantiles,
-                               Y,
-                               sigmasq,
-                               sum_trees_output,
-                               random_state):
+    def _gibbs_step_trees(self,
+                          X,
+                          X_quantiles,
+                          Y,
+                          sigmasq,
+                          sum_trees_output,
+                          random_state):
 
         variable_inclusion = np.zeros(self.num_variates_, int)
 
         total_stages = 0
+            
         for tree_id in range(self.num_trees):
             # Generate an initial set of SMC particles
             # at the end of the algorithm we return one of these particles as the new tree
@@ -423,6 +431,7 @@ class BART(BaseEnsemble, RegressorMixin):
                                         resid,
                                         root_weight,
                                         p.split_prob,
+                                        p.min_depth,
                                         p.X_missing,
                                         p.ssv,
                                         p.available_predictors,

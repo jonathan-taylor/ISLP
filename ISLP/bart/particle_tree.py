@@ -18,6 +18,7 @@ class ParticleTree(object):
                  resid,
                  log_weight,
                  split_prob,
+                 min_depth,
                  X_missing,
                  ssv,
                  available_predictors,
@@ -29,6 +30,7 @@ class ParticleTree(object):
 
         self.tree = tree # keeps the tree that we care at the moment
         self.split_prob = split_prob
+        self.min_depth = min_depth
         self.expansion_nodes = [0]
         self.X_missing = X_missing
         self.used_variates = []
@@ -54,7 +56,7 @@ class ParticleTree(object):
             # Probability that this node will remain a leaf node
             depth = self.tree[index_leaf_node].depth
 
-            if self.random_state.random() < self.split_prob(depth):
+            if self.random_state.random() < self.split_prob(depth) or depth < self.min_depth:
                 (tree_grew,
                  index_selected_predictor,
                  left_node,
