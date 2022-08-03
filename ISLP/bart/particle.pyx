@@ -79,8 +79,7 @@ cdef class SequentialTreeBuilder(TreeBuilder):
         # structure to capture splits
         cdef DTYPE_t[::1] Xf = np.empty_like(X[:,0])
         cdef SIZE_t[::1] samples = np.arange(X.shape[0], dtype=np.intp)
-        cdef SIZE_t[::1] _apply_train = -np.ones(X.shape[0], dtype=np.intp)
-        cdef SIZE_t[::1] _apply_count = np.zeros(X.shape[0], dtype=np.intp)
+        cdef SIZE_t[::1] leaves_train = -np.ones(X.shape[0], dtype=np.intp)
 
         if sample_weight is not None:
             sample_weight_ptr = <DOUBLE_t*> sample_weight.data
@@ -171,7 +170,6 @@ cdef class SequentialTreeBuilder(TreeBuilder):
                                           end-split,
                                           end-split)
                 
-                print('split', start, split, end)
                 # add it to stack as a candidate to split
                 
                 expansion_nodes.push({'node_id':right_id,
@@ -194,8 +192,6 @@ cdef class SequentialTreeBuilder(TreeBuilder):
                                       'depth':depth+1,
                                       'start':start,
                                       'end':split+1})
-                
-                #print(f'node: {node_id}, right:{right_id}, left:{left_id}, start:{start}, end:{end}, feature:{feature}')
                 
                 # update current leaf to a split node
 
@@ -220,18 +216,13 @@ cdef class SequentialTreeBuilder(TreeBuilder):
                                         
             else:
                 # the node will not be split again
-                # update the _apply_train
+                # update the leaves_train
                 # this is used to be able to efficiently
                 # compute marginal likelihood when the response is changed
                 
                 for idx in range(start, end):
-                    _apply_train[samples[idx]] = node_id
-                    _apply_count[samples[idx]] += 1
+                    leaves_train[samples[idx]] = node_id
 
-                print('final node', node_id, np.array(samples[start:end]), start, end, tree.nodes[node_id].left_child, tree.nodes[node_id].right_child)
-                print(np.array(_apply_train)[samples[start:end]], 'apply_train')
-                print(tree.apply(X)[samples[start:end]], 'apply')
-                
             if rc >= 0:
                 rc = tree._resize_c(tree.node_count)
 
@@ -240,7 +231,7 @@ cdef class SequentialTreeBuilder(TreeBuilder):
         if rc == -1:
             raise MemoryError()
 
-        return tree, loglikelihood, np.asarray(_apply_train)
+        return tree, loglikelihood, np.asarray(leaves_train)
 
     cpdef split_prob(self, SIZE_t depth):
         return 0.95 / ((1 + depth) * (1 + depth))
@@ -308,7 +299,6 @@ cpdef marginal_loglikelihood(cnp.ndarray response,
     
     cdef SIZE_t node_idx
     cdef SIZE_t resp_idx
-    cdef float logL = 0
 
     response_sum = np.zeros(node_count, float)
     cdef SIZE_t[::1] n_sum = np.zeros(node_count, dtype=np.intp)
@@ -330,13 +320,15 @@ cpdef marginal_loglikelihood(cnp.ndarray response,
         if not incremental:
             responsesq_sum = (response**2).sum()
 
+    cdef float logL = 0
     for node_idx in range(node_count):
-        sigmasq_bar = 1 / (n_sum[node_idx] / sigmasq + 1 / mu_prior_var)
-        mu_bar = (response_sum[node_idx] / sigmasq + mu_prior_mean / mu_prior_var) * sigmasq_bar
+        if n_sum[node_idx] > 0:
+            sigmasq_bar = 1 / (n_sum[node_idx] / sigmasq + 1 / mu_prior_var)
+            mu_bar = (response_sum[node_idx] / sigmasq + mu_prior_mean / mu_prior_var) * sigmasq_bar
 
-        logL += (0.5 * ln(sigmasq_bar / mu_prior_var) +
-                 0.5 * (mu_bar**2 / sigmasq_bar))
-        logL -= 0.5 * mu_prior_mean**2 / mu_prior_var
+            logL += (0.5 * ln(sigmasq_bar / mu_prior_var) +
+                     0.5 * (mu_bar**2 / sigmasq_bar))
+            logL -= 0.5 * mu_prior_mean**2 / mu_prior_var
 
     if not incremental:
         logL -= response.shape[0] * 0.5 * ln(sigmasq)

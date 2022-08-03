@@ -20,23 +20,25 @@ def test_apply(n=100, p=20):
     y = np.random.standard_normal(n)
     tree = Tree(10, np.array([1,1]), 2)
     builder = MyBuilder(X.shape[1], 0, sigmasq, mu_prior_mean, mu_prior_var)
-    _, _, _apply_train = builder.build(tree, X, y, np.ones_like(y))
+    _, logL1, leaves_train = builder.build(tree, X, y, np.ones_like(y))
 
     idx1 = tree.apply(X.astype(np.float32))
-    idx2 = _apply_train
+    idx2 = leaves_train
     np.testing.assert_allclose(idx1, idx2)
 
-    # compute the loglikelihood of a new response
-
+    # compute the loglikelihood a response
 
     y_new = np.random.standard_normal(y.shape)
-    marginal_loglikelihood(y,
-                           _apply_train,
-                           np.unique(_apply_train).shape[0],
-                           sigmasq,
-                           mu_prior_mean,
-                           mu_prior_var)
+    logL2 = marginal_loglikelihood(y,
+                                   leaves_train,
+                                   tree.node_count,
+                                   sigmasq,
+                                   mu_prior_mean,
+                                   mu_prior_var)
 
+    # the incremental should match the `marginal` approach
+    
+    assert np.allclose(logL1, logL2)
 
 def test_marginal_loglikelihood(n=40):
     # make sure that marginal_loglikelihood is correct in cython
