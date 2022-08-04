@@ -15,7 +15,7 @@ class MyBuilder(SequentialTreeBuilder):
     def split_prob(self, depth):
         return (depth <= 1)
 
-def test_builder(n=100, p=20):
+def test_builder(n=100, p=20, nsample=3):
     # make sure that the _apply_train attribute is tracked correctly
 
     sigmasq, mu_prior_mean, mu_prior_var = 1.5, 0.2, 0.4
@@ -24,7 +24,8 @@ def test_builder(n=100, p=20):
     y = np.random.standard_normal(n).astype(np.float32)
 
     dt = DecisionTreeRegressor().fit(X, y)
-    tree = dt.tree_
+    tree = Tree(p, np.array([1]), 1)
+    
     builder = MyBuilder(max_depth=10,
                         num_particles=10,
                         max_stages=5000,
@@ -32,9 +33,24 @@ def test_builder(n=100, p=20):
                         sigmasq=sigmasq,
                         mu_prior_mean=mu_prior_mean,
                         mu_prior_var=mu_prior_var)
-    _, logL1, leaves_train = builder.sample(tree, np.zeros(y.shape[0], dtype=np.intp),
-                                            X, y, np.ones_like(y))
 
+                   
+    # build an initial tree
+    tree, logL1, leaves_train = builder.build(tree,
+                                              X,
+                                              y,
+                                              np.ones_like(y))
+
+    # sample trees
+
+    for _ in range(nsample):
+        print('here', leaves_train.dtype)
+        builder.sample(tree,
+                       leaves_train,
+                       X,
+                       y)
+        print('now')
+        
     idx1 = tree.apply(X.astype(np.float32))
     idx2 = leaves_train
     np.testing.assert_allclose(idx1, idx2)
