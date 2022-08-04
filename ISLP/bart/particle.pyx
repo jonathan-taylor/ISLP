@@ -17,6 +17,8 @@
 # Modified 2022 Jonathan Taylor
 
 from libc.math cimport log as ln
+from libc.math cimport sqrt
+
 import numpy as np
 cimport numpy as cnp
 cnp.import_array()
@@ -42,10 +44,11 @@ cdef extern from "<stack>" namespace "std" nogil:
         
 cdef struct StackRecord:
     SIZE_t depth
+    SIZE_t particle_id
     SIZE_t node_id
     SIZE_t start
     SIZE_t end
-
+    
 cdef class SequentialTreeBuilder(TreeBuilder):
     """Build a decision tree sequentially for particle Gibbs BART
 
@@ -56,30 +59,43 @@ cdef class SequentialTreeBuilder(TreeBuilder):
 
     def __cinit__(self, 
                   SIZE_t max_depth,
+                  SIZE_t num_particles,
+                  SIZE_t max_stages,
                   int random_state,
                   float sigmasq,
                   float mu_prior_mean,
                   float mu_prior_var):
 
+        cdef SIZE_t self.max_depth = max_depth
         self.max_depth = max_depth
+        self.num_particles = num_particles
+        self.max_stages = max_stages
         self.random_ = check_random_state(random_state)
         self.sigmasq = sigmasq
         self.mu_prior_mean = mu_prior_mean
         self.mu_prior_var = mu_prior_var
-        
-    cpdef build(self, Tree tree, object X, cnp.ndarray y,
+        self.particle_idx = np.arange(1, num_particles)
+
+    cpdef build(self,
+                Tree cur_tree, # tree we will resample
+                object X,
+                cnp.ndarray response,
                 cnp.ndarray sample_weight=None):
-        """Build a decision tree from the training set (X, y)."""
+        """Build a tree sequentially at random according to a BART prior for X, returning a loglikelihood based on response."""
 
         # check input
-        X, y, sample_weight = self._check_input(X, y, sample_weight)
+        X, response, sample_weight = self._check_input(X, response, sample_weight)
         
         cdef DOUBLE_t* sample_weight_ptr = NULL
 
         # structure to capture splits
-        cdef DTYPE_t[::1] Xf = np.empty_like(X[:,0])
-        cdef SIZE_t[::1] samples = np.arange(X.shape[0], dtype=np.intp)
-        cdef SIZE_t[::1] leaves_train = -np.ones(X.shape[0], dtype=np.intp)
+        cdef DTYPE_t num_particles = self.num_particles
+        cdef DTYPE_t num_features = X.shape[1]
+        cdef DTYPE_t num_samples = X.shape[0]
+        cdef DTYPE_t particle_idx
+        cdef DTYPE_t[::1] Xf = np.empty((X.shape[0], num_particles-1)) # used to keep track of node_map of each particle tree
+        cdef SIZE_t[::1] samples = np.multiply.outer(np.arange(X.shape[0], dtype=np.intp), np.ones(num_particles-1))
+        cdef SIZE_t[::1] leaves_train = np.empty((X.shape[0], num_particles-1), dtype=np.intp)
 
         if sample_weight is not None:
             sample_weight_ptr = <DOUBLE_t*> sample_weight.data
@@ -117,21 +133,34 @@ cdef class SequentialTreeBuilder(TreeBuilder):
         # make a tree with a single leaf node
         # tree should be empty?
 
-        root_node_id = tree._add_node(_TREE_UNDEFINED,
-                                      0,
-                                      True,
-                                      _TREE_UNDEFINED,
-                                      _TREE_UNDEFINED,
-                                      0,
-                                      X.shape[1],
-                                      X.shape[1])
-    
-        expansion_nodes.push({'node_id':root_node_id,
-                              'depth':0,
-                              'start':0,
-                              'end':X.shape[0]})
+        cdef SIZE_t[::1] classes = np.array([1], dtype=np.intp)
+        cnp.ndarray particles = np.array([Tree(num_features, classes, 1) for _ in range(num_particles-1)])
+        cdef DTYPE_t[::1] weights = np.empty(num_particles)
+        
+        weights[0] = marginal_loglikelihood
 
-        cdef float loglikelihood = marginal_loglikelihood(y,
+        for particle_idx in range(1, num_particles):
+            tree = particles[particle_idx]
+            root_node_id = tree._add_node(_TREE_UNDEFINED,
+                                          0,
+                                          True,
+                                          _TREE_UNDEFINED,
+                                          _TREE_UNDEFINED,
+                                          0,
+                                          num_samples,
+                                          num_samples)
+    
+            expansion_nodes.push({'node_id':root_node_id,
+                                  'particle_id':particle_idx,
+                                  'depth':0,
+                                  'start':0,
+                                  'end':X.shape[0]})
+
+            # set the value in case this tree will just be a root
+            # the Gibbs step for mu will later use this 
+            tree.value[0] = response.mean()
+
+        cdef float loglikelihood = marginal_loglikelihood(response,
                                                           None,
                                                           1,
                                                           self.sigmasq,
@@ -139,6 +168,8 @@ cdef class SequentialTreeBuilder(TreeBuilder):
                                                           self.mu_prior_var)
         # try to split
 
+        cdef SIZE_t stage = 0
+        
         while not expansion_nodes.empty():
             stack_record = expansion_nodes.top()
             expansion_nodes.pop()
@@ -202,14 +233,22 @@ cdef class SequentialTreeBuilder(TreeBuilder):
            
                 # increment the loglikelihood
 
-                loglikelihood += incremental_loglikelihood(y,
-                                                           samples,
-                                                           start,
-                                                           split,
-                                                           end,
-                                                           self.sigmasq,
-                                                           self.mu_prior_mean,
-                                                           self.mu_prior_var)
+                increment, mean_L, mean_R = incremental_loglikelihood(response,
+                                                                      samples,
+                                                                      start,
+                                                                      split,
+                                                                      end,
+                                                                      self.sigmasq,
+                                                                      self.mu_prior_mean,
+                                                                      self.mu_prior_var)
+                loglikelihood += increment
+
+                # set the values in the nodes to the response mean
+                # will be reset later in a Gibbs step
+                # which uses this value
+
+                tree.value[left_id] = mean_L
+                tree.value[right_id] = mean_R
 
                 if depth > max_depth_seen:
                     max_depth_seen = depth
@@ -228,6 +267,10 @@ cdef class SequentialTreeBuilder(TreeBuilder):
 
             if rc >= 0:
                 tree.max_depth = max_depth_seen
+
+            stage += 1
+            if stage >= self.max_stages:
+                break
         if rc == -1:
             raise MemoryError()
 
@@ -235,6 +278,71 @@ cdef class SequentialTreeBuilder(TreeBuilder):
 
     cpdef split_prob(self, SIZE_t depth):
         return 0.95 / ((1 + depth) * (1 + depth))
+
+    cpdef build_particles(self,
+                          object X,
+                          cnp.ndarray response):
+
+        X, response, _ = self._check_input(X, response, None) # sample_weight is None
+        cdef SIZE_t = num_features = X.shape[0]
+        cdef SIZE_t[::1] num_classes = np.array([1])
+        cdef SIZE_t num_particles = self.num_particles 
+        cdef SIZE_t num_resample = num_particles - 1
+        cdef DTYPE_t[::1] weights = np.empty(num_particles)
+        cdef int j
+
+        particles = np.empty(num_particles, dtype=object)
+        
+        for j in range(num_particles):
+            tree = Tree(num_features, num_classes, 1)
+            tree, logL, leaves_train = self.build(tree,
+                                                  X,
+                                                  response,
+                                                  None)
+            weights[j] = logL
+            particles[j] = (tree, leaves_train)
+
+        # line 13 of Algorithm 2 of Lakshminarayanan
+        W_t, normalized_weights = _normalize(particles)
+
+        # line 14-15 of Algorithm 2 of Lakshminarayanan
+        # Resample all but first particle
+        re_n_w = normalized_weights[1:] / normalized_weights[1:].sum()
+        new_indices = self.random_.choice(self.particle_idx,
+                                          size=num_resample,
+                                          p=re_n_w)
+        particles[1:] = particles[new_indices]
+
+
+#### Likelihood calculations and sampling for Regression version
+
+cpdef sample_values_tree(Tree tree,
+                         random_state,
+                         float sigmasq,
+                         float mu_prior_mean,
+                         float mu_prior_var):
+
+    # we only update the value in the nodes
+    # assumes that the current values in the nodes are the
+    # sums of responses in that node
+    
+    random_state = check_random_state(random_state)
+    cdef float response_mean
+    
+    for leaf_id in range(tree.node_count):
+        if tree.nodes[leaf_id].left_child == _TREE_LEAF: # we are in a leaf
+            n_node_samples = tree.n_node_samples[leaf_id]
+            if n_node_samples > 0:
+                response_mean = float(tree.value[leaf_id])
+                quad = n_node_samples / sigmasq + 1 / mu_prior_var
+                linear = response_mean / sigmasq + mu_prior_mean / mu_prior_var
+
+                mean = linear / quad
+                std = 1. / sqrt(quad)
+                tree.value[leaf_id] = random_state.normal() * std + mean
+            else:
+                tree.value[leaf_id] = random_state.normal() * sqrt(mu_prior_var) + mu_prior_mean
+
 
 cpdef incremental_loglikelihood(cnp.ndarray response,
                                 SIZE_t[::1] samples,
@@ -287,10 +395,10 @@ cpdef incremental_loglikelihood(cnp.ndarray response,
             0.5 * (mu_bar_f**2 / sigmasq_bar_f))
     logL_f -= 0.5 * mu_prior_mean**2 / mu_prior_var
 
-    return logL_L + logL_R - logL_f
+    return logL_L + logL_R - logL_f, sum_L / n_L, sum_R / n_R
 
 cpdef marginal_loglikelihood(cnp.ndarray response,
-                             SIZE_t[::1] node_map,
+                             SIZE_t[::1] leaf_map,
                              int node_count,
                              float sigmasq,
                              float mu_prior_mean,
@@ -300,30 +408,30 @@ cpdef marginal_loglikelihood(cnp.ndarray response,
     cdef SIZE_t node_idx
     cdef SIZE_t resp_idx
 
-    response_sum = np.zeros(node_count, float)
-    cdef SIZE_t[::1] n_sum = np.zeros(node_count, dtype=np.intp)
+    cdef DTYPE_t[::1] response_sum = np.zeros(node_count, dtype=np.float32)
+    cdef SIZE_t[::1] n_node_samples = np.zeros(node_count, dtype=np.intp)
 
     cdef float sigmasq_bar
     cdef float mu_bar
     cdef float responsesq_sum = 0
 
-    if node_map is not None:
+    if leaf_map is not None:
         for resp_idx in range(response.shape[0]):
             r = response[resp_idx]
-            response_sum[node_map[resp_idx]] += r
-            n_sum[node_map[resp_idx]] += 1
+            response_sum[leaf_map[resp_idx]] += r
+            n_node_samples[leaf_map[resp_idx]] += 1
             if not incremental:
                 responsesq_sum += r*r
     else:
-        n_sum[0] = response.shape[0]
+        n_node_samples[0] = response.shape[0]
         response_sum[0] = response.sum()
         if not incremental:
             responsesq_sum = (response**2).sum()
 
     cdef float logL = 0
     for node_idx in range(node_count):
-        if n_sum[node_idx] > 0:
-            sigmasq_bar = 1 / (n_sum[node_idx] / sigmasq + 1 / mu_prior_var)
+        if n_node_samples[node_idx] > 0:
+            sigmasq_bar = 1 / (n_node_samples[node_idx] / sigmasq + 1 / mu_prior_var)
             mu_bar = (response_sum[node_idx] / sigmasq + mu_prior_mean / mu_prior_var) * sigmasq_bar
 
             logL += (0.5 * ln(sigmasq_bar / mu_prior_var) +
@@ -334,6 +442,38 @@ cpdef marginal_loglikelihood(cnp.ndarray response,
         logL -= response.shape[0] * 0.5 * ln(sigmasq)
         logL -= 0.5 * responsesq_sum / sigmasq
                 
+    return logL
+
+cpdef marginal_loglikelihood_tree(Tree tree,
+                                  float sigmasq,
+                                  float mu_prior_mean,
+                                  float mu_prior_var):
+    
+    # NOTE: this does not include the (response**2).sum() and log sigmasq terms!
+    # assumes that nodes have value that is a given response summed over
+    # the leaves
+    
+    cdef SIZE_t node_idx
+    cdef SIZE_t resp_idx
+
+    cdef float response_mean
+    cdef SIZE_t n_node_samples
+    cdef float sigmasq_bar
+    cdef float mu_bar
+
+    cdef float logL = 0
+    for leaf_id in range(tree.node_count):
+        if tree.nodes[leaf_id].left_child == _TREE_LEAF: # we are in a leaf
+            response_mean = tree.value[leaf_id]
+            n_node_samples = tree.n_node_samples[leaf_id]
+            if n_node_samples > 0:
+                sigmasq_bar = 1 / (n_node_samples / sigmasq + 1 / mu_prior_var)
+                mu_bar = (response_mean * n_node_samples / sigmasq + mu_prior_mean / mu_prior_var) * sigmasq_bar
+
+                logL += (0.5 * ln(sigmasq_bar / mu_prior_var) +
+                         0.5 * (mu_bar**2 / sigmasq_bar))
+                logL -= 0.5 * mu_prior_mean**2 / mu_prior_var
+
     return logL
 
 
@@ -452,4 +592,20 @@ cdef void heapsort(DTYPE_t* Xf, SIZE_t* samples, SIZE_t n) nogil:
         sift_down(Xf, samples, 0, end)
         end = end - 1
 
-        
+#### Util functions
+
+def _normalize(particles):
+    """
+    Use logsumexp trick to get W_t and softmax to get normalized_weights
+    """
+    log_w = np.array([p.log_weight for p in particles])
+    log_w_max = log_w.max()
+    log_w_ = log_w - log_w_max
+    w_ = np.exp(log_w_)
+    w_sum = w_.sum()
+    W_t = log_w_max + np.log(w_sum) - np.log(log_w.shape[0])
+    normalized_weights = w_ / w_sum
+    # stabilize weights to avoid assigning exactly zero probability to a particle
+    normalized_weights += 1e-12
+    return W_t, normalized_weights
+

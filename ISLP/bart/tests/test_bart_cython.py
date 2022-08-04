@@ -3,6 +3,8 @@ from sklearn.tree._tree import Tree
 
 from ISLP.bart.particle import (SequentialTreeBuilder,
                                 marginal_loglikelihood,
+                                marginal_loglikelihood_tree,
+                                sample_values_tree,
                                 incremental_loglikelihood)
 from ISLP.bart.likelihood import (marginal_loglikelihood as marginal_loglikelihood_py,
                                   incremental_loglikelihood as incremental_loglikelihood_py)
@@ -12,15 +14,21 @@ class MyBuilder(SequentialTreeBuilder):
     def split_prob(self, depth):
         return (depth <= 1)
 
-def test_apply(n=100, p=20):
+def test_builder(n=100, p=20):
     # make sure that the _apply_train attribute is tracked correctly
 
-    sigmasq, mu_prior_mean, mu_prior_var = 1, 0, 0.2
+    sigmasq, mu_prior_mean, mu_prior_var = 1.5, 0.2, 0.4
 
-    X = np.random.standard_normal((n, p))
-    y = np.random.standard_normal(n)
+    X = np.random.standard_normal((n, p)).astype(np.float32)
+    y = np.random.standard_normal(n).astype(np.float32)
     tree = Tree(p, np.array([1]), 1)
-    builder = MyBuilder(p, 0, sigmasq, mu_prior_mean, mu_prior_var)
+    builder = MyBuilder(max_depth=10,
+                        num_particles=10,
+                        max_stages=5000,
+                        random_state=0,
+                        sigmasq=sigmasq,
+                        mu_prior_mean=mu_prior_mean,
+                        mu_prior_var=mu_prior_var)
     _, logL1, leaves_train = builder.build(tree, X, y, np.ones_like(y))
 
     idx1 = tree.apply(X.astype(np.float32))
@@ -41,6 +49,33 @@ def test_apply(n=100, p=20):
     
     assert np.allclose(logL1, logL2)
 
+    for leaf in np.unique(leaves_train):
+        sum1 = y[leaves_train == leaf].sum()
+        sum2 = tree.value[leaf]
+
+    logL3 = marginal_loglikelihood_tree(tree,
+                                        sigmasq,
+                                        mu_prior_mean,
+                                        mu_prior_var)
+    
+    # this logL3 doesn't have global terms in it. let's add them
+
+    logL3 -= n * 0.5 * np.log(sigmasq)
+    logL3 -= 0.5 * (y**2).sum() / sigmasq
+
+    assert np.fabs((logL1 - logL3) / logL3) < 0.01 
+
+    for leaf in np.unique(leaves_train):
+        print(leaf, tree.value[leaf])
+
+    sample_values_tree(tree,
+                       0,
+                       sigmasq,
+                       mu_prior_mean,
+                       mu_prior_var)                  
+
+    for leaf in np.unique(leaves_train):
+        print(leaf, tree.value[leaf])
     return tree
 
 def test_marginal_loglikelihood(n=40):
@@ -49,7 +84,7 @@ def test_marginal_loglikelihood(n=40):
     y = np.random.standard_normal(n)
     node_map = np.zeros(n, np.intp)
 
-    sigmasq, mu_prior_mean, mu_prior_var = 1, 0, 0.2
+    sigmasq, mu_prior_mean, mu_prior_var = 1.5, 0.2, 0.2
 
     val_py = marginal_loglikelihood_py(y,
                                        sigmasq,
@@ -112,7 +147,7 @@ def test_incremental_loglikelihood(n=40):
                                        end,
                                        sigmasq,
                                        mu_prior_mean,
-                                       mu_prior_var)
+                                       mu_prior_var)[0]
 
     assert np.allclose(val_py, val_cy)
 
