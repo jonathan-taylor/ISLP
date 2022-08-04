@@ -1,5 +1,6 @@
 import numpy as np
 from sklearn.tree._tree import Tree
+from sklearn.tree import DecisionTreeRegressor
 
 from ISLP.bart.particle import (SequentialTreeBuilder,
                                 marginal_loglikelihood,
@@ -21,7 +22,9 @@ def test_builder(n=100, p=20):
 
     X = np.random.standard_normal((n, p)).astype(np.float32)
     y = np.random.standard_normal(n).astype(np.float32)
-    tree = Tree(p, np.array([1]), 1)
+
+    dt = DecisionTreeRegressor().fit(X, y)
+    tree = dt.tree_
     builder = MyBuilder(max_depth=10,
                         num_particles=10,
                         max_stages=5000,
@@ -29,7 +32,8 @@ def test_builder(n=100, p=20):
                         sigmasq=sigmasq,
                         mu_prior_mean=mu_prior_mean,
                         mu_prior_var=mu_prior_var)
-    _, logL1, leaves_train = builder.build(tree, X, y, np.ones_like(y))
+    _, logL1, leaves_train = builder.sample(tree, np.zeros(y.shape[0], dtype=np.intp),
+                                            X, y, np.ones_like(y))
 
     idx1 = tree.apply(X.astype(np.float32))
     idx2 = leaves_train
