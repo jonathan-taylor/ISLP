@@ -194,6 +194,8 @@ np.random.seed(1)
 
 try:
     from keras.datasets import imdb
+    from tensorflow.keras.preprocessing.sequence \
+        import pad_sequences
 except:
     raise ImportError('requires keras.datasets')
 
@@ -201,23 +203,21 @@ num_words = 10000
 ((S_train, Y_train), 
  (S_test, Y_test)) = imdb.load_data(num_words=num_words)
 
+Y_train = Y_train.astype(np.float32)
+Y_test = Y_test.astype(np.float32)
+
 def one_hot(sequences, ncol):
     idx, vals = [], []
     for i, s in enumerate(sequences):
         idx.extend({(i,v):1 for v in s}.keys())
     idx = np.array(idx).T
-    vals = np.ones(idx.shape[1])
+    vals = np.ones(idx.shape[1], dtype=np.float32)
     tens = torch.sparse_coo_tensor(indices=idx,
                                    values=vals,
                                    size=(len(sequences), ncol))
     return tens.coalesce()
 
-mask = np.zeros(S_train.shape[0], bool)
-mask[:-2000] = 1
-np.random.shuffle(mask)
-
-X_train, L_train = one_hot(S_train[mask], num_words), Y_train[mask]
-X_valid, L_valid = one_hot(S_train[~mask], num_words), Y_train[~mask]
+X_train, L_train = one_hot(S_train, num_words), Y_train
 X_test = one_hot(S_test, num_words)
 
 def convert_sparse_tensor(X):
@@ -229,17 +229,14 @@ def convert_sparse_tensor(X):
                       shape=X.shape).tocsr()
 X_train_s = convert_sparse_tensor(X_train)
 X_test_s = convert_sparse_tensor(X_test)
-X_valid_s = convert_sparse_tensor(X_valid)
 
 # save the sparse matrices
 
 save_npz('IMDB_X_test.npz', X_test_s)
-save_npz('IMDB_X_valid.npz', X_valid_s)
 save_npz('IMDB_X_train.npz', X_train_s)
 
 np.save('IMDB_Y_test.npy', Y_test)
 np.save('IMDB_Y_train.npy', L_train)
-np.save('IMDB_Y_valid.npy', L_valid)
 
 # save the sparse tensors
 
@@ -251,10 +248,6 @@ torch.save(X_train.indices(), 'IMDB_X_train_idx.tensor')
 torch.save(X_train.values(), 'IMDB_X_train_values.tensor')
 torch.save(X_train.size(), 'IMDB_X_train_size.tensor')
 
-torch.save(X_valid.indices(), 'IMDB_X_valid_idx.tensor')
-torch.save(X_valid.values(), 'IMDB_X_valid_values.tensor')
-torch.save(X_valid.size(), 'IMDB_X_valid_size.tensor')
-
 # save and pickle the word index
 
 word_index = imdb.get_word_index()
@@ -265,3 +258,14 @@ lookup[2] = "<UNK>"
 lookup[4] = "<UNUSED>"
 
 pickle.dump(lookup, open('IMDB_word_index.pkl', 'bw'))
+
+# create the padded representations
+
+(S_train,
+ S_test) = [torch.tensor(pad_sequences(S, maxlen=500, value=0))
+            for S in [S_train,
+                      S_test]]
+
+torch.save(S_train, 'IMDB_S_train.tensor')
+torch.save(S_test, 'IMDB_S_test.tensor')
+
