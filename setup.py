@@ -234,7 +234,8 @@ def main(**extra_args):
           packages     = ['ISLP',
                           'ISLP.wrappers',
                           'ISLP.models',
-                          'ISLP.bart'
+                          'ISLP.bart',
+                          'ISLP.torch'
                           ],
           ext_modules = EXTS,
           package_data = {"ISLP":["data/*csv", "data/*npy", "data/*data"]},
