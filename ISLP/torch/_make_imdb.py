@@ -199,9 +199,11 @@ try:
 except:
     raise ImportError('requires keras.datasets')
 
-num_words = 10000
+# the 3 is for three terms: <START> <UNK> <UNUSED> 
+num_words = 10000+3
 ((S_train, Y_train), 
  (S_test, Y_test)) = imdb.load_data(num_words=num_words)
+
 
 Y_train = Y_train.astype(np.float32)
 Y_test = Y_test.astype(np.float32)

@@ -17,11 +17,13 @@ def load_data(dataset):
         xtest = xtest.rename(columns=dict([('V%d' % d, 'X%d' % d) for d in range(1, len(xtest.columns))]))
         ytest = pd.read_csv(resource_filename('ISLP', pjoin('data', 'Khan_ytest.csv')))
         ytest = ytest.rename(columns={'x':'Y'})
-
+        ytest = ytest['Y']
+        
         xtrain = pd.read_csv(resource_filename('ISLP', pjoin('data', 'Khan_xtrain.csv')))
         xtrain = xtrain.rename(columns=dict([('V%d' % d, 'X%d' % d) for d in range(1, len(xtest.columns))]))
         ytrain = pd.read_csv(resource_filename('ISLP', pjoin('data', 'Khan_ytrain.csv')))
         ytrain = ytrain.rename(columns={'x':'Y'})
+        ytrain = ytrain['Y']
 
         return {'xtest':xtest,
                 'xtrain':xtrain,

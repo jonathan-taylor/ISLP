@@ -1,3 +1,5 @@
+import warnings
+
 import torch.nn as nn
 from torch.optim import RMSprop
 
@@ -10,6 +12,7 @@ from pytorch_lightning.utilities.seed import seed_everything
 from torch.utils.data import (random_split,
                               DataLoader,
                               Dataset)
+from torch import tensor
 from torchvision import transforms
 from torch.utils.data import TensorDataset
 
@@ -87,18 +90,26 @@ class SimpleDataModule(LightningDataModule):
                    batch_size=32,
                    num_workers=0,
                    persistent_workers=True,
+                   test_as_validation=False,
                    seed=0):
 
-        tensor_ds = TensorDataset(*arrays)
+        tensor_ds = TensorDataset(*[tensor(arr) for arr in arrays])
         npts = len(tensor_ds)
         if type(test) == float:
             test = int(test*npts)
         if type(validation) == float:
             validation = int(validation*npts)
+        if npts <= test + validation:
+            raise ValueError('Total test and validation requested exceeds size of dataset: no data left for training.')
         train_ds, test_ds, valid_ds = random_split(tensor_ds,
                                                    [npts - test - validation,
                                                     test,
                                                     validation])
+        if test_as_validation:
+            valid_ds = test_ds
+            if validation != 0:
+                warnings.warn('Validation set not empty but `test_as_validation` is True. If using test set for validation set `validation=0`.')
+
         return SimpleDataModule(train_ds,
                                 test_ds,
                                 validation=valid_ds,
