@@ -32,9 +32,9 @@ def load_sparse(validation=2000,
     mask[:-int(validation)] = 1
     np.random.shuffle(mask)
     
-    X_train_tmp = X_train
-    X_train, Y_train = X_train_tmp[mask], num_words), Y_train[mask]
-    X_valid, Y_valid = X_train_tmp[~mask], Y_train[~mask]
+    X_train_tmp, Y_train_tmp = X_train, Y_train
+    X_train, Y_train = X_train_tmp[mask], Y_train_tmp[mask]
+    X_valid, Y_valid = X_train_tmp[~mask], Y_train_tmp[~mask]
 
     return (X_train, Y_train), (X_valid, Y_valid), (X_test, Y_test)
 

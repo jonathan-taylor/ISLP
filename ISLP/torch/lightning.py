@@ -7,44 +7,46 @@ from pytorch_lightning import (LightningModule,
                                LightningDataModule)
 from pytorch_lightning.utilities.distributed import rank_zero_only
 from pytorch_lightning.utilities.seed import seed_everything
-from torch.utils.data import random_split, DataLoader
+from torch.utils.data import (random_split,
+                              DataLoader,
+                              Dataset)
 from torchvision import transforms
+from torch.utils.data import TensorDataset
 
 class SimpleDataModule(LightningDataModule):
 
     def __init__(self,
                  train_dataset,
                  test_dataset,
-                 transform=None,
                  batch_size=32,
                  num_workers=0,
                  persistent_workers=True,
                  validation=None,
-                 test_as_validation=False,
                  seed=0):
 
-        super().__init__()
+        super(SimpleDataModule, self).__init__()
 
         ntrain = len(train_dataset)
         if type(validation) == float:
-            validation = int(validation * len(train_dataset))
-        if validation is None:
-            validation = 0
+            nvalidation = int(validation * len(train_dataset))
+        elif type(validation) == int:
+            nvalidation = validation
+        elif validation is None:
+            nvalidation = 0
 
-        if not test_as_validation:
-            (self.train_dataset,
-             self.validation_dataset) = random_split(train_dataset,
-                                                     [ntrain - validation,
-                                                      validation])
-        else:
+        if isinstance(validation, Dataset):
             (self.train_dataset,
              self.validation_dataset) = (train_dataset,
-                                         test_dataset)
+                                         validation)
+        else:
+            (self.train_dataset,
+             self.validation_dataset) = random_split(train_dataset,
+                                                     [ntrain - nvalidation,
+                                                      nvalidation])
                 
         self.test_dataset = test_dataset
         self.batch_size = batch_size
         self.num_workers = num_workers
-        self.transform = transform
         self.persistent_workers = persistent_workers and num_workers > 0
         self.seed = seed
         
@@ -78,6 +80,33 @@ class SimpleDataModule(LightningDataModule):
                           num_workers=self.num_workers,
                           persistent_workers=self.persistent_workers)
 
+    @staticmethod
+    def fromarrays(*arrays,
+                   test=0,
+                   validation=0,
+                   batch_size=32,
+                   num_workers=0,
+                   persistent_workers=True,
+                   seed=0):
+
+        tensor_ds = TensorDataset(*arrays)
+        npts = len(tensor_ds)
+        if type(test) == float:
+            test = int(test*npts)
+        if type(validation) == float:
+            validation = int(validation*npts)
+        train_ds, test_ds, valid_ds = random_split(tensor_ds,
+                                                   [npts - test - validation,
+                                                    test,
+                                                    validation])
+        return SimpleDataModule(train_ds,
+                                test_ds,
+                                validation=valid_ds,
+                                batch_size=batch_size,
+                                num_workers=num_workers,
+                                persistent_workers=persistent_workers,
+                                seed=seed)
+
 class SimpleModule(LightningModule):
 
     """
@@ -92,7 +121,7 @@ class SimpleModule(LightningModule):
                  on_epoch=True,
                  pre_process_y_for_metrics=lambda y: y):
 
-        super().__init__()
+        super(SimpleModule, self).__init__()
 
         self.model = model
         self.loss = loss or nn.MSELoss()
