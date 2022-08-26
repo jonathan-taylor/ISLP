@@ -61,25 +61,30 @@ class SimpleDataModule(LightningDataModule):
                           num_workers=self.num_workers,
                           persistent_workers=self.persistent_workers)
 
+    # for validation, test and predict
+    # we load the entire data at once in this
+    # simple module. otherwise metrics get averaged
+    # over minibatch
+
     def val_dataloader(self):
         seed_everything(self.seed, workers=True)
         return DataLoader(self.validation_dataset,
                           shuffle=False,
-                          batch_size=self.batch_size,
+                          batch_size=len(self.validation_dataset),
                           num_workers=self.num_workers,
                           persistent_workers=self.persistent_workers)
 
     def test_dataloader(self):
         seed_everything(self.seed, workers=True)
         return DataLoader(self.test_dataset,
-                          batch_size=self.batch_size,
+                          batch_size=len(self.test_dataset),
                           num_workers=self.num_workers,
                           persistent_workers=self.persistent_workers)
 
     def predict_dataloader(self):
         seed_everything(self.seed, workers=True)
         return DataLoader(self.test_dataset,
-                          batch_size=self.batch_size,
+                          batch_size=len(self.test_dataset),
                           num_workers=self.num_workers,
                           persistent_workers=self.persistent_workers)
 

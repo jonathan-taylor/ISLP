@@ -1,2 +1,3 @@
-include ISLP/data/*.csvinclude versioneer.py
+include ISLP/data/*.csv
+include versioneer.py
 include ISLP/_version.py
