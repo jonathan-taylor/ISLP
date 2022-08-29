@@ -190,8 +190,6 @@ import numpy as np
 from scipy.sparse import coo_matrix, save_npz
 import torch
 
-np.random.seed(1)
-
 try:
     from keras.datasets import imdb
     from tensorflow.keras.preprocessing.sequence \

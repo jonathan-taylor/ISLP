@@ -11,13 +11,15 @@ from sklearn.decomposition import PCA
 default_encoders = {'categorical': Contrast(method=None),
                     'ordinal': OrdinalEncoder()}
 
+
 def test_interaction():
 
+    rng = np.random.default_rng(0)
     I = Interaction(['V', 'U'],
                     {'V':[0,2],
                      'U':[1,3,5]},
                     {'V':[0,1],'U':[0,1,2]})
-    X = np.random.standard_normal((50,10))
+    X = rng.standard_normal((50,10))
     W = I.fit_transform(X)
 
     W2 = np.array([X[:,0]*X[:,1],
@@ -31,7 +33,8 @@ def test_interaction():
 
 def test_ndarray():
     
-    X = np.random.standard_normal((50,5))
+    rng = np.random.default_rng(1)
+    X = rng.standard_normal((50,5))
 
     M = ModelSpec(terms=[1, (3,2)],
                   default_encoders=default_encoders)
@@ -43,7 +46,8 @@ def test_ndarray():
     
 def test_dataframe1():
     
-    X = np.random.standard_normal((50,5))
+    rng = np.random.default_rng(2)
+    X = rng.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
     
     M = ModelSpec(terms=['A','D',('D','E')],
@@ -57,7 +61,8 @@ def test_dataframe1():
 
 def test_dataframe2():
     
-    X = np.random.standard_normal((50,5))
+    rng = np.random.default_rng(3)
+    X = rng.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['V','B','A','D','E'])
     
     M = ModelSpec(terms=['A', 'D', 'B', ('D','E'), 'V'],
@@ -72,9 +77,10 @@ def test_dataframe2():
     
 def test_dataframe3():
     
-    X = np.random.standard_normal((50,5))
+    rng = np.random.default_rng(8)
+    X = rng.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
-    D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
+    D['E'] = pd.Categorical(rng.choice(range(4,8), 50, replace=True))
     
     M = ModelSpec(terms=['A', 'E', ('D','E')],
                   default_encoders=default_encoders)
@@ -92,10 +98,11 @@ def test_dataframe3():
 
 def test_dataframe4():
     
-    X = np.random.standard_normal((50,5))
+    rng = np.random.default_rng(9)
+    X = rng.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
-    D['D'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
-    D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
+    D['D'] = pd.Categorical(rng.choice(['a','b','c'], 50, replace=True))
+    D['E'] = pd.Categorical(rng.choice(range(4,8), 50, replace=True))
     
     M = ModelSpec(terms=['A', 'E', ('D','E'), 'D'],
                   default_encoders=default_encoders)
@@ -116,10 +123,11 @@ def test_dataframe4():
     
 def test_dataframe5():
     
-    X = np.random.standard_normal((50,5))
+    rng = np.random.default_rng(10)
+    X = rng.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
-    D['D'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
-    D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
+    D['D'] = pd.Categorical(rng.choice(['a','b','c'], 50, replace=True))
+    D['E'] = pd.Categorical(rng.choice(range(4,8), 50, replace=True))
     
     M = ModelSpec(terms=['A', 'E', ('D','E')],
                   default_encoders=default_encoders)
@@ -133,11 +141,12 @@ def test_dataframe5():
     
 def test_dataframe6():
     
-    X = np.random.standard_normal((50,5))
+    rng = np.random.default_rng(11)
+    X = rng.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
     W = Variable(('A','E'), 'AE', None)
-    D['D'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
-    D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
+    D['D'] = pd.Categorical(rng.choice(['a','b','c'], 50, replace=True))
+    D['E'] = pd.Categorical(rng.choice(range(4,8), 50, replace=True))
     
     M = ModelSpec(terms=['A',W,(W,'D',)],
                   default_encoders=default_encoders)
@@ -147,10 +156,11 @@ def test_dataframe6():
 
 def test_dataframe7():
     
-    X = np.random.standard_normal((50,6))
+    rng = np.random.default_rng(12)
+    X = rng.standard_normal((50,6))
     D = pd.DataFrame(X, columns=['AA','Bbbb','C','Ddd','Y','Eee'])
-    D['Ddd'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
-    D['Eee'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
+    D['Ddd'] = pd.Categorical(rng.choice(['a','b','c'], 50, replace=True))
+    D['Eee'] = pd.Categorical(rng.choice(range(4,8), 50, replace=True))
         
     M = ModelSpec(terms=D.columns.drop(['Y','C']),
                   default_encoders=default_encoders)
@@ -160,10 +170,11 @@ def test_dataframe7():
 
 def test_dataframe8():
     
-    X = np.random.standard_normal((50,6))
+    rng = np.random.default_rng(13)
+    X = rng.standard_normal((50,6))
     D = pd.DataFrame(X, columns=['A','B','C','D','Y','E'])
-    D['D'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
-    D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
+    D['D'] = pd.Categorical(rng.choice(['a','b','c'], 50, replace=True))
+    D['E'] = pd.Categorical(rng.choice(range(4,8), 50, replace=True))
     
     poly =  Poly(degree=3)
     # raises a ValueError because poly will have been already fit -- need new instance of Poly
@@ -177,10 +188,11 @@ def test_dataframe8():
 
 def test_dataframe9():
     
-    X = np.random.standard_normal((50,6))
+    rng = np.random.default_rng(14)
+    X = rng.standard_normal((50,6))
     D = pd.DataFrame(X, columns=['A','B','C','D','Y','E'])
-    D['D'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
-    D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
+    D['D'] = pd.Categorical(rng.choice(['a','b','c'], 50, replace=True))
+    D['E'] = pd.Categorical(rng.choice(range(4,8), 50, replace=True))
     
     poly =  Poly(degree=3)
     # raises a ValueError because poly will have been already fit -- need new instance of Poly
@@ -195,12 +207,13 @@ def test_dataframe9():
 
 def test_dataframe10():
     
-    X = np.random.standard_normal((50,5))
+    rng = np.random.default_rng(15)
+    X = rng.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
     W = Variable(('A','E'), 'AE', None)
     U = Variable((W, 'C'), 'WC', None)
-    D['D'] = pd.Categorical(np.random.choice(['a','b','c'], 50, replace=True))
-    D['E'] = pd.Categorical(np.random.choice(range(4,8), 50, replace=True))
+    D['D'] = pd.Categorical(rng.choice(['a','b','c'], 50, replace=True))
+    D['E'] = pd.Categorical(rng.choice(range(4,8), 50, replace=True))
     
     M = ModelSpec(terms=['A', 'E', 'C', W, (W, 'D',), U],
                   default_encoders=default_encoders)
@@ -216,7 +229,8 @@ def test_dataframe10():
 
 def test_poly_ns_bs():
     
-    X = np.random.standard_normal((50,5))
+    rng = np.random.default_rng(16)
+    X = rng.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
     
     M = ModelSpec(terms=[poly('A', intercept=True, degree=3),
@@ -234,7 +248,8 @@ def test_poly_ns_bs():
 
 def test_submodel():
     
-    X = np.random.standard_normal((50,5))
+    rng = np.random.default_rng(17)
+    X = rng.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
     
     M = ModelSpec(terms=[poly('A', intercept=True, degree=3),
@@ -249,9 +264,10 @@ def test_submodel():
 
 def test_contrast():
     
-    X = np.random.standard_normal((50,5))
+    rng = np.random.default_rng(18)
+    X = rng.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
-    D['C'] = pd.Categorical(np.random.choice(range(4,9), 50, replace=True))
+    D['C'] = pd.Categorical(rng.choice(range(4,9), 50, replace=True))
     for method in ['sum', 'drop', None, lambda p: np.identity(p)]:
         M = ModelSpec(terms=[poly('A', intercept=True, degree=3),
                              contrast('C', method),
@@ -265,7 +281,8 @@ def test_contrast():
     
 def test_sequence():
     
-    X = np.random.standard_normal((50,5))
+    rng = np.random.default_rng(19)
+    X = rng.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
     
     M = ModelSpec(terms=[poly('A', intercept=True, degree=3),
@@ -277,9 +294,10 @@ def test_sequence():
     
 def test_poly_ns_bs2():
     
-    X = np.random.standard_normal((50,5))
+    rng = np.random.default_rng(20)
+    X = rng.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
-    D['C'] = pd.Categorical(np.random.choice(range(4,9), 50, replace=True))
+    D['C'] = pd.Categorical(rng.choice(range(4,9), 50, replace=True))
     M = ModelSpec(terms=[(poly('A', intercept=True, degree=3),'C')])
     MX = M.fit_transform(D)
     print(MX.columns)
@@ -287,7 +305,8 @@ def test_poly_ns_bs2():
     
 def test_pca():
     
-    X = np.random.standard_normal((50,8))
+    rng = np.random.default_rng(21)
+    X = rng.standard_normal((50,8))
     D = pd.DataFrame(X, columns=['A','B','C','D','E', 'F', 'G', 'H'])
     
     pca_ = Variable(('A','B','C','D'), 'pca(ABCD)', PCA(n_components=2))

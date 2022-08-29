@@ -11,11 +11,12 @@ from ISLP.models.generic_selector import FeatureSelector
 
 def test_min_max():
 
+    rng = np.random.default_rng(0)
     n, p = 100, 7
-    X = np.random.standard_normal((n, p))
-    Y = np.random.standard_normal(n)
+    X = rng.standard_normal((n, p))
+    Y = rng.standard_normal(n)
     D = pd.DataFrame(X, columns=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'][:p])
-    D['A'] = pd.Categorical(np.random.choice(range(5), (n,), replace=True))
+    D['A'] = pd.Categorical(rng.choice(range(5), (n,), replace=True))
 
     model_spec = MS(list(D.columns))
     model_spec.fit(D)
@@ -40,10 +41,11 @@ def test_min_max():
 def test_step():
 
     n, p = 100, 7
-    X = np.random.standard_normal((n, p))
-    Y = np.random.standard_normal(n)
+    rng = np.random.default_rng(1)
+    X = rng.standard_normal((n, p))
+    Y = rng.standard_normal(n)
     D = pd.DataFrame(X, columns=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'][:p])
-    D['A'] = pd.Categorical(np.random.choice(range(5), (n,), replace=True))
+    D['A'] = pd.Categorical(rng.choice(range(5), (n,), replace=True))
 
     model_spec = MS(list(D.columns))
     model_spec.fit(D)
@@ -114,11 +116,12 @@ def test_step():
         
 def test_constraint():
 
+    rng = np.random.default_rng(3)
     n, p = 100, 7
-    X = np.random.standard_normal((n, p))
-    Y = np.random.standard_normal(n)
+    X = rng.standard_normal((n, p))
+    Y = rng.standard_normal(n)
     D = pd.DataFrame(X, columns=['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'][:p])
-    D['A'] = pd.Categorical(np.random.choice(range(5), (n,), replace=True))
+    D['A'] = pd.Categorical(rng.choice(range(5), (n,), replace=True))
 
     model_spec = MS(list(D.columns))
     model_spec.fit(D)

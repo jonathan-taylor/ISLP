@@ -8,9 +8,10 @@ def test_bart():
     
     n, p = 1000, 50
 
-    X = np.random.standard_normal((n,p))
-    X2 = np.random.standard_normal((n,p))
-    Y = np.random.standard_normal(n)*5
+    rng = np.random.default_rng(0)
+    X = rng.standard_normal((n,p))
+    X2 = rng.standard_normal((n,p))
+    Y = rng.standard_normal(n)*5
 
     B = BART()
     B.fit(X, Y)

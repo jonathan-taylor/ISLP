@@ -86,10 +86,10 @@ def load_sparse(root='.',
                        for r in ['Y_test.npy',
                                  'Y_train.npy']]
     
-    np.random.seed(random_state)
+    rng = np.random.default_rng(random_state)
     mask = np.zeros(X_train.shape[0], bool)
     mask[:-int(validation)] = 1
-    np.random.shuffle(mask)
+    rng.shuffle(mask)
     
     X_train_tmp, Y_train_tmp = X_train, Y_train
     X_train, Y_train = X_train_tmp[mask], Y_train_tmp[mask]
