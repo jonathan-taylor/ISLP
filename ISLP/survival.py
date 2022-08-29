@@ -1,7 +1,9 @@
 import numpy as np
 from scipy.optimize import root
 
-def sim_time(linpred, cum_hazard):
+def sim_time(linpred,
+             cum_hazard,
+             rng):
     """
     Simulate a survival time for a 
     cumulative hazard function $H$ with actual hazard
@@ -14,7 +16,7 @@ def sim_time(linpred, cum_hazard):
     Cox proportional hazards model.
     """
 
-    U = np.random.sample()
+    U = rng.uniform()
     B = - np.log(U) /  np.exp(linpred)
     lower, upper = 1, 2
 
