@@ -827,4 +827,6 @@ def clusterer(variables, name, transform, scale=False):
     return intermed
 
 def _argstring(*args, **kwargs):
-    return ', '.join([str(a) for a in args]) + ', '.join([f'{k}={v}' for k, v in kwargs.items()])
+    _args = ', '.join([str(a) for a in args])
+    _kwargs = ', '.join([f'{k}={v}' for k, v in kwargs.items()])
+    return ', '.join([_args, _kwargs])
