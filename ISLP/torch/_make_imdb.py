@@ -227,8 +227,15 @@ def convert_sparse_tensor(X):
                       (idx[0],
                        idx[1])),
                       shape=X.shape).tocsr()
+
 X_train_s = convert_sparse_tensor(X_train)
 X_test_s = convert_sparse_tensor(X_test)
+
+X_train_d = torch.tensor(X_train_s.todense())
+X_test_d = torch.tensor(X_test_s.todense())
+
+torch.save(X_train_d, 'IMDB_X_train.tensor')
+torch.save(X_test_d, 'IMDB_X_test.tensor')
 
 # save the sparse matrices
 
@@ -237,16 +244,6 @@ save_npz('IMDB_X_train.npz', X_train_s)
 
 np.save('IMDB_Y_test.npy', Y_test)
 np.save('IMDB_Y_train.npy', L_train)
-
-# save the sparse tensors
-
-torch.save(X_test.indices(), 'IMDB_X_test_idx.tensor')
-torch.save(X_test.values(), 'IMDB_X_test_values.tensor')
-torch.save(X_test.size(), 'IMDB_X_test_size.tensor')
-
-torch.save(X_train.indices(), 'IMDB_X_train_idx.tensor')
-torch.save(X_train.values(), 'IMDB_X_train_values.tensor')
-torch.save(X_train.size(), 'IMDB_X_train_size.tensor')
 
 # save and pickle the word index
 

@@ -143,7 +143,7 @@ class SimpleModule(LightningModule):
         self.loss = loss or nn.MSELoss()
         optimizer = optimizer or RMSprop(model.parameters())
         self._optimizer = optimizer
-        self._metrics = metrics
+        self.metrics = metrics
         self.on_epoch = on_epoch
         self.pre_process_y_for_metrics = pre_process_y_for_metrics
         
@@ -160,9 +160,9 @@ class SimpleModule(LightningModule):
                  on_step=False)
 
         y_ = self.pre_process_y_for_metrics(y)
-        for _metric in self._metrics.keys():
+        for _metric in self.metrics.keys():
             self.log(f"train_{_metric}",
-                     self._metrics[_metric](preds, y_),
+                     self.metrics[_metric](preds, y_),
                      on_epoch=self.on_epoch)
         return loss
 
@@ -172,9 +172,9 @@ class SimpleModule(LightningModule):
         loss = self.loss(preds, y)
 
         y_ = self.pre_process_y_for_metrics(y)
-        for _metric in self._metrics.keys():
+        for _metric in self.metrics.keys():
             self.log(f"test_{_metric}",
-                     self._metrics[_metric](preds, y_),
+                     self.metrics[_metric](preds, y_),
                      on_epoch=self.on_epoch)
         self.log("test_loss",
                  loss,
@@ -190,9 +190,9 @@ class SimpleModule(LightningModule):
         # must be int for classification metrics
 
         y_ = self.pre_process_y_for_metrics(y)
-        for _metric in self._metrics.keys():
+        for _metric in self.metrics.keys():
             self.log(f"valid_{_metric}",
-                     self._metrics[_metric](preds, y_),
+                     self.metrics[_metric](preds, y_),
                      on_epoch=self.on_epoch)
         self.log("valid_loss",
                  loss,
