@@ -21,12 +21,6 @@ md5sums = {'IMDB_Y_test.npy': 'bedbed694970384ebf48088dfee80d51',
            'IMDB_S_test.tensor': '02669d946d63aeede9b71abf3b8e811d',
            'IMDB_X_test.tensor': '75b9cc67bd7b34b1da664d1e4b2ea69d',
            'IMDB_X_train.tensor': 'e34b5c4d2a4212f317408fe275785788',
-           #'IMDB_X_train_size.tensor': '859a90e4c8617925fdf58d67c15d063b',
-           #'IMDB_X_test_idx.tensor': '196829061c910afab8979822f2bdad5e',
-           #'IMDB_X_train_values.tensor': '67da83ef8c8a53f7da2d28ef5b2ecc9f',
-           #'IMDB_X_test_values.tensor': '4abfa952fe9466abaaf3ab7a8b140765',
-           #'IMDB_X_test_size.tensor': '859a90e4c8617925fdf58d67c15d063b',
-           #'IMDB_X_train_idx.tensor': '47368c12728797527d6a6e8217f3da64'
            'IMDB_X_test.npz': 'd914c62cc0a3862067eea3cce955ea2b',
            'IMDB_S_train.tensor': '0c00ebbb1c050141bbfe90b19cf173dd',
            'IMDB_word_index.pkl': '5fa514f2ee6e3ea50a07e84711c42bbd',
@@ -36,8 +30,7 @@ md5sums = {'IMDB_Y_test.npy': 'bedbed694970384ebf48088dfee80d51',
 
 def _get_imdb(imdb_file,
               outdir,
-              #urlbase='https://hastie.su.domains/ISLP/Data/IMDB/',
-              urlbase='file:///Users/jonathantaylor/Desktop/ISLP_book/ISLP/ISLP/data',
+              urlbase='https://hastie.su.domains/ISLP/Data/IMDB/',
               ):
     if not os.path.exists(outdir):
         os.makedirs(outdir)
