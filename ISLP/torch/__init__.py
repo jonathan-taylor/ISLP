@@ -1,7 +1,8 @@
 import os
 
 from .lightning import (SimpleDataModule,
-                        SimpleModule)
+                        SimpleModule,
+                        ErrorTracker)
 
 def rec_num_workers():
 
