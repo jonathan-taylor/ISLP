@@ -4,7 +4,7 @@ Objects helpful in analysis of IMDB data from `keras`. Constructs
 a lookup table that is usable directly with `keras.datasets.imdb` data.
 
 """
-import os
+import os, gzip
 from os.path import join as pjoin
 from hashlib import md5
 
@@ -18,24 +18,25 @@ import urllib
 
 md5sums = {'IMDB_Y_test.npy': 'bedbed694970384ebf48088dfee80d51',
            'IMDB_Y_train.npy': '66bbcf3b4d43d2ddbafc03c2c5fbaab5',
-           'IMDB_S_test.tensor': '02669d946d63aeede9b71abf3b8e811d',
-           'IMDB_X_test.tensor': '75b9cc67bd7b34b1da664d1e4b2ea69d',
-           'IMDB_X_train.tensor': 'e34b5c4d2a4212f317408fe275785788',
+           'IMDB_S_test.tensor.gz': 'b792157f839e849b9bca81572474d3a6',
+           'IMDB_S_train.tensor.gz': 'f51d41d7d9a8dd030db068115b12fc0c',
+           'IMDB_X_test.tensor.gz': 'b850b332d6c3bd057757f33674877438',
+           'IMDB_X_train.tensor.gz': '74d8a538c0ce86fb45ce4497417f598d',
            'IMDB_X_test.npz': 'd914c62cc0a3862067eea3cce955ea2b',
-           'IMDB_S_train.tensor': '0c00ebbb1c050141bbfe90b19cf173dd',
-           'IMDB_word_index.pkl': '5fa514f2ee6e3ea50a07e84711c42bbd',
            'IMDB_X_train.npz': '9d19e42410ca9264bd2c549122a842fa',
+           'IMDB_word_index.pkl': '5fa514f2ee6e3ea50a07e84711c42bbd',
 }
 
 
 def _get_imdb(imdb_file,
               outdir,
-              urlbase='https://hastie.su.domains/ISLP/Data/IMDB/',
+              urlbase='http://imdb.jtaylor.su.domains/jtaylor/data/'
               ):
     if not os.path.exists(outdir):
         os.makedirs(outdir)
 
-    if not os.path.exists(pjoin(outdir, imdb_file)):
+    outfile = pjoin(outdir, imdb_file)
+    if not os.path.exists(outfile):
         # try to retrieve file
         if imdb_file not in md5sums.keys():
             raise ValueError(f'file "{imdb_file}" not part of IMDB dataset')
@@ -43,13 +44,20 @@ def _get_imdb(imdb_file,
             print(f'Retrieving "{imdb_file}" from "{urlbase}".')
             raw_data = response.read()
 
-        open(pjoin(outdir, imdb_file), 'wb').write(raw_data)
+        open(outfile, 'wb').write(raw_data)
 
         if not _check_md5sum(imdb_file,
-                             pjoin(outdir, imdb_file)):
+                             outfile):
             raise ValueError('md5 sum does not match, file possibly corrupted')
 
-    return pjoin(outdir, imdb_file)
+        if os.path.splitext(outfile)[1] == '.gz':
+            unzip_file = os.path.splitext(outfile)[0]
+            with gzip.open(outfile, 'rb') as gzip_file:
+                ungzip_data = gzip_file.read()
+            open(unzip_file, 'wb').write(ungzip_data)
+            outfile = unzip_file
+
+    return outfile
     
 def _check_md5sum(imdb_file,
                   filename):
@@ -100,7 +108,7 @@ def load_tensor(root='.'):
     """
 
     X_test, X_train = [torch.load(_get_imdb(f'IMDB_{r}', root))
-                       for r in ['X_test.tensor', 'X_train.tensor']]
+                       for r in ['X_test.tensor.gz', 'X_train.tensor.gz']]
     
     Y_test, Y_train = [np.load(_get_imdb(f'IMDB_{r}', root))
                        for r in ['Y_test.npy',
@@ -118,8 +126,8 @@ def load_sequential(root='.'):
 
     (S_train,
      S_test) = [torch.load(_get_imdb(f'IMDB_{r}', root))
-                   for r in ['S_train.tensor',
-                             'S_test.tensor',]]
+                   for r in ['S_train.tensor.gz',
+                             'S_test.tensor.gz',]]
     
     Y_test, Y_train = [np.load(_get_imdb(f'IMDB_{r}', root))
                        for r in ['Y_test.npy',
