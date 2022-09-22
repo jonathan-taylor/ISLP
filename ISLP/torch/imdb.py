@@ -32,6 +32,7 @@ def _get_imdb(imdb_file,
               outdir,
               urlbase='http://imdb.jtaylor.su.domains/jtaylor/data/'
               ):
+
     if not os.path.exists(outdir):
         os.makedirs(outdir)
 
@@ -56,7 +57,9 @@ def _get_imdb(imdb_file,
                 ungzip_data = gzip_file.read()
             open(unzip_file, 'wb').write(ungzip_data)
             outfile = unzip_file
-
+    else:
+        if os.path.splitext(outfile)[1] == '.gz':
+            outfile = os.path.splitext(outfile)[0]
     return outfile
     
 def _check_md5sum(imdb_file,
