@@ -21,8 +21,9 @@ def approx_lam(X,
 
     Parameters
     ----------
-    X : array-like
-        Input dataset with n rows
+
+    X : array-like of shape `(n_samples, n_features)`
+        Input dataset
 
     term : Term
         Term for which we which to scale penalty
@@ -80,8 +81,9 @@ def degrees_of_freedom(X,
 
     Parameters
     ----------
-    X : array-like
-        Input dataset with n rows
+
+    X : array-like of shape `(n_samples, n_features)`
+        Input dataset
 
     term : Term
         Term for which we which to scale penalty
@@ -123,6 +125,11 @@ def degrees_of_freedom(X,
 def _eigvals(D_term, term, W=None):
     
     """
+
+    D_term : array-like
+        Columns of design corresponding to term.
+
+    term : term in GAM
 
     W : array-like (optional)
         Diagonal weight matrix.
@@ -167,13 +174,17 @@ def anova(*models,
 
     Parameters
     ----------
+
     models : GAMs
         Sequence of fitted GAM models.
 
+    scale : float
+        Estimate of noise level, defaults to None. 
+
     useF : bool
-         If True use an F distribution for p-value computation
-         based on degrees of freedom of largest model. Otherwise,
-         use chi-squared.
+        If True use an F distribution for p-value computation
+        based on degrees of freedom of largest model. Otherwise,
+        use chi-squared.
 
     Returns
     -------
@@ -226,6 +237,50 @@ def plot(gam,
          partial_kwargs={'c':'b', 'linewidth':4},
          err_kwargs={'c':'r', 'ls':'--', 'linewidth':4},
          bar_kwargs={'capsize':10}):
+
+    """
+
+    For a given term, try to find multiplier of
+    penalty to achieve a specified degrees of freedom.
+
+    Parameters
+    ----------
+
+    gam : GAM
+        A fitted GAM model.
+
+    term_idx : int
+        Which term in the GAM to plot?
+
+    quantiles : [float, float], default=[0.025, 0.0975]
+        Which quantiles for pointwise confidence bands?
+
+    ax : matplotlib axes, optional
+        
+    levels : sequence
+        For categorical features, which indices to include
+        in plot. Defaults to all levels.
+
+    partial_kwargs : dict
+        Keyword arguments for partial dependence plot
+        for continuous variables.
+    
+    err_kwargs : dict
+        Keyword arguments for pointwise confidence bands
+        for continuous variables.
+    
+    bar_kwargs : dict
+        Keyword arguments for barplot for 
+        for categorical variables.
+    
+
+    Returns
+    -------
+
+    ax : matplotlib axes
+        Axes with partial dependence plot added.
+
+    """
 
     if ax is None:
         ax = plt.gca()
