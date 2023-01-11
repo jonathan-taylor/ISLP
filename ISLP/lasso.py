@@ -19,10 +19,10 @@ def lam_values(X,
     Parameters
     ----------
 
-    X : array-like
+    X : array-like of shape (n_samples, n_features)
         Design matrix for LASSO problem.
 
-    Y : array-like
+    Y : array-like of shape (n_samples,)
         Response for LASSO problem.
 
     proportion : float
@@ -36,7 +36,7 @@ def lam_values(X,
 
     Objective here is *sum* of log-likelihood terms not *mean*
     of log-likelihood terms. Values may have to be divided
-    by `X.shape[0]`.
+    by `n_samples`.
 
     '''
 

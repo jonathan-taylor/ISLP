@@ -14,6 +14,19 @@ def sim_time(linpred,
     
     with `l` the linear predictor `linpred` as in a
     Cox proportional hazards model.
+
+    Compute a grid of lambda values for LASSO path.
+
+    Parameters
+    ----------
+
+    lin_pred : float
+        Linear predictor value.
+
+    cum_hazard : callable
+        Cumulative hazard function, takes a single non-negative argument.
+
+    rng : numpy random number generator
     """
 
     U = rng.uniform()
