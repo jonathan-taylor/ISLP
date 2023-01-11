@@ -1,3 +1,15 @@
+"""
+Some useful sklearn transformers:
+
+    - Poly: for orthogonalized polynomial regression
+
+    - Interaction: computing pairwise product for interactions
+
+    - BSpline: arbitrary degree B-splines
+
+    - NaturalSpline: natural cubic splines
+"""
+
 from itertools import product
 import numpy as np, pandas as pd
 
@@ -17,13 +29,13 @@ class Poly(TransformerMixin, BaseEstimator):
         Parameters
         ----------
 
-        degree : int
+        degree : int, default=1
             Degree of polynomial.
 
-        intercept : bool (optional)
+        intercept : bool, default=False
             Include a column for intercept?
 
-        raw : bool (optional)
+        raw : bool, default=False
             If False, perform a QR decomposition on the resulting
             matrix of powers of centered and / or scaled features.
         '''
@@ -32,7 +44,9 @@ class Poly(TransformerMixin, BaseEstimator):
         self.raw = raw
         self.intercept = intercept
 
-    def fit(self, X, y=None):
+    def fit(self,
+            X,
+            y=None):
 
         """
         Construct parameters for orthogonal
@@ -40,12 +54,12 @@ class Poly(TransformerMixin, BaseEstimator):
 
         Parameters
         ----------
-        X : array-like
+        X : array-like of shape (n_samples,)
+            Features used in fitting `svm`. Assumed to have at least 2 columns.
 
-            Single feature on which polynomial features are fit
-            by first demeaning and / or scaling, followed
-            by QR decomposition on the matrix of powers of resulting
-            feature.
+        y : default=None
+            Ignored. This parameter exists only for compatibility with
+            :class:`~sklearn.pipeline.Pipeline`.
 
         """
         
@@ -149,9 +163,13 @@ class Interaction(TransformerMixin, BaseEstimator):
         ----------
 
         variables : sequence
+            Variables in the interactions.
 
         columns : dict
-            Mapping from variable names to columns
+            Mapping from variable names to columns.
+
+        column_names : dict
+            Mapping from variable names to lists of column names.
 
         '''
         
@@ -175,7 +193,9 @@ class Interaction(TransformerMixin, BaseEstimator):
         for names in product(*variable_names):
             self.columns_.append(':'.join(names))
 
-    def fit(self, X, y=None):
+    def fit(self,
+            X,
+            y=None):
 
         """
         Nothing to be computed for the fit.
@@ -184,7 +204,7 @@ class Interaction(TransformerMixin, BaseEstimator):
         ----------
         X : array-like
 
-        y : None
+        y : default=None
             Ignored. This parameter exists only for compatibility with
             :class:`~sklearn.pipeline.Pipeline`.
 
@@ -195,8 +215,8 @@ class Interaction(TransformerMixin, BaseEstimator):
     def transform(self, X):
 
         """
-        Construct parameters for orthogonal
-        polynomials in the feature X.
+        Construct columns representing interactions
+        of relevant variables.
 
         Parameters
         ----------
@@ -205,8 +225,8 @@ class Interaction(TransformerMixin, BaseEstimator):
 
         Returns
         -------
-        XP : np.ndarray
-            Evaluated polynomial features.
+        XI : np.ndarray
+            Evaluated interaction features.
         """
         check_is_fitted(self)
 
@@ -289,25 +309,26 @@ class BSpline(TransformerMixin, BaseEstimator):
         Parameters
         ----------
 
-        degree : int
+        degree : int, default=3
             Degree of polynomial.
 
-        intercept : bool
+        intercept : bool, default=False
             If False, a column of basis is dropped so that by
             adding an intercept column design stays full rank.
 
-        lower_bound : float
+        lower_bound : float, default=None
             Lower boundary not. Will be set to minimal value if not supplied.
 
-        upper_bound : float
+        upper_bound : float, default=None
             Upper boundary not. Will be set to maximal value if not supplied.
 
-        internal_knots : array-like
+        internal_knots : array-like (optional)
             Optional internal knots of B-spline. Will be set to
             appropriate quantiles based on `df`.
 
-        df : int
-            Degrees of freedom for regression. Defaults to `degree + intercept`.
+        df : int, default=None
+            Degrees of freedom for spline. Defaults to `degree + intercept`.
+
         ext : int
             How B-splines are to be extended beyond the boundary using
             `scipy.interpolate.splev`.
@@ -322,7 +343,9 @@ class BSpline(TransformerMixin, BaseEstimator):
         self.ext = ext
         self.intercept = intercept
         
-    def fit(self, X, y=None):
+    def fit(self,
+            X,
+            y=None):
 
         """
         Compute knots for B-spline representation.
@@ -330,7 +353,6 @@ class BSpline(TransformerMixin, BaseEstimator):
         Parameters
         ----------
         X : array-like
-
             Single feature on which B-spline will be evaluated.
 
         y : None
@@ -403,17 +425,17 @@ class BSpline(TransformerMixin, BaseEstimator):
 
         """
         Construct design for B-splines
-        in the feature X.
+        using features X.
 
         Parameters
         ----------
         X : array-like
-            X on which features will be evaluated.
+            X on which splines will be evaluated.
 
         Returns
         -------
-        XP : np.ndarray
-            Evaluated polynomial features.
+        XS : np.ndarray
+            Evaluated splines.
         """
         check_is_fitted(self)
 
@@ -456,24 +478,24 @@ class NaturalSpline(TransformerMixin, BaseEstimator):
         Parameters
         ----------
 
-        intercept : bool
+        intercept : bool, default=False
             If False, a column of basis is dropped so that by
             adding an intercept column design stays full rank.
 
-        lower_bound : float
+        lower_bound : float, default=None
             Lower boundary not. Will be set to minimal value if not supplied.
 
-        upper_bound : float
+        upper_bound : float, default=None
             Upper boundary not. Will be set to maximal value if not supplied.
 
-        internal_knots : array-like
+        internal_knots : array-like (optional)
             Optional internal knots of B-spline. Will be set to
             appropriate quantiles based on `df`.
 
-        df : int
-            Degrees of freedom for regression. Defaults to `3 + intercept`.
+        df : int, default=None
+            Degrees of freedom for spline. Defaults to `3 + intercept`.
 
-        ext : int
+        ext : int, default=0
             How B-splines are to be extended beyond the boundary using
             `scipy.interpolate.splev`.
 
@@ -486,7 +508,9 @@ class NaturalSpline(TransformerMixin, BaseEstimator):
         self.intercept = intercept
         self.ext = ext
         
-    def fit(self, X, y=None):
+    def fit(self,
+            X,
+            y=None):
 
         """
         Compute knots for natural spline representation.
@@ -582,18 +606,18 @@ class NaturalSpline(TransformerMixin, BaseEstimator):
     def transform(self, X):
 
         """
-        Construct design for B-splines
-        in the feature X.
+        Construct design for natural cubic splines
+        for features X.
 
         Parameters
         ----------
         X : array-like
-            X on which features will be evaluated.
+            X on which natural cubic splines will be evaluated.
 
         Returns
         -------
-        XP : np.ndarray
-            Evaluated polynomial features.
+        XN : np.ndarray
+            Evaluated natural cubic spline features.
         """
 
         check_is_fitted(self)
