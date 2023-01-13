@@ -25,6 +25,7 @@ which is part of the base `R` distribution, but accessible from
    datasets/NYSE
    datasets/OJ
    datasets/Portfolio
+   datasets/Publication
    datasets/Smarket
    datasets/USArrests
    datasets/Wage

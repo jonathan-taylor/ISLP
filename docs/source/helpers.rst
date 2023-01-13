@@ -7,7 +7,6 @@ just a few helper functions.
 .. toctree::
 
    helpers/cluster
-   helpers/lasso
    helpers/pygam
    helpers/survival
    helpers/svm
