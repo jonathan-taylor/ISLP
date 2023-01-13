@@ -41,7 +41,8 @@ and fit using the `fit` method.
 
 ```{code-cell} ipython3
 design = ModelSpec([quartic], intercept=False)
-py_features = np.asarray(design.fit_transform(Carseats))
+ISLP_features = design.fit_transform(Carseats)
+ISLP_features.columns
 ```
 
 ## Compare to `R`
@@ -60,7 +61,7 @@ R_features = poly(Carseats$Population, 4)
 ```
 
 ```{code-cell} ipython3
-np.linalg.norm(py_features - R_features)
+np.linalg.norm(ISLP_features - R_features)
 ```
 
 ## Underlying model
@@ -89,7 +90,7 @@ Let's compare the features again.
 
 ```{code-cell} ipython3
 design = ModelSpec([quartic_raw], intercept=False)
-py_features = np.asarray(design.fit_transform(Carseats))
+raw_features = design.fit_transform(Carseats)
 ```
 
 ```{code-cell} ipython3
@@ -98,7 +99,7 @@ R_features = poly(Carseats$Population, 4, raw=TRUE)
 ```
 
 ```{code-cell} ipython3
-np.linalg.norm(py_features - R_features)
+np.linalg.norm(raw_features - R_features)
 ```
 
 ## Intercept
@@ -109,9 +110,9 @@ it doesn't contain an intercept, the order 0 term. This can be include with `int
 ```{code-cell} ipython3
 quartic_int = poly('Population', degree=4, raw=True, intercept=True)
 design = ModelSpec([quartic_int], intercept=False)
-py_features = np.asarray(design.fit_transform(Carseats))
+intercept_features = design.fit_transform(Carseats)
 ```
 
 ```{code-cell} ipython3
-np.linalg.norm(py_features[:,1:] - R_features)
+np.linalg.norm(intercept_features.iloc[:,1:] - R_features)
 ```
