@@ -21,7 +21,7 @@ This module contains a single function used to help visualize the decision rule 
 ```{code-cell}
 import numpy as np
 from sklearn.svm import SVC
-from ISLP.svm import plot_svm
+from ISLP.svm import plot
 ```
 
 ## Make a toy dataset
@@ -42,7 +42,7 @@ svm.fit(X, Y)
 ```
 
 ```{code-cell}
-plot_svm(X, Y, svm)
+plot(X, Y, svm)
 ```
 
 ## Slicing through different features
@@ -52,5 +52,5 @@ We can see this by taking a cross-section through the data that includes this co
 one of the axes in the plot.
 
 ```{code-cell}
-plot_svm(X, Y, svm, features=(3, 4))
+plot(X, Y, svm, features=(3, 4))
 ```
