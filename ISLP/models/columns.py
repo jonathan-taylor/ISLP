@@ -163,7 +163,7 @@ def _get_column_info(X,
                 encoder.fit(Xcol)
                 columns = ['{0}'.format(col)]
             else:
-                Xcol = _get_column(col, X, ndarray=False)
+                Xcol = _get_column(col, X, twodim=True, ndarray=True)
                 encoder = clone(default_encoders['categorical'])
                 cols = encoder.fit_transform(Xcol)
                 if hasattr(encoder, 'columns_'):
