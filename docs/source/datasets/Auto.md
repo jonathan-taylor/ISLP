@@ -61,5 +61,5 @@ Auto.columns
 ```
 
 ```{code-cell}
-Auto.describe()
+Auto.describe().iloc[:,:4]
 ```
