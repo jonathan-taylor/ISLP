@@ -37,18 +37,21 @@ class BART(BaseEnsemble, RegressorMixin):
 
     Parameters
     ----------
+
     num_particles : int
         Number of particles for the conditional SMC sampler. Defaults to 10
     max_stages : int
         Maximum number of iterations of the conditional SMC sampler. Defaults to 100.
 
-    Note
-    ----
+    Notes
+    -----
+
     This sampler is inspired by the [Lakshminarayanan2015] Particle Gibbs sampler, but introduces
     several changes. The changes will be properly documented soon.
 
     References
     ----------
+
     .. [Lakshminarayanan2015] Lakshminarayanan, B. and Roy, D.M. and Teh, Y. W., (2015),
         Particle Gibbs for Bayesian Additive Regression Trees.
         ArviX, `link <https://arxiv.org/abs/1502.04622>`__

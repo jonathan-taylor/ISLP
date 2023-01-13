@@ -1,7 +1,9 @@
 """
+Helper functions for LASSO
+==========================
 
 Functions helpful for LASSO models. 
-In particular, a function for default $\lambda$ values.
+Currently only contains a function for default $\lambda$ values.
 
 """
 
@@ -31,8 +33,8 @@ def lam_values(X,
     nstep : int
         Number of steps on logarithmic scale for the sequence.
 
-    Note
-    ----
+    Notes
+    -----
 
     Objective here is *sum* of log-likelihood terms not *mean*
     of log-likelihood terms. Values may have to be divided

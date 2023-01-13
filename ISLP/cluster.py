@@ -1,3 +1,14 @@
+"""
+Helper functions for clustering
+===============================
+
+This module contains functions used for clustering in the unsupervised
+lab of ISLP. Currently it contains just a simple function to construct
+a linkage matrix to assist plotting a dendrogram of a hierarchical
+clustering.
+
+"""
+
 import numpy as np
 
 def compute_linkage(hclust):

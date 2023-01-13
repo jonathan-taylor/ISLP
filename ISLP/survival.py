@@ -1,3 +1,14 @@
+"""
+Helper functions for survival analysis
+======================================
+
+This module contains functions used for the survival analysis lab of
+ISLP. Currently it contains just a simple function to generate
+survival times from a Cox proportional hazards model with a given
+baseline cumulative hazard.
+
+"""
+
 import numpy as np
 from scipy.optimize import root
 
@@ -6,11 +17,11 @@ def sim_time(linpred,
              rng):
     """
     Simulate a survival time for a 
-    cumulative hazard function $H$ with actual hazard
+    cumulative hazard function $H$ with cumulative hazard
 
-    $$
-    H_l(t) = e^l H(t)
-    $$
+    .. math::
+
+        H_l(t) = e^l \cdot H(t)
     
     with `l` the linear predictor `linpred` as in a
     Cox proportional hazards model.
@@ -27,6 +38,7 @@ def sim_time(linpred,
         Cumulative hazard function, takes a single non-negative argument.
 
     rng : numpy random number generator
+        Used to generate survival times.
     """
 
     U = rng.uniform()

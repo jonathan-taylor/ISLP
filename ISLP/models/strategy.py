@@ -1,3 +1,12 @@
+"""
+Model selection strategies
+==========================
+
+This module defines search strategies to be used in generic
+stepwise model selection.
+
+"""
+
 # Jonathan Taylor 2021
 # mlxtend Machine Learning Library Extensions
 #
@@ -23,7 +32,7 @@ class Strategy(NamedTuple):
     """
     initial_state: object
         Initial state of feature selector.
-    state_generator: callable
+    candidate_states: callable
         Callable taking single argument `state` and returning
         candidates for next batch of scores to be calculated.
     build_submodel: callable
@@ -35,6 +44,9 @@ class Strategy(NamedTuple):
         the state generator should step. Often will just check
         if there is a better score than that at current best state
         but can use entire set of results if desired.
+    postprocess: callable
+        Callable to postprocess the results after selection
+        procedure terminates.
     """
 
     initial_state: Any
@@ -193,6 +205,29 @@ class MinMaxCandidates(object):
 
 class Stepwise(MinMaxCandidates):
 
+    """
+    Parameters
+    ----------
+    model_spec: ModelSpec
+        ModelSpec describing the terms in the model.
+    direction: str
+        One of ['forward', 'backward', 'both']
+    min_terms: int (default: 1)
+        Minumum number of terms to select
+    max_terms: int (default: 1)
+        Maximum number of terms to select
+    lower_terms: [Variable]
+        Subset of terms to keep: smallest model.
+    upper_terms: [Variable]
+        Largest possible model.
+    constraints: {array-like} (optional), shape [n_terms, n_terms]
+        Boolean matrix decribing a dag with [i,j] nonzero implying that j is
+        a child of i (i.e. there is an edge i->j). 
+        All search candidates are checked for validity: i.e.
+        the parent of each term in a candidate must be included
+        in the set of terms.
+    """
+
     def __init__(self,
                  model_spec,
                  direction='forward',
@@ -201,28 +236,6 @@ class Stepwise(MinMaxCandidates):
                  lower_terms=None,
                  upper_terms=None,
                  validator=None):
-        """
-        Parameters
-        ----------
-        model_spec: ModelSpec
-            ModelSpec describing the terms in the model.
-        direction: str
-            One of ['forward', 'backward', 'both']
-        min_terms: int (default: 1)
-            Minumum number of terms to select
-        max_terms: int (default: 1)
-            Maximum number of terms to select
-        lower_terms: [Variable]
-            Subset of terms to keep: smallest model.
-        upper_terms: [Variable]
-            Largest possible model.
-        constraints: {array-like} (optional), shape [n_terms, n_terms]
-            Boolean matrix decribing a dag with [i,j] nonzero implying that j is
-            a child of i (i.e. there is an edge i->j). 
-            All search candidates are checked for validity: i.e.
-            the parent of each term in a candidate must be included
-            in the set of terms.
-        """
 
         self.direction = direction
         MinMaxCandidates.__init__(self,
@@ -240,13 +253,13 @@ class Stepwise(MinMaxCandidates):
 
         If 'forward', all columns not in the current state
         are added (maintaining an upper limit on the number of columns 
-        at `self.max_terms`).
+        at *self.max_terms*).
 
         If 'backward', all columns not in the current state
         are dropped (maintaining a lower limit on the number of columns 
-        at `self.min_terms`).
+        at *self.min_terms*).
 
-        All candidates include `self.lower_terms` if any.
+        All candidates include *self.lower_terms* if any.
         
         Parameters
         ----------
@@ -417,11 +430,8 @@ class Stepwise(MinMaxCandidates):
 
         Parameters
         ----------
-        X: {array-like, sparse matrix}, shape = [n_samples, n_features]
-            Training vectors, where n_samples is the number of samples and
-            n_features is the number of features.
-            New in v 0.13.0: pandas DataFrames are now also accepted as
-            argument for X.
+        model_spec: ModelSpec
+            ModelSpec describing the terms in the model.
         n_steps: int
             How many steps to take in the search?
         direction: str
@@ -430,7 +440,7 @@ class Stepwise(MinMaxCandidates):
             Minumum number of terms to select
         max_terms: int (default: None)
             Maximum number of terms to select.
-            If None defaults to len(model_spec.terms_)
+            If None defaults to number of terms in *model_spec*.
         lower_terms: [Variable]
             Subset of terms to keep: smallest model.
         upper_terms: [Variable]

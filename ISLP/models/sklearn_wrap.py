@@ -1,3 +1,10 @@
+"""
+
+Wrappers for *statsmodels*
+==========================
+
+"""
+
 import numpy as np, pandas as pd
 
 from sklearn.base import (BaseEstimator,
@@ -11,32 +18,34 @@ from .generic_selector import FeatureSelector
 class sklearn_sm(BaseEstimator,
                  RegressorMixin): 
 
+    """
+    Parameters
+    ----------
+
+    model_type: class
+        A model type from statsmodels, e.g. sm.OLS or sm.GLM
+
+    model_spec: ModelSpec
+        Specify the design matrix.
+
+    model_args: dict (optional)
+        Arguments passed to the statsmodels model.
+
+    Notes
+    -----
+
+    If model_str is present, then X and Y are presumed
+    to be pandas objects that are placed
+    into a dataframe before formula is evaluated.
+    This affects `fit` and `predict` methods.
+
+    """
+
     def __init__(self,
                  model_type,
                  model_spec=None,
                  model_args={}):
-        """
-        Parameters
-        ----------
 
-        model_type: class
-            A model type from statsmodels, e.g. sm.OLS or sm.GLM
-
-        model_spec: ModelSpec
-            Specify the design matrix.
-
-        model_args: dict (optional)
-            Arguments passed to the statsmodels model.
-
-        Notes
-        -----
-
-        If model_str is present, then X and Y are presumed
-        to be pandas objects that are placed
-        into a dataframe before formula is evaluated.
-        This affects `fit` and `predict` methods.
-
-        """
         self.model_type = model_type
         self.model_spec = model_spec
         self.model_args = model_args
@@ -123,34 +132,38 @@ class sklearn_sm(BaseEstimator,
            
 class sklearn_selected(sklearn_sm):
 
+    """
+    Parameters
+    ----------
+
+    model_type : class
+        A model type from statsmodels, e.g. sm.OLS or sm.GLM
+
+    strategy : Strategy
+        A search strategy
+
+    model_args : dict (optional)
+        Arguments passed to the statsmodels model.
+
+    scoring : str or callable, default=None
+
+        A str (see model evaluation documentation) or a scorer
+        callable object / function with signature `scorer(estimator, X,
+        y)` which should return only a single value.
+        
+    cv: int, cross-validation generator or an iterable, default=None
+
+        Determines the cross-validation splitting strategy.
+
+    """
+
     def __init__(self,
                  model_type,
                  strategy,
                  model_args={},
                  scoring=None,
                  cv=None):
-        """
-        Parameters
-        ----------
 
-        model_type: class
-            A model type from statsmodels, e.g. sm.OLS or sm.GLM
-
-        model_spec: ModelSpec
-            Specify the design matrix.
-
-        model_args: dict (optional)
-            Arguments passed to the statsmodels model.
-
-        Notes
-        -----
-
-        If model_str is present, then X and Y are presumed
-        to be pandas objects that are placed
-        into a dataframe before formula is evaluated.
-        This affects `fit` and `predict` methods.
-
-        """
         self.model_type = model_type
         self.model_args = model_args
 
@@ -211,34 +224,37 @@ class sklearn_selected(sklearn_sm):
 
 class sklearn_selection_path(sklearn_sm):
 
+    """
+    Parameters
+    ----------
+
+    model_type : class
+        A model type from statsmodels, e.g. sm.OLS or sm.GLM
+
+    strategy : Strategy
+        A search strategy
+
+    model_args : dict (optional)
+        Arguments passed to the statsmodels model.
+
+    scoring : str or callable, default=None
+
+        A str (see model evaluation documentation) or a scorer
+        callable object / function with signature `scorer(estimator, X,
+        y)` which should return only a single value.
+        
+    cv: int, cross-validation generator or an iterable, default=None
+
+        Determines the cross-validation splitting strategy.
+
+    """
+
     def __init__(self,
                  model_type,
                  strategy,
                  model_args={},
                  scoring=None,
                  cv=None):
-        """
-        Parameters
-        ----------
-
-        model_type: class
-            A model type from statsmodels, e.g. sm.OLS or sm.GLM
-
-        model_spec: ModelSpec
-            Specify the design matrix.
-
-        model_args: dict (optional)
-            Arguments passed to the statsmodels model.
-
-        Notes
-        -----
-
-        If model_str is present, then X and Y are presumed
-        to be pandas objects that are placed
-        into a dataframe before formula is evaluated.
-        This affects `fit` and `predict` methods.
-
-        """
         self.model_type = model_type
         self.model_args = model_args
 
@@ -247,6 +263,7 @@ class sklearn_selection_path(sklearn_sm):
         self.scoring = scoring
 
     def fit(self, X, y):
+
         """
         First, select a model
         with design matrix 

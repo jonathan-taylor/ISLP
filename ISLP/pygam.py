@@ -1,3 +1,12 @@
+"""
+Helper functions for GAMs
+=========================
+
+This module contains functions used for the GAM lab of
+ISLP.
+
+"""
+
 import numpy as np
 import pandas as pd
 

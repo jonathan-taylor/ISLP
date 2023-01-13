@@ -1,3 +1,8 @@
+"""
+This package contains tools to specify, manipulate
+and select regression models.
+
+"""
 import numpy as np, pandas as pd
 
 from .model_spec import (ModelSpec,

@@ -1,5 +1,10 @@
 """
-Some useful sklearn transformers:
+Transformers
+============
+
+This module defines some sklearn transformers useful for defining
+flexible regression models for single features, as well as interactions
+between sets of columns.
 
     - Poly: for orthogonalized polynomial regression
 
@@ -19,27 +24,27 @@ from scipy.interpolate import splev
 
 class Poly(TransformerMixin, BaseEstimator):
 
+    '''
+
+    Parameters
+    ----------
+
+    degree : int, default=1
+        Degree of polynomial.
+
+    intercept : bool, default=False
+        Include a column for intercept?
+
+    raw : bool, default=False
+        If False, perform a QR decomposition on the resulting
+        matrix of powers of centered and / or scaled features.
+    '''
+
     def __init__(self,
                  degree=1,
                  intercept=False,
                  raw=False):
-
-        '''
-
-        Parameters
-        ----------
-
-        degree : int, default=1
-            Degree of polynomial.
-
-        intercept : bool, default=False
-            Include a column for intercept?
-
-        raw : bool, default=False
-            If False, perform a QR decomposition on the resulting
-            matrix of powers of centered and / or scaled features.
-        '''
-        
+     
         self.degree = degree
         self.raw = raw
         self.intercept = intercept
@@ -149,30 +154,30 @@ class Poly(TransformerMixin, BaseEstimator):
 
 class Interaction(TransformerMixin, BaseEstimator):
 
+    '''
+
+    Form the tensor product interaction
+    from a group of columns.
+
+    Parameters
+    ----------
+
+    variables : sequence
+        Variables in the interactions.
+
+    columns : dict
+        Mapping from variable names to columns.
+
+    column_names : dict
+        Mapping from variable names to lists of column names.
+
+    '''
+
     def __init__(self,
                  variables,
                  columns,
                  column_names):
-
-        '''
-
-        Form the tensor product interaction
-        from a group of columns.
-
-        Parameters
-        ----------
-
-        variables : sequence
-            Variables in the interactions.
-
-        columns : dict
-            Mapping from variable names to columns.
-
-        column_names : dict
-            Mapping from variable names to lists of column names.
-
-        '''
-        
+       
         self.variables = variables
         self.columns = columns
         self.column_names = column_names
@@ -295,6 +300,37 @@ def _splev_taylor(x,
 
 class BSpline(TransformerMixin, BaseEstimator):
 
+    '''
+
+    Parameters
+    ----------
+
+    degree : int, default=3
+        Degree of polynomial.
+
+    intercept : bool, default=False
+        If False, a column of basis is dropped so that by
+        adding an intercept column design stays full rank.
+
+    lower_bound : float, default=None
+        Lower boundary not. Will be set to minimal value if not supplied.
+
+    upper_bound : float, default=None
+        Upper boundary not. Will be set to maximal value if not supplied.
+
+    internal_knots : array-like (optional)
+        Optional internal knots of B-spline. Will be set to
+        appropriate quantiles based on `df`.
+
+    df : int, default=None
+        Degrees of freedom for spline. Defaults to `degree + intercept`.
+
+    ext : int
+        How B-splines are to be extended beyond the boundary using
+        `scipy.interpolate.splev`.
+
+    '''
+
     def __init__(self,
                  degree=3,
                  intercept=False,
@@ -304,37 +340,6 @@ class BSpline(TransformerMixin, BaseEstimator):
                  df=None,
                  ext=0):
 
-        '''
-
-        Parameters
-        ----------
-
-        degree : int, default=3
-            Degree of polynomial.
-
-        intercept : bool, default=False
-            If False, a column of basis is dropped so that by
-            adding an intercept column design stays full rank.
-
-        lower_bound : float, default=None
-            Lower boundary not. Will be set to minimal value if not supplied.
-
-        upper_bound : float, default=None
-            Upper boundary not. Will be set to maximal value if not supplied.
-
-        internal_knots : array-like (optional)
-            Optional internal knots of B-spline. Will be set to
-            appropriate quantiles based on `df`.
-
-        df : int, default=None
-            Degrees of freedom for spline. Defaults to `degree + intercept`.
-
-        ext : int
-            How B-splines are to be extended beyond the boundary using
-            `scipy.interpolate.splev`.
-
-        '''
-        
         self.degree = degree
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
@@ -463,6 +468,36 @@ class BSpline(TransformerMixin, BaseEstimator):
 
 class NaturalSpline(TransformerMixin, BaseEstimator):
 
+    '''
+
+    Natural cubic spline.
+
+    Parameters
+    ----------
+
+    intercept : bool, default=False
+        If False, a column of basis is dropped so that by
+        adding an intercept column design stays full rank.
+
+    lower_bound : float, default=None
+        Lower boundary not. Will be set to minimal value if not supplied.
+
+    upper_bound : float, default=None
+        Upper boundary not. Will be set to maximal value if not supplied.
+
+    internal_knots : array-like (optional)
+        Optional internal knots of B-spline. Will be set to
+        appropriate quantiles based on `df`.
+
+    df : int, default=None
+        Degrees of freedom for spline. Defaults to `3 + intercept`.
+
+    ext : int, default=0
+        How B-splines are to be extended beyond the boundary using
+        `scipy.interpolate.splev`.
+
+    '''
+
     def __init__(self,
                  intercept=False,
                  lower_bound=None,
@@ -471,36 +506,6 @@ class NaturalSpline(TransformerMixin, BaseEstimator):
                  df=None,
                  ext=0):
 
-        '''
-
-        Natural cubic spline.
-
-        Parameters
-        ----------
-
-        intercept : bool, default=False
-            If False, a column of basis is dropped so that by
-            adding an intercept column design stays full rank.
-
-        lower_bound : float, default=None
-            Lower boundary not. Will be set to minimal value if not supplied.
-
-        upper_bound : float, default=None
-            Upper boundary not. Will be set to maximal value if not supplied.
-
-        internal_knots : array-like (optional)
-            Optional internal knots of B-spline. Will be set to
-            appropriate quantiles based on `df`.
-
-        df : int, default=None
-            Degrees of freedom for spline. Defaults to `3 + intercept`.
-
-        ext : int, default=0
-            How B-splines are to be extended beyond the boundary using
-            `scipy.interpolate.splev`.
-
-        '''
-        
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
         self.internal_knots = internal_knots

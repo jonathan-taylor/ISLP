@@ -1,3 +1,14 @@
+"""
+Helper functions for SVMs
+=========================
+
+This module contains functions used for the SVM
+lab of ISLP. Currently it contains just a simple function to plot
+decision boundary and points through a two-dimensional
+slice for an SVM classifier.
+
+"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 

@@ -1,3 +1,11 @@
+"""
+Model specification
+===================
+
+This module defines the basic object to represent regression
+formula: *ModelSpec*. 
+"""
+
 from collections import namedtuple
 from itertools import product
 from typing import NamedTuple, Any
@@ -31,7 +39,7 @@ class Variable(NamedTuple):
 
     """
     An element in a model matrix that will build
-    columns from an X.
+    columns from an array-like X.
     """
 
     variables: tuple
@@ -123,49 +131,46 @@ class Contrast(TransformerMixin, BaseEstimator):
 
 class ModelSpec(TransformerMixin, BaseEstimator):
 
+    '''
+
+    Parameters
+    ----------
+
+    terms : sequence (optional)
+        Sequence of sets whose
+        elements are columns of *X* when fit.
+        For :py:class:`pd.DataFrame` these can be column
+        names.
+
+    intercept : bool (optional)
+        Include a column for intercept?
+
+    categorical_features : array-like of {bool, int} of shape (n_features) 
+            or shape (n_categorical_features,), default=None.
+        Indicates the categorical features. Will be ignored if *X* is a :py:class:`pd.DataFrame`
+        or :py:class:`pd.Series`.
+
+        - None : no feature will be considered categorical for :py:class:`np.ndarray`.
+        - boolean array-like : boolean mask indicating categorical features.
+        - integer array-like : integer indices indicating categorical
+          features.
+
+    default_encoders : dict
+        Dictionary whose keys are elements of *terms* and values
+        are transforms to be applied to the associate columns in the model matrix
+        by running the *fit_transform* method when *fit* is called and overwriting
+        these values in the dictionary.
+
+    '''
+
     def __init__(self,
-                 terms,
+                 terms=[],
                  intercept=True,
                  categorical_features=None,
                  default_encoders={'categorical': Contrast(method='drop'),
                                    'ordinal': OrdinalEncoder()}
                  ):
-
-        '''
-
-        Parameters
-        ----------
-
-        degree : int
-            Degree of polynomial.
-
-        intercept : bool (optional)
-            Include a column for intercept?
-
-        terms : sequence (optional)
-            Sequence of sets whose
-            elements are columns of `X` when fit.
-            For `pd.DataFrame` these can be column
-            names.
-
-        categorical_features : array-like of {bool, int} of shape (n_features) 
-                or shape (n_categorical_features,), default=None.
-            Indicates the categorical features. Will be ignored if `X` is a `pd.DataFrame`
-            or `pd.Series`.
-
-            - None : no feature will be considered categorical for `np.ndarray`.
-            - boolean array-like : boolean mask indicating categorical features.
-            - integer array-like : integer indices indicating categorical
-              features.
-
-        transforms : dict
-            Dictionary whose keys are elements of `terms` and values
-            are transforms to be applied to the associate columns in the model matrix
-            by running the `fit_transform` method when `fit` is called and overwriting
-            these values in the dictionary.
-
-        '''
-        
+       
         self.intercept = intercept
         self.terms = terms
         self.categorical_features = categorical_features
@@ -181,7 +186,7 @@ class ModelSpec(TransformerMixin, BaseEstimator):
         ----------
         X : array-like
             X on which model matrix will be evaluated.
-            If a `pd.DataFrame` or `pd.Series`, variables that are of
+            If a :py:class:`pd.DataFrame` or :py:class:`pd.Series`, variables that are of
             categorical dtype will be treated as categorical.
 
         """
@@ -292,7 +297,7 @@ class ModelSpec(TransformerMixin, BaseEstimator):
 
         y : None
             Ignored. This parameter exists only for compatibility with
-            :class:`~sklearn.pipeline.Pipeline`.
+            :py:class:`sklearn.pipeline.Pipeline`.
         """
         return self.build_submodel(X, self.terms_)
     
@@ -465,7 +470,9 @@ class ModelSpec(TransformerMixin, BaseEstimator):
             col_cache[joblib_hash([var.name, X])] = (val, names)
         return val, names
 
-    def build_sequence(self, X, anova_type='sequential'):
+    def build_sequence(self,
+                       X,
+                       anova_type='sequential'):
         """
         Build implied sequence of submodels 
         based on successively including more terms.
@@ -664,8 +671,8 @@ def ns(col, *args, intercept=False, name=None, **kwargs):
     Create a natural spline Variable
     for a given column.
     
-    Additional `args` and `kwargs`
-    are passed to `NaturalSpline`.
+    Additional *args* and *kwargs*
+    are passed to :py:class:`NaturalSpline`.
 
     Parameters
     ----------
@@ -708,8 +715,8 @@ def bs(col, *args, intercept=False, name=None, **kwargs):
     Create a B-spline Variable
     for a given column.
     
-    Additional `args` and `kwargs`
-    are passed to `BSpline`.
+    Additional *args* and *kwargs*
+    are passed to :py:class:`ISLP.transforms.BSpline`.
 
     Parameters
     ----------
@@ -752,8 +759,8 @@ def pca(variables, name, *args, scale=False, **kwargs):
     Create PCA encoding of features
     from a sequence of variables.
     
-    Additional `args` and `kwargs`
-    are passed to `PCA`.
+    Additional *args* and *kwargs*
+    are passed to :py:class:`ISLP.transforms.PCA`.
 
     Parameters
     ----------
@@ -783,48 +790,48 @@ def pca(variables, name, *args, scale=False, **kwargs):
                             name=f'{shortname}({name})',
                             encoder=encoder)
 
-def clusterer(variables, name, transform, scale=False):
-    """
-    Create PCA encoding of features
-    from a sequence of variables.
+# def clusterer(variables, name, transform, scale=False):
+#     """
+#     Create PCA encoding of features
+#     from a sequence of variables.
     
-    Additional `args` and `kwargs`
-    are passed to `PCA`.
+#     Additional `args` and `kwargs`
+#     are passed to `PCA`.
 
-    Parameters
-    ----------
+#     Parameters
+#     ----------
 
-    variables : [column identifier, Column or Variable]
-        Sequence whose columns will be encoded by PCA.
+#     variables : [column identifier, Column or Variable]
+#         Sequence whose columns will be encoded by PCA.
 
-    name: str
-        name for the Variable
+#     name: str
+#         name for the Variable
 
-    transform: Transformer
-        A transform with a `predict` method.
+#     transform: Transformer
+#         A transform with a `predict` method.
 
-    Returns
-    -------
+#     Returns
+#     -------
 
-    var : Variable
+#     var : Variable
 
-    """
+#     """
 
-    if scale:
-        scaler = StandardScaler(with_mean=True,
-                                with_std=True)
-        encoder = make_pipeline(scaler, transform)
-    else:
-        encoder = transform
+#     if scale:
+#         scaler = StandardScaler(with_mean=True,
+#                                 with_std=True)
+#         encoder = make_pipeline(scaler, transform)
+#     else:
+#         encoder = transform
 
-    intermed = Variable((derived_variable(*variables,
-                                          name='cluster_intermed',
-                                          encoder=encoder,
-                                          use_transform=False),),
-                            name=f'Cat({encoder}({name}))',
-                            encoder=Contrast(method='drop'))
+#     intermed = Variable((derived_variable(*variables,
+#                                           name='cluster_intermed',
+#                                           encoder=encoder,
+#                                           use_transform=False),),
+#                             name=f'Cat({encoder}({name}))',
+#                             encoder=Contrast(method='drop'))
 
-    return intermed
+#     return intermed
 
 def _argstring(*args, **kwargs):
     _args = ', '.join([str(a) for a in args])

@@ -1,3 +1,12 @@
+"""
+Stepwise model selection
+========================
+
+This package defines objects to carry out
+custom stepwise model selection.
+
+"""
+
 # Sebastian Raschka 2014-2020
 # mlxtend Machine Learning Library Extensions
 #
@@ -93,7 +102,8 @@ class FeatureSelector(MetaEstimatorMixin):
     See `Strategy` for explanation of the fields.
 
     Examples
-    -----------
+    --------
+
     For usage examples, please see
     TBD
 
@@ -310,7 +320,8 @@ class FeatureSelector(MetaEstimatorMixin):
             interval bounds of the CV score averages.
 
         Returns
-        ----------
+        -------
+
         Dictionary with items where each dictionary value is a list
         with the number of iterations (number of feature subsets) as
         its length. The dictionary keys corresponding to these lists
