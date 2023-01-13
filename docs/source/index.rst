@@ -16,4 +16,5 @@ Contents
    transforms
    models
    helpers
+   imdb
    api/index

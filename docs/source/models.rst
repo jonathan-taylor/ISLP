@@ -6,7 +6,7 @@ Tools for regression models
 
 .. toctree::
   
-   models/model_spec
+   models/spec
    models/sklearn_wrap
    models/generic_selector
    models/strategy

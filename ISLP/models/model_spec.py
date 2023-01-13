@@ -71,6 +71,10 @@ class Contrast(TransformerMixin, BaseEstimator):
         cats = self.encoder_.categories_[0]
         column_names = [str(n) for n in cats]
 
+
+        if isinstance(X, pd.DataFrame): # expecting a column, we take .iloc[:,0]
+            X = X.iloc[:,0]
+
         if X.dtype == 'category':
             Xcats = list(X.dtype.categories)
         else:

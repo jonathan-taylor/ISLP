@@ -7,14 +7,17 @@ jupytext:
     format_version: 0.13
     jupytext_version: 1.14.1
 kernelspec:
-  display_name: Python 3 (ipykernel)
+  display_name: islp_test
   language: python
-  name: python3
+  name: islp_test
 ---
 
 ## Building design matrices with `ModelSpec`
 
+Force rebuild
+
 ```{code-cell} ipython3
+x=4
 import numpy as np, pandas as pd
 %load_ext rpy2.ipython
 
@@ -528,25 +531,19 @@ Somewhat clunkily, we can make this a categorical variable by creating a `Variab
 categorical encoder.
 
 ```{code-cell} ipython3
+cluster2 = make_pipeline(StandardScaler(), KMeans(n_clusters=3, random_state=0))
+cluster_var = derived_variable('Income', 'Price', 'Advertising', 'Population', 
+                               name='myclus', 
+                               encoder=cluster2,
+                               use_transform=False)
 cat_cluster = Variable((cluster_var,), name='mynewcat', encoder=Contrast(method='drop'))
 cat_cluster
 ```
 
 ```{code-cell} ipython3
-design = ModelSpec([cluster_var, cat_cluster]).fit(Carseats)
+design = ModelSpec([cat_cluster]).fit(Carseats)
 
 design.transform(Carseats)
-```
-
-This functionality could be encapsulated in a function, and is, the `clusterer` function.
-
-```{code-cell} ipython3
-from ISLP.models.model_spec import clusterer
-design = ModelSpec([clusterer(['Income', 'Price', 'Advertising', 'Population'], 
-                                name='myclus',
-                                scale=True,
-                                transform=KMeans(n_clusters=3, random_state=0))])
-design.fit_transform(Carseats)
 ```
 
 ## Submodels
