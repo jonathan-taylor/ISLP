@@ -380,19 +380,18 @@ class BSpline(TransformerMixin, BaseEstimator):
         if self.upper_bound is None:
             self.upper_bound = X.max()
             
-        if self.df is None:
-            self.df = order - 1 + self.intercept
-
-        if self.df < order - 1 + self.intercept:
-            raise ValueError('df must be greater than or equal to %d' % (order - 1 + self.intercept))
-        ninternal = self.df - (order - 1 + self.intercept)
-        if self.internal_knots is None:
-            if self.df is None:
-                raise ValueError('if internal_knots unspecified then df must be specified')
+        if self.df is not None:
+            if self.df < order - 1 + self.intercept:
+                raise ValueError('df must be greater than or equal to %d' % (order - 1 + self.intercept))
+            ninternal = self.df - (order - 1 + self.intercept)
             percs = 100*np.linspace(0, 1, ninternal+2)[1:-1]
             internal_knots = np.percentile(X, percs)
+            if self.internal_knots is not None:
+                raise ValueError('only one of df or internal_knots should be specified')
         else:
-            internal_knots = self.internal_knots
+            internal_knots = np.asarray(sorted(self.internal_knots))
+            if self.internal_knots is None:
+                raise ValueError('if df not specified then need internal_knots')
 
         if self.lower_bound >= self.upper_bound:
             raise ValueError('lower_bound must be smaller than upper_bound')
@@ -548,21 +547,18 @@ class NaturalSpline(TransformerMixin, BaseEstimator):
         if upper_bound is None:
             upper_bound = X.max()
             
-        if self.df is None:
-            self.df = order - 1 + self.intercept - 2 # -2 for constraints
-
-        if self.df < order:
-            raise ValueError('df must be greater than or equal to %d' % (order - 1 + self.intercept - 2))
-        ninternal = self.df - (order - 1 + self.intercept - 2)
-        if self.internal_knots is None:
-            if self.df is None:
-                raise ValueError('if internal_knots unspecified then df must be specified')
-            percs = 100*np.linspace(0, 1, ninternal + 2)[1:-1]
+        if self.df is not None:
+            if self.df < order - 1 + self.intercept - 2:
+                raise ValueError('df must be greater than or equal to %d' % (order - 1 + self.intercept - 2))
+            ninternal = self.df - (order - 1 + self.intercept - 2) # -2 for constraints
+            percs = 100*np.linspace(0, 1, ninternal+2)[1:-1]
             internal_knots = np.percentile(X, percs)
+            if self.internal_knots is not None:
+                raise ValueError('only one of df or internal_knots should be specified')
         else:
             internal_knots = np.asarray(sorted(self.internal_knots))
-            if ninternal != internal_knots.shape[0]:
-                raise ValueErorr('conflict between df and internal_knots')
+            if self.internal_knots is None:
+                raise ValueError('if df not specified then need internal_knots')
 
         if lower_bound >= upper_bound:
             raise ValueError('lower_bound must be smaller than upper_bound')

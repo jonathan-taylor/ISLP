@@ -522,7 +522,7 @@ class ModelSpec(TransformerMixin, BaseEstimator):
         else:
             raise ValueError('anova_type must be one of ["sequential", "drop"]')
 
-def derived_variable(*variables, encoder=None, name=None, use_transform=True):
+def derived_variable(variables, encoder=None, name=None, use_transform=True):
     """
     Create a Variable, optionally
     applying an encoder to the stacked columns.
@@ -530,7 +530,7 @@ def derived_variable(*variables, encoder=None, name=None, use_transform=True):
     Parameters
     ----------
 
-    variables : column identifier, Column, Variable
+    variables : [column identifier, Column, Variable]
         Variables to apply transform to. Could be
         column identifiers or variables: all columns
         will be stacked before encoding.
@@ -549,7 +549,7 @@ def derived_variable(*variables, encoder=None, name=None, use_transform=True):
 
     if name is None:
         name = str(encoder)
-    var = Variable(variables,
+    var = Variable(tuple([v for v in variables]),
                    name,
                    encoder,
                    use_transform=use_transform,
@@ -621,11 +621,16 @@ def ordinal(col, *args, **kwargs):
 
         name = f'{shortname}({name})'
 
-    return derived_variable(col,
+    return derived_variable([col],
                             name=name,
                             encoder=encoder)
 
-def poly(col, *args, intercept=False, name=None, **kwargs):
+def poly(col,
+         degree=1,
+         intercept=False,
+         raw=False,
+         name=None):
+
     """
     Create a polynomial Variable
     for a given column.
@@ -639,8 +644,15 @@ def poly(col, *args, intercept=False, name=None, **kwargs):
     col : column identifier or Column
         Column to transform.
 
-    intercept : bool
-        Include an intercept column.
+    degree : int, default=1
+        Degree of polynomial.
+
+    intercept : bool, default=False
+        Include a column for intercept?
+
+    raw : bool, default=False
+        If False, perform a QR decomposition on the resulting
+        matrix of powers of centered and / or scaled features.
 
     name : str (optional)
         Defaults to one derived from col.
@@ -651,32 +663,39 @@ def poly(col, *args, intercept=False, name=None, **kwargs):
     var : Variable
     """
     shortname, klass = 'poly', Poly
-    encoder = klass(*args,
-                    intercept=intercept,
-                    **kwargs) 
+    encoder = klass(degree=degree,
+                    raw=raw,
+                    intercept=intercept) 
     if name is None:
         if isinstance(col, Column):
             name = col.name
         else:
             name = str(col)
 
-        _args = _argstring(*args, **kwargs)
+        kwargs = {}
+        if intercept:
+            kwargs['intercept'] = True
+        if raw:
+            kwargs['raw'] = True
+
+        _args = _argstring(degree=degree,
+                           **kwargs)
         if _args:
             name = ', '.join([name, _args])
 
         name = f'{shortname}({name})'
 
-    return derived_variable(col,
+    return derived_variable([col],
                             name=name,
                             encoder=encoder)
 
-def ns(col, *args, intercept=False, name=None, **kwargs):
+def ns(col, intercept=False, name=None, **spline_args):
     """
     Create a natural spline Variable
     for a given column.
     
-    Additional *args* and *kwargs*
-    are passed to :py:class:`NaturalSpline`.
+    Additional *spline_args*
+    are passed to :py:class:`NaturalSpline` along with *intercept*.
 
     Parameters
     ----------
@@ -702,25 +721,25 @@ def ns(col, *args, intercept=False, name=None, **kwargs):
         else:
             name = str(col)
 
-        _args = _argstring(*args, **kwargs)
+        _args = _argstring(**spline_args)
         if _args:
             name = ', '.join([name, _args])
 
         name = f'{shortname}({name})'
-    encoder = klass(*args,
-                    intercept=intercept,
-                    **kwargs) 
-    return derived_variable(col,
+    encoder = klass(intercept=intercept,
+                    **spline_args) 
+    return derived_variable([col],
                             name=name,
                             encoder=encoder)
 
-def bs(col, *args, intercept=False, name=None, **kwargs):
+def bs(col, intercept=False, name=None, **spline_args):
     """
     Create a B-spline Variable
     for a given column.
     
-    Additional *args* and *kwargs*
-    are passed to :py:class:`ISLP.transforms.BSpline`.
+    Additional args and *spline_args*
+    are passed to :py:class:`ISLP.transforms.BSpline`
+    along with *intercept*.
 
     Parameters
     ----------
@@ -746,24 +765,23 @@ def bs(col, *args, intercept=False, name=None, **kwargs):
         else:
             name = str(col)
 
-        _args = _argstring(*args, **kwargs)
+        _args = _argstring(**spline_args)
         if _args:
             name = ', '.join([name, _args])
 
         name = f'{shortname}({name})'
-    encoder = klass(*args,
-                    intercept=intercept,
-                    **kwargs) 
-    return derived_variable(col,
+    encoder = klass(intercept=intercept,
+                    **spline_args) 
+    return derived_variable([col],
                             name=name,
                             encoder=encoder)
 
-def pca(variables, name, *args, scale=False, **kwargs):
+def pca(variables, name, scale=False, **pca_args):
     """
     Create PCA encoding of features
     from a sequence of variables.
     
-    Additional *args* and *kwargs*
+    Additional args and *pca_args*
     are passed to :py:class:`ISLP.transforms.PCA`.
 
     Parameters
@@ -779,18 +797,18 @@ def pca(variables, name, *args, scale=False, **kwargs):
 
     """
     shortname, klass = 'pca', PCA
-    encoder = klass(*args,
-                    **kwargs) 
+    encoder = klass(**pca_args) 
     if scale:
         scaler = StandardScaler(with_mean=True,
                                 with_std=True)
         encoder = make_pipeline(scaler, encoder)
 
-    _args = _argstring(*args, **kwargs)
+    _args = _argstring(**pca_args)
+
     if _args:
         name = ', '.join([name, _args])
 
-    return derived_variable(*variables,
+    return derived_variable(variables,
                             name=f'{shortname}({name})',
                             encoder=encoder)
 
@@ -840,4 +858,12 @@ def pca(variables, name, *args, scale=False, **kwargs):
 def _argstring(*args, **kwargs):
     _args = ', '.join([str(a) for a in args])
     _kwargs = ', '.join([f'{k}={v}' for k, v in kwargs.items()])
-    return ', '.join([_args, _kwargs])
+
+    if args and kwargs:
+        return ', '.join([_args, _kwargs])
+    elif args:
+        return _args
+    elif kwargs:
+        return _kwargs
+    else:
+        return ''
