@@ -2,7 +2,7 @@ import numpy as np, pandas as pd
 from sklearn.base import clone
 
 from pandas.api.types import CategoricalDtype
-from ..columns import _get_column_info
+from ISLP.models.columns import _get_column_info
 
 def test_column_info():
 

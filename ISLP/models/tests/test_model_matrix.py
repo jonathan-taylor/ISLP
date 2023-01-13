@@ -1,8 +1,8 @@
 import numpy as np, pandas as pd
 from sklearn.base import clone
 
-from ...transforms import Poly, NaturalSpline, BSpline, Interaction
-from ..model_spec import ModelSpec, Variable, ns, bs, poly, pca, contrast, Contrast
+from ISLP.transforms import Poly, NaturalSpline, BSpline, Interaction
+from ISLP.models.model_spec import ModelSpec, Variable, ns, bs, poly, pca, contrast, Contrast
 
 from sklearn.preprocessing import (OneHotEncoder,
                                    OrdinalEncoder)

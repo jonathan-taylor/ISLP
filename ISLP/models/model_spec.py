@@ -107,6 +107,7 @@ class Contrast(TransformerMixin, BaseEstimator):
             self.contrast_matrix_ = self.contrast_matrix_[:,colmap]
         elif callable(self.method):
             self.contrast_matrix_ = self.method(len(cats))
+            self.columns_ = ['C({})'.format(i) for i in range(self.contrast_matrix_.shape[1])]
         elif self.method is None:
             self.contrast_matrix_ = np.identity(len(cats))
             self.columns_ = column_names
