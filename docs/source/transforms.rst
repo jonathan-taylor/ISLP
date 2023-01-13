@@ -1,0 +1,2 @@
+.. automodule:: ISLP.transforms
+    :members:
