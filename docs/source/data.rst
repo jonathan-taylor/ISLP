@@ -21,21 +21,11 @@ which is part of the base `R` distribution, but accessible from
    datasets/Fund
    datasets/Hitters
    datasets/Khan
-
-- `NCI`:   Gene expression measurements for 64 cancer cell lines.
-
-- `NYSE`:   Returns, volatility, and volume for the New York Stock Exchange.
-
-- `OJ`:  Sales information for  Citrus Hill and Minute Maid orange juice.
-
-- `Portfolio`:   Past values of  financial assets, for use in portfolio allocation.
-
-- `Publication`:   Time to publication for 244 clinical trials.
-
-- `Smarket`:   Daily percentage returns for S&P 500 over a 5-year period.
-
-- `USArrests`:  Crime statistics per 100,000 residents in 50 states of USA. 
-
-- `Wage`:  Income survey data for men in  central Atlantic region of USA. 
-
-- `Weekly`:   1,089 weekly stock market returns for 21 years. 
+   datasets/NCI60
+   datasets/NYSE
+   datasets/OJ
+   datasets/Portfolio
+   datasets/Smarket
+   datasets/USArrests
+   datasets/Wage
+   datasets/Weekly

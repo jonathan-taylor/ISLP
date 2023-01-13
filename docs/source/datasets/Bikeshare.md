@@ -8,6 +8,10 @@ jupytext:
     format_name: myst
     format_version: 0.13
     jupytext_version: 1.14.1
+kernelspec:
+  display_name: islp_test
+  language: python
+  name: islp_test
 ---
 
 # Bike sharing data
@@ -55,3 +59,21 @@ with weather and seasonal information.
 ## Source
 
 The [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/bike+sharing+dataset).
+
+```{code-cell} ipython3
+from ISLP import load_data
+Bikeshare = load_data('Bikeshare')
+Bikeshare.columns
+```
+
+```{code-cell} ipython3
+Bikeshare.shape
+```
+
+```{code-cell} ipython3
+Bikeshare.columns
+```
+
+```{code-cell} ipython3
+Bikeshare.describe().iloc[:,:4]
+```

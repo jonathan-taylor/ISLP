@@ -8,6 +8,10 @@ jupytext:
     format_name: myst
     format_version: 0.13
     jupytext_version: 1.14.1
+kernelspec:
+  display_name: islp_test
+  language: python
+  name: islp_test
 ---
 
 # Sales of Child Car Seats
@@ -36,3 +40,21 @@ different stores.
 - `Urban`: A factor with levels No and Yes to indicate whether the store is in an urban or rural location
 
 - `US`: A factor with levels No and Yes to indicate whether the store is in the US or not
+
+```{code-cell} ipython3
+from ISLP import load_data
+Carseats = load_data('Carseats')
+Carseats.columns
+```
+
+```{code-cell} ipython3
+Carseats.shape
+```
+
+```{code-cell} ipython3
+Carseats.columns
+```
+
+```{code-cell} ipython3
+Carseats.describe().iloc[:,:4]
+```

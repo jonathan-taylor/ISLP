@@ -8,28 +8,38 @@ jupytext:
     format_name: myst
     format_version: 0.13
     jupytext_version: 1.14.1
+kernelspec:
+  display_name: islp_test
+  language: python
+  name: islp_test
 ---
 
-NCI 60 Data
+# NCI 60 Data
 
-Description:
+NCI microarray data. The data contains expression levels on 6830
+genes from 64 cancer cell lines. Cancer type is also recorded.
 
-     NCI microarray data. The data contains expression levels on 6830
-     genes from 64 cancer cell lines. Cancer type is also recorded.
+The format is a list containing two elements: ‘data’ and ‘labs’.
 
-Usage:
+- `data`: is a 64 by 6830 matrix of the expression values while
 
-     NCI60
-     
-Format:
+- `labs`: is a vector listing the cancer types for the 64 cell lines.
 
-     The format is a list containing two elements: ‘data’ and ‘labs’.
+## Source
 
-     ‘data’ is a 64 by 6830 matrix of the expression values while
-     ‘labs’ is a vector listing the cancer types for the 64 cell lines.
+The data come from Ross et al. (Nat Genet., 2000). More information can be obtained at
+[http://genome-www.stanford.edu/nci60](http://genome-www.stanford.edu/nci60).
 
-Source:
+```{code-cell} ipython3
+from ISLP import load_data
+NCI60 = load_data('NCI60')
+NCI60.keys()
+```
 
-     The data come from Ross et al. (Nat Genet., 2000). More
-     information can be obtained at
-     http://genome-www.stanford.edu/nci60/
+```{code-cell} ipython3
+NCI60['labels'].value_counts()
+```
+
+```{code-cell} ipython3
+NCI60['data'].shape
+```

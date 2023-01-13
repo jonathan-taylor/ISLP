@@ -8,64 +8,77 @@ jupytext:
     format_name: myst
     format_version: 0.13
     jupytext_version: 1.14.1
+kernelspec:
+  display_name: islp_test
+  language: python
+  name: islp_test
 ---
 
-Orange Juice Data
+# Orange Juice Data
 
-Description:
+The data contains 1070 purchases where the customer either
+purchased Citrus Hill or Minute Maid Orange Juice. A number of
+characteristics of the customer and product are recorded.
 
-     The data contains 1070 purchases where the customer either
-     purchased Citrus Hill or Minute Maid Orange Juice. A number of
-     characteristics of the customer and product are recorded.
-
-Usage:
-
-     OJ
      
-Format:
+- `Purchase`: A factor with levels 'CH' and 'MM' indicating whether
+the customer purchased Citrus Hill or Minute Maid Orange
+Juice
 
-     A data frame with 1070 observations on the following 18 variables.
+- `WeekofPurchase`: Week of purchase
 
-     ‘Purchase’ A factor with levels ‘CH’ and ‘MM’ indicating whether
-          the customer purchased Citrus Hill or Minute Maid Orange
-          Juice
+- `StoreID`: Store ID
 
-     ‘WeekofPurchase’ Week of purchase
+- `PriceCH`: Price charged for CH
 
-     ‘StoreID’ Store ID
+- `PriceMM`: Price charged for MM
 
-     ‘PriceCH’ Price charged for CH
+- `DiscCH`: Discount offered for CH
 
-     ‘PriceMM’ Price charged for MM
+- `DiscMM`: Discount offered for MM
 
-     ‘DiscCH’ Discount offered for CH
+- `SpecialCH`: Indicator of special on CH
 
-     ‘DiscMM’ Discount offered for MM
+- `SpecialMM`: Indicator of special on MM
 
-     ‘SpecialCH’ Indicator of special on CH
+- `LoyalCH`: Customer brand loyalty for CH
 
-     ‘SpecialMM’ Indicator of special on MM
+- `SalePriceMM`: Sale price for MM
 
-     ‘LoyalCH’ Customer brand loyalty for CH
+- `SalePriceCH`: Sale price for CH
 
-     ‘SalePriceMM’ Sale price for MM
+- `PriceDiff`: Sale price of MM less sale price of CH
 
-     ‘SalePriceCH’ Sale price for CH
+- `Store7`: A factor with levels 'No' and 'Yes' indicating whether
+the sale is at Store 7
 
-     ‘PriceDiff’ Sale price of MM less sale price of CH
+- `PctDiscMM`: Percentage discount for MM
 
-          ‘Store7’ A factor with levels ‘No’ and ‘Yes’ indicating whether
-          the sale is at Store 7
+- `PctDiscCH`: Percentage discount for CH
 
-     ‘PctDiscMM’ Percentage discount for MM
+- `ListPriceDiff`: List price of MM less list price of CH
 
-     ‘PctDiscCH’ Percentage discount for CH
+- `STORE`: Which of 5 possible stores the sale occured at
 
-     ‘ListPriceDiff’ List price of MM less list price of CH
+## Source
 
-     ‘STORE’ Which of 5 possible stores the sale occured at
+Stine, Robert A., Foster, Dean P., Waterman, Richard P. Business
+Analysis Using Regression (1998). Published by Springer.
 
-Source:
+```{code-cell}
+from ISLP import load_data
+OJ = load_data('OJ')
+OJ.columns
+```
 
-     Stine, Robert A., Foster, Dean P., Waterman, Richard P. Business
-     Analysis Using Regression (1998). Published by Springer.
+```{code-cell}
+OJ.shape
+```
+
+```{code-cell}
+OJ.columns
+```
+
+```{code-cell}
+OJ.describe().iloc[:,:4]
+```

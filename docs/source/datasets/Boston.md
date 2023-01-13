@@ -8,6 +8,10 @@ jupytext:
     format_name: myst
     format_version: 0.13
     jupytext_version: 1.14.1
+kernelspec:
+  display_name: islp_test
+  language: python
+  name: islp_test
 ---
 
 # Boston Data
@@ -49,3 +53,20 @@ This dataset was obtained from, and is slightly modified from, the
 Boston dataset that is part of the `R` library `MASS`.  References are
 available in the MASS library.
 
+```{code-cell}
+from ISLP import load_data
+Boston = load_data('Boston')
+Boston.columns
+```
+
+```{code-cell}
+Boston.shape
+```
+
+```{code-cell}
+Boston.columns
+```
+
+```{code-cell}
+Boston.describe()
+```

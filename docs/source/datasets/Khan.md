@@ -8,6 +8,10 @@ jupytext:
     format_name: myst
     format_version: 0.13
     jupytext_version: 1.14.1
+kernelspec:
+  display_name: islp_test
+  language: python
+  name: islp_test
 ---
 
 # Khan Gene Data
@@ -19,7 +23,7 @@ tissue sample, 2308 gene expression measurements are available.
      
 ## Format
 
-The format is a list containing four components: `xtrain`,
+The format is a dict containing four components: `xtrain`,
 `xtest`, `ytrain`, and `ytest`. `xtrain` contains the 2308 gene
 expression values for 63 subjects and `ytrain` records the
 corresponding tumor type. `ytrain` and `ytest` contain the
@@ -38,7 +42,23 @@ Medicine, v.7, pp.673-679, 2001.
 
 The data were also used in:
 
--     Tibshirani RJ, Hastie T, Narasimhan B, and G. Chu. Diagnosis of
+- Tibshirani RJ, Hastie T, Narasimhan B, and G. Chu. Diagnosis of
 Multiple Cancer Types by Shrunken Centroids of Gene Expression.
 Proceedings of the National Academy of Sciences of the United
 States of America, v.99(10), pp.6567-6572, May 14, 2002.
+
+```{code-cell} ipython3
+from ISLP import load_data
+Khan = load_data('Khan')
+Khan.keys()
+```
+
+```{code-cell} ipython3
+for X in ['xtest', 'xtrain']:
+    print(Khan[X].shape)
+```
+
+```{code-cell} ipython3
+for Y in ['ytest', 'ytrain']:
+    print(Khan[Y].value_counts())
+```

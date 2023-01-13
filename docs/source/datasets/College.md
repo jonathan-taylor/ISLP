@@ -8,6 +8,10 @@ jupytext:
     format_name: myst
     format_version: 0.13
     jupytext_version: 1.14.1
+kernelspec:
+  display_name: islp_test
+  language: python
+  name: islp_test
 ---
 
 # U.S. News and World Report's College Data
@@ -57,3 +61,21 @@ This dataset was taken from the StatLib library which is
 maintained at Carnegie Mellon University. The dataset was used in
 the ASA Statistical Graphics Section's 1995 Data Analysis
 Exposition.
+
+```{code-cell} ipython3
+from ISLP import load_data
+College = load_data('College')
+College.columns
+```
+
+```{code-cell} ipython3
+College.shape
+```
+
+```{code-cell} ipython3
+College.columns
+```
+
+```{code-cell} ipython3
+College.describe().iloc[:,:4]
+```

@@ -8,45 +8,61 @@ jupytext:
     format_name: myst
     format_version: 0.13
     jupytext_version: 1.14.1
+kernelspec:
+  display_name: islp_test
+  language: python
+  name: islp_test
 ---
 
-Weekly S&P Stock Market Data
+# Weekly S&P Stock Market Data
 
-Description:
+Weekly percentage returns for the S&P 500 stock index between 1990
+and 2010.
 
-     Weekly percentage returns for the S&P 500 stock index between 1990
-     and 2010.
+- `Year`: The year that the observation was recorded
 
-Usage:
+- `Lag1`: Percentage return for previous week
 
-     Weekly
-     
-Format:
+- `Lag2`: Percentage return for 2 weeks previous
 
-     A data frame with 1089 observations on the following 9 variables.
+- `Lag3`: Percentage return for 3 weeks previous
 
-     ‘Year’ The year that the observation was recorded
+- `Lag4`: Percentage return for 4 weeks previous
 
-     ‘Lag1’ Percentage return for previous week
+- `Lag5`: Percentage return for 5 weeks previous
 
-     ‘Lag2’ Percentage return for 2 weeks previous
+- `Volume`: Volume of shares traded (average number of daily shares
+ traded in billions)
 
-     ‘Lag3’ Percentage return for 3 weeks previous
+- `Today`: Percentage return for this week
 
-     ‘Lag4’ Percentage return for 4 weeks previous
+- `Direction`: A factor with levels 'Down' and 'Up' indicating
+ whether the market had a positive or negative return on a
+ given week.
 
-     ‘Lag5’ Percentage return for 5 weeks previous
+## Source
 
-     ‘Volume’ Volume of shares traded (average number of daily shares
-          traded in billions)
+Raw values of the S&P 500 were obtained from Yahoo Finance and
+then converted to percentages and lagged.
 
-     ‘Today’ Percentage return for this week
+```{code-cell} ipython3
+from ISLP import load_data
+Weekly = load_data('Weekly')
+Weekly.columns
+```
 
-     ‘Direction’ A factor with levels ‘Down’ and ‘Up’ indicating
-          whether the market had a positive or negative return on a
-          given week
+```{code-cell} ipython3
+Weekly.shape
+```
 
-Source:
+```{code-cell} ipython3
+Weekly.columns
+```
 
-     Raw values of the S&P 500 were obtained from Yahoo Finance and
-     then converted to percentages and lagged.
+```{code-cell} ipython3
+Weekly.describe().iloc[:,:4]
+```
+
+```{code-cell} ipython3
+
+```

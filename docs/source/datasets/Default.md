@@ -8,6 +8,10 @@ jupytext:
     format_name: myst
     format_version: 0.13
     jupytext_version: 1.14.1
+kernelspec:
+  display_name: islp_test
+  language: python
+  name: islp_test
 ---
 
 # Credit Card Default Data
@@ -27,3 +31,24 @@ on their credit card debt.
 
 - `income`: Income of customer
 
+```{code-cell} ipython3
+from ISLP import load_data
+Default = load_data('Default')
+Default.columns
+```
+
+```{code-cell} ipython3
+Default.shape
+```
+
+```{code-cell} ipython3
+Default.columns
+```
+
+```{code-cell} ipython3
+Default.describe()
+```
+
+```{code-cell} ipython3
+Default['student'].value_counts()
+```

@@ -8,6 +8,10 @@ jupytext:
     format_name: myst
     format_version: 0.13
     jupytext_version: 1.14.1
+kernelspec:
+  display_name: islp_test
+  language: python
+  name: islp_test
 ---
 
 # Caravan
@@ -26,3 +30,17 @@ at [http://www.liacs.nl/~putten/library/cc2000/data.html](http://www.liacs.nl/~p
   [http://www.liacs.nl/~putten/library/cc2000/](http://www.liacs.nl/~putten/library/cc2000/)
 
 -  P. van der Putten and M. van Someren. A Bias-Variance Analysis of a Real World Learning Problem: The CoIL Challenge 2000. Machine Learning, October 2004, vol. 57, iss. 1-2, pp. 177-195, Kluwer Academic Publishers
+
+```{code-cell} ipython3
+from ISLP import load_data
+Caravan = load_data('Caravan')
+Caravan.columns
+```
+
+```{code-cell} ipython3
+Caravan.shape
+```
+
+```{code-cell} ipython3
+Caravan.columns[:20]
+```

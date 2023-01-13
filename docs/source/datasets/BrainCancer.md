@@ -8,6 +8,10 @@ jupytext:
     format_name: myst
     format_version: 0.13
     jupytext_version: 1.14.1
+kernelspec:
+  display_name: islp_test
+  language: python
+  name: islp_test
 ---
 
 # Brain Cancer Data
@@ -38,3 +42,25 @@ with brain cancer.
      Comparison of two statistical approaches. PLoS One,
      11(2):e0148733, 2016.
      [https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4749663/](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4749663/)
+
+```{code-cell} ipython3
+from ISLP import load_data
+BrainCancer = load_data('BrainCancer')
+BrainCancer.columns
+```
+
+```{code-cell} ipython3
+BrainCancer.shape
+```
+
+```{code-cell} ipython3
+BrainCancer.columns
+```
+
+```{code-cell} ipython3
+BrainCancer.describe()
+```
+
+```{code-cell} ipython3
+BrainCancer['diagnosis'].value_counts()
+```

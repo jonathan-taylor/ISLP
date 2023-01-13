@@ -22,11 +22,12 @@ extensions = [
     'sphinx_rtd_theme',
     'texext.math_dollar',
     'numpydoc',
-    'nbsphinx'
+    'myst_nb'
 ]
 
 graphviz_dot = '/opt/homebrew/bin/dot'
 numpydoc_class_members_toctree = False
+nb_execution_mode = "cache"
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),

@@ -8,37 +8,49 @@ jupytext:
     format_name: myst
     format_version: 0.13
     jupytext_version: 1.14.1
+kernelspec:
+  display_name: islp_test
+  language: python
+  name: islp_test
 ---
 
-New York Stock Exchange Data
+# New York Stock Exchange Data
 
-Description:
+Data consisting of the Dow Jones returns, log trading volume, and
+log volatility for the New York Stock Exchange over a 20 year
+period
 
-     Data consisting of the Dow Jones returns, log trading volume, and
-     log volatility for the New York Stock Exchange over a 20 year
-     period
+- `date`: Date
 
-Usage:
+- `day_of_week`: Day of the week
 
-     Portfolio
-     
-Format:
+- `DJ_return`: Return for Dow Jones Industrial Average
 
-     A data frame with 6,051 observations and 6 variables:
+- `log_volume`: Log of trading volume
 
-     ‘date’ Date
+- `log_volatility`: Log of volatility
 
-     ‘day_of_week’ Day of the week
+- `train`: For the first 4,281 observations, this is set to `True`
 
-     ‘DJ_return’ Return for Dow Jones Industrial Average
+## Source
 
-     ‘log_volume’ Log of trading volume
+- B. LeBaron and A. Weigend (1998), IEEE Transactions on Neural
+Networks 9(1): 213-220.
 
-     ‘log_volatility’ Log of volatility
+```{code-cell}
+from ISLP import load_data
+NYSE = load_data('NYSE')
+NYSE.columns
+```
 
-     ‘train’ For the first 4,281 observations, this is set to TRUE
+```{code-cell}
+NYSE.shape
+```
 
-Source:
+```{code-cell}
+NYSE.columns
+```
 
-     B. LeBaron and A. Weigend (1998), IEEE Transactions on Neural
-     Networks 9(1): 213-220.
+```{code-cell}
+NYSE.describe()
+```

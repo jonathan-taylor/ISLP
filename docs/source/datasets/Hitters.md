@@ -8,6 +8,10 @@ jupytext:
     format_name: myst
     format_version: 0.13
     jupytext_version: 1.14.1
+kernelspec:
+  display_name: islp_test
+  language: python
+  name: islp_test
 ---
 
 # Baseball Data
@@ -63,3 +67,21 @@ data were originally from Sports Illustrated, April 20, 1987. The
 1986 and career statistics were obtained from The 1987 Baseball
 Encyclopedia Update published by Collier Books, Macmillan
 Publishing Company, New York.
+
+```{code-cell} ipython3
+from ISLP import load_data
+Hitters = load_data('Hitters')
+Hitters.columns
+```
+
+```{code-cell} ipython3
+Hitters.shape
+```
+
+```{code-cell} ipython3
+Hitters.columns
+```
+
+```{code-cell} ipython3
+Hitters.describe().iloc[:,:4]
+```

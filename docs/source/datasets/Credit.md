@@ -8,6 +8,10 @@ jupytext:
     format_name: myst
     format_version: 0.13
     jupytext_version: 1.14.1
+kernelspec:
+  display_name: islp_test
+  language: python
+  name: islp_test
 ---
 
 # Credit Card Balance Data
@@ -42,3 +46,21 @@ A simulated data set containing information on 400 customers.
 Simulated data. Many thanks to Albert Kim for helpful suggestions,
 and for supplying a draft of the man documentation page on Oct 19,
 2017.
+
+```{code-cell} ipython3
+from ISLP import load_data
+Credit = load_data('Credit')
+Credit.columns
+```
+
+```{code-cell} ipython3
+Credit.shape
+```
+
+```{code-cell} ipython3
+Credit.columns
+```
+
+```{code-cell} ipython3
+Credit.describe().iloc[:,:4]
+```

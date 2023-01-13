@@ -8,6 +8,10 @@ jupytext:
     format_name: myst
     format_version: 0.13
     jupytext_version: 1.14.1
+kernelspec:
+  display_name: islp_test
+  language: python
+  name: islp_test
 ---
 
 # Fund Manager Data
@@ -15,3 +19,16 @@ jupytext:
 A simulated data set containing the returns for 2,000 hedge fund
 managers.
 
+```{code-cell} ipython3
+from ISLP import load_data
+Fund = load_data('Fund')
+Fund.columns
+```
+
+```{code-cell} ipython3
+Fund.shape
+```
+
+```{code-cell} ipython3
+Fund.columns
+```

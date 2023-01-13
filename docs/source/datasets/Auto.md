@@ -12,7 +12,7 @@ kernelspec:
   name: islp_test
 ---
 
-# Auto data set
+# Auto Data
 
 Gas mileage, horsepower, and other information for 392 vehicles.
 

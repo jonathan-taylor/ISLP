@@ -12,6 +12,7 @@ Contents
 .. toctree::
 
    installation
+   data
    transforms
    models
    helpers
