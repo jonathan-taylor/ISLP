@@ -12,18 +12,18 @@ slice for an SVM classifier.
 import matplotlib.pyplot as plt
 import numpy as np
 
-def plot_svm(X,
-             Y,
-             svm, 
-             features=(0, 1),
-             xlim=None,
-             nx=300,
-             ylim=None,
-             ny=300,
-             ax=None,
-             decision_cmap=plt.cm.plasma,
-             scatter_cmap=plt.cm.tab10,
-             alpha=0.2):
+def plot(X,
+         Y,
+         svm, 
+         features=(0, 1),
+         xlim=None,
+         nx=300,
+         ylim=None,
+         ny=300,
+         ax=None,
+         decision_cmap=plt.cm.plasma,
+         scatter_cmap=plt.cm.tab10,
+         alpha=0.2):
 
    '''
    Graphical representation of fitted support vector classifier.
