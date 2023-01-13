@@ -39,6 +39,7 @@ class FeatureSelector(MetaEstimatorMixin):
     Parameters
     ----------
     estimator: scikit-learn classifier or regressor
+
     strategy: Strategy
         Description of search strategy: a named tuple
         with fields `initial_state`, 
@@ -49,6 +50,7 @@ class FeatureSelector(MetaEstimatorMixin):
         If 0, no output,
         if 1 number of features in current set, if 2 detailed logging 
         including timestamp and cv scores at step.
+
     scoring: str, callable, or None (default: None)
         If None (default), uses 'accuracy' for sklearn classifiers
         and 'r2' for sklearn regressors.
@@ -60,14 +62,17 @@ class FeatureSelector(MetaEstimatorMixin):
         sklearn's signature ``scorer(estimator, X, y)``; see
         http://scikit-learn.org/stable/modules/generated/sklearn.metrics.make_scorer.html
         for more information.
+
     cv: int (default: 5)
         Integer or iterable yielding train, test splits. If cv is an integer
         and `estimator` is a classifier (or y consists of integer class
         labels) stratified k-fold. Otherwise regular k-fold cross-validation
         is performed. No cross-validation if cv is None, False, or 0.
+
     n_jobs: int (default: 1)
         The number of CPUs to use for evaluating different feature subsets
         in parallel. -1 means 'all CPUs'.
+
     pre_dispatch: int, or string (default: '2*n_jobs')
         Controls the number of jobs that get dispatched
         during parallel execution if `n_jobs > 1` or `n_jobs=-1`.
@@ -80,6 +85,7 @@ class FeatureSelector(MetaEstimatorMixin):
         An int, giving the exact number of total jobs that are spawned
         A string, giving an expression as a function
             of n_jobs, as in `2*n_jobs`
+
     clone_estimator: bool (default: True)
         Clones estimator if True; works with the original estimator instance
         if False. Set to False if the estimator doesn't
@@ -88,6 +94,7 @@ class FeatureSelector(MetaEstimatorMixin):
 
     Attributes
     ----------
+
     results_: dict
         A dictionary of selected feature subsets during the
         selection, where the dictionary keys are
@@ -106,7 +113,6 @@ class FeatureSelector(MetaEstimatorMixin):
 
     For usage examples, please see
     TBD
-
     """
     def __init__(self,
                  estimator,

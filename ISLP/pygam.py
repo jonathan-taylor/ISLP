@@ -52,6 +52,10 @@ def approx_lam(X,
     lam : array-like
         Rescaled lam values.
 
+    Notes
+    -----
+
+    The term must be part of a GAM that has already been fit.
 
     """
     df = df + 1e-7 # to account for boundary case
@@ -95,7 +99,7 @@ def degrees_of_freedom(X,
         Input dataset
 
     term : Term
-        Term for which we which to scale penalty
+        Term for which we which to scale penalty.
 
     lam : array-like (optional)
         Values at which to approximate degrees of freedom.
@@ -110,6 +114,11 @@ def degrees_of_freedom(X,
     df : float
         Degrees of freedom as computed by the trace of
         the smoother matrix.
+
+    Notes
+    -----
+
+    The term must be part of a GAM that has already been fit.
 
     """
     X = check_X(X)

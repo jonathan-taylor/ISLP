@@ -160,7 +160,6 @@ class ModelSpec(TransformerMixin, BaseEstimator):
         are transforms to be applied to the associate columns in the model matrix
         by running the *fit_transform* method when *fit* is called and overwriting
         these values in the dictionary.
-
     '''
 
     def __init__(self,
