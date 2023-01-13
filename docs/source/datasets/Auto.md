@@ -1,6 +1,6 @@
 ---
 jupytext:
-  formats: ipynb,md:myst
+  formats: notebooks///ipynb,source/datasets///md:myst
   text_representation:
     extension: .md
     format_name: myst
@@ -46,20 +46,20 @@ has 397 observations, of which 5 have missing values for the
 variable `horsepower`. These rows are removed here. The original
 dataset is available at [the book's website](https://www.statlearning.com).
 
-```{code-cell} ipython3
+```{code-cell}
 from ISLP import load_data
 Auto = load_data('Auto')
 Auto.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Auto.shape
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Auto.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Auto.describe()
 ```

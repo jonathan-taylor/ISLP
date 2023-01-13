@@ -1,7 +1,7 @@
 ---
 jupytext:
   cell_metadata_filter: -all
-  formats: ipynb,md:myst
+  formats: notebooks///ipynb,source/datasets///md:myst
   main_language: python
   text_representation:
     extension: .md
@@ -57,20 +57,20 @@ Current Population Survey data.
 
 See also: [re3data.org/repository/r3d100011860](https://www.re3data.org/repository/r3d100011860)
 
-```{code-cell} ipython3
+```{code-cell}
 from ISLP import load_data
 Wage = load_data('Wage')
 Wage.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Wage.shape
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Wage.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Wage.describe()
 ```

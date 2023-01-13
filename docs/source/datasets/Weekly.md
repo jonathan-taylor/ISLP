@@ -1,7 +1,7 @@
 ---
 jupytext:
   cell_metadata_filter: -all
-  formats: ipynb,md:myst
+  formats: notebooks///ipynb,source/datasets///md:myst
   main_language: python
   text_representation:
     extension: .md
@@ -45,24 +45,24 @@ and 2010.
 Raw values of the S&P 500 were obtained from Yahoo Finance and
 then converted to percentages and lagged.
 
-```{code-cell} ipython3
+```{code-cell}
 from ISLP import load_data
 Weekly = load_data('Weekly')
 Weekly.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Weekly.shape
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Weekly.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Weekly.describe().iloc[:,:4]
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 
 ```

@@ -1,7 +1,7 @@
 ---
 jupytext:
   cell_metadata_filter: -all
-  formats: ipynb,md:myst
+  formats: notebooks///ipynb,source/datasets///md:myst
   main_language: python
   text_representation:
     extension: .md
@@ -41,20 +41,20 @@ different stores.
 
 - `US`: A factor with levels No and Yes to indicate whether the store is in the US or not
 
-```{code-cell} ipython3
+```{code-cell}
 from ISLP import load_data
 Carseats = load_data('Carseats')
 Carseats.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Carseats.shape
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Carseats.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Carseats.describe().iloc[:,:4]
 ```

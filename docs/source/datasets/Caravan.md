@@ -1,7 +1,7 @@
 ---
 jupytext:
   cell_metadata_filter: -all
-  formats: ipynb,md:myst
+  formats: notebooks///ipynb,source/datasets///md:myst
   main_language: python
   text_representation:
     extension: .md
@@ -31,16 +31,16 @@ at [http://www.liacs.nl/~putten/library/cc2000/data.html](http://www.liacs.nl/~p
 
 -  P. van der Putten and M. van Someren. A Bias-Variance Analysis of a Real World Learning Problem: The CoIL Challenge 2000. Machine Learning, October 2004, vol. 57, iss. 1-2, pp. 177-195, Kluwer Academic Publishers
 
-```{code-cell} ipython3
+```{code-cell}
 from ISLP import load_data
 Caravan = load_data('Caravan')
 Caravan.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Caravan.shape
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Caravan.columns[:20]
 ```

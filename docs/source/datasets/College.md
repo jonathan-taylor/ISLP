@@ -1,7 +1,7 @@
 ---
 jupytext:
   cell_metadata_filter: -all
-  formats: ipynb,md:myst
+  formats: notebooks///ipynb,source/datasets///md:myst
   main_language: python
   text_representation:
     extension: .md
@@ -62,20 +62,20 @@ maintained at Carnegie Mellon University. The dataset was used in
 the ASA Statistical Graphics Section's 1995 Data Analysis
 Exposition.
 
-```{code-cell} ipython3
+```{code-cell}
 from ISLP import load_data
 College = load_data('College')
 College.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 College.shape
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 College.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 College.describe().iloc[:,:4]
 ```

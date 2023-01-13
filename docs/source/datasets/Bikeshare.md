@@ -1,7 +1,7 @@
 ---
 jupytext:
   cell_metadata_filter: -all
-  formats: ipynb,md:myst
+  formats: notebooks///ipynb,source/datasets///md:myst
   main_language: python
   text_representation:
     extension: .md
@@ -60,20 +60,20 @@ with weather and seasonal information.
 
 The [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/bike+sharing+dataset).
 
-```{code-cell} ipython3
+```{code-cell}
 from ISLP import load_data
 Bikeshare = load_data('Bikeshare')
 Bikeshare.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Bikeshare.shape
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Bikeshare.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Bikeshare.describe().iloc[:,:4]
 ```

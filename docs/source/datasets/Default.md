@@ -1,7 +1,7 @@
 ---
 jupytext:
   cell_metadata_filter: -all
-  formats: ipynb,md:myst
+  formats: notebooks///ipynb,source/datasets///md:myst
   main_language: python
   text_representation:
     extension: .md
@@ -31,24 +31,24 @@ on their credit card debt.
 
 - `income`: Income of customer
 
-```{code-cell} ipython3
+```{code-cell}
 from ISLP import load_data
 Default = load_data('Default')
 Default.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Default.shape
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Default.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Default.describe()
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Default['student'].value_counts()
 ```

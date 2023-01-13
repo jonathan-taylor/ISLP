@@ -1,7 +1,7 @@
 ---
 jupytext:
   cell_metadata_filter: -all
-  formats: ipynb,md:myst
+  formats: notebooks///ipynb,source/datasets///md:myst
   main_language: python
   text_representation:
     extension: .md
@@ -47,20 +47,20 @@ Simulated data. Many thanks to Albert Kim for helpful suggestions,
 and for supplying a draft of the man documentation page on Oct 19,
 2017.
 
-```{code-cell} ipython3
+```{code-cell}
 from ISLP import load_data
 Credit = load_data('Credit')
 Credit.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Credit.shape
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Credit.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Credit.describe().iloc[:,:4]
 ```

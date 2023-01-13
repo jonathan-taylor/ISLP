@@ -1,7 +1,7 @@
 ---
 jupytext:
   cell_metadata_filter: -all
-  formats: ipynb,md:myst
+  formats: notebooks///ipynb,source/datasets///md:myst
   main_language: python
   text_representation:
     extension: .md
@@ -43,24 +43,24 @@ with brain cancer.
      11(2):e0148733, 2016.
      [https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4749663/](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4749663/)
 
-```{code-cell} ipython3
+```{code-cell}
 from ISLP import load_data
 BrainCancer = load_data('BrainCancer')
 BrainCancer.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 BrainCancer.shape
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 BrainCancer.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 BrainCancer.describe()
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 BrainCancer['diagnosis'].value_counts()
 ```

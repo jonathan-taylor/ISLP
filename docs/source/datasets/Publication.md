@@ -1,7 +1,7 @@
 ---
 jupytext:
   cell_metadata_filter: -all
-  formats: ipynb,md:myst
+  formats: notebooks///ipynb,source/datasets///md:myst
   main_language: python
   text_representation:
     extension: .md
@@ -49,20 +49,20 @@ Publication of trials funded by the National Heart, Lung, and
 Blood Institute.  New England Journal of Medicine,
 369(20):1926-1934, 2013.
 
-```{code-cell} ipython3
+```{code-cell}
 from ISLP import load_data
 Publication = load_data('Publication')
 Publication.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Publication.shape
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Publication.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Publication.describe().iloc[:,:4]
 ```

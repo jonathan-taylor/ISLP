@@ -1,7 +1,7 @@
 ---
 jupytext:
   cell_metadata_filter: -all
-  formats: ipynb,md:myst
+  formats: notebooks///ipynb,source/datasets///md:myst
   main_language: python
   text_representation:
     extension: .md
@@ -19,16 +19,16 @@ kernelspec:
 A simulated data set containing the returns for 2,000 hedge fund
 managers.
 
-```{code-cell} ipython3
+```{code-cell}
 from ISLP import load_data
 Fund = load_data('Fund')
 Fund.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Fund.shape
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Fund.columns
 ```

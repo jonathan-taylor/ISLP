@@ -1,7 +1,7 @@
 ---
 jupytext:
   cell_metadata_filter: -all
-  formats: ipynb,md:myst
+  formats: notebooks///ipynb,source/datasets///md:myst
   main_language: python
   text_representation:
     extension: .md
@@ -47,18 +47,18 @@ Multiple Cancer Types by Shrunken Centroids of Gene Expression.
 Proceedings of the National Academy of Sciences of the United
 States of America, v.99(10), pp.6567-6572, May 14, 2002.
 
-```{code-cell} ipython3
+```{code-cell}
 from ISLP import load_data
 Khan = load_data('Khan')
 Khan.keys()
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 for X in ['xtest', 'xtrain']:
     print(Khan[X].shape)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 for Y in ['ytest', 'ytrain']:
     print(Khan[Y].value_counts())
 ```

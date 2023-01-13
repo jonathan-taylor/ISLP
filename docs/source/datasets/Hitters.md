@@ -1,7 +1,7 @@
 ---
 jupytext:
   cell_metadata_filter: -all
-  formats: ipynb,md:myst
+  formats: notebooks///ipynb,source/datasets///md:myst
   main_language: python
   text_representation:
     extension: .md
@@ -68,20 +68,20 @@ data were originally from Sports Illustrated, April 20, 1987. The
 Encyclopedia Update published by Collier Books, Macmillan
 Publishing Company, New York.
 
-```{code-cell} ipython3
+```{code-cell}
 from ISLP import load_data
 Hitters = load_data('Hitters')
 Hitters.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Hitters.shape
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Hitters.columns
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Hitters.describe().iloc[:,:4]
 ```
