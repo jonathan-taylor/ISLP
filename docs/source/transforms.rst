@@ -1,2 +1,8 @@
-.. automodule:: ISLP.transforms
-    :members:
+Transforms for flexible features
+================================
+
+.. toctree::
+  
+   transforms/poly
+   transforms/splines
+   transforms/PCA

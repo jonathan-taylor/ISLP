@@ -492,3 +492,161 @@ of `np.std(ddof=1)`.
 ```{code-cell} ipython3
 np.array(sm.OLS(Y, X).fit().params)[1:3] * np.sqrt(X.shape[0] / (X.shape[0]-1))
 ```
+
+## Submodels
+
+We can build submodels as well, even if the terms do not appear in the original `terms` argument.
+Fundamentally, the terms just need to be able to have the `design.build_columns` work for us to be
+able to build a design matrix. The initial inspection of the columns of `Carseats` has created
+a column for `US`, hence we can build this submodel.
+
+```{code-cell} ipython3
+design = ModelSpec(['UIncome', 'ShelveLoc', 'Price']).fit(Carseats)
+design.build_submodel(Carseats, ['US'])
+```
+
+## ANOVA 
+
+For a given `terms` argument, there as a natural sequence of models, namely those specified by `[terms[:i] for i in range(len(terms)+1]`.
+
+```{code-cell} ipython3
+design = ModelSpec(['ShelveLoc', 'Price', 'UIncome', 'US']).fit(Carseats)
+for D in design.build_sequence(Carseats):
+    print(D.columns)
+```
+
+```{code-cell} ipython3
+sm.stats.anova_lm(*(sm.OLS(Y, D).fit() for D in design.build_sequence(Carseats) ))
+```
+
+```{code-cell} ipython3
+%%R
+anova(lm(Sales ~ ShelveLoc + Price + UIncome + US, data=Carseats))
+```
+
+Recall that `ModelSpec` does not inspect `terms` to reorder based on degree of 
+interaction as `R` does:
+
+```{code-cell} ipython3
+design = ModelSpec([(full_encoding, 'ShelveLoc'), pref_encoding]).fit(Carseats)
+sm.stats.anova_lm(*(sm.OLS(Y, D).fit() for D in design.build_sequence(Carseats) ))
+```
+
+```{code-cell} ipython3
+%%R
+anova(lm(Sales ~ UIncome:ShelveLoc + UIncome, data=Carseats))
+```
+
+To agree with `R` we must order `terms` as `R` will.
+
+```{code-cell} ipython3
+design = ModelSpec([pref_encoding, (full_encoding, 'ShelveLoc')]).fit(Carseats)
+sm.stats.anova_lm(*(sm.OLS(Y, D).fit() for D in design.build_sequence(Carseats)))
+```
+
+## More complicated interactions
+
+Can we have an interaction of a polynomial effect with a categorical? Absolutely
+
+```{code-cell} ipython3
+%%R
+anova(lm(Sales ~ UIncome + poly(Income, 3):UIncome + UIncome:US, data=Carseats))
+```
+
+To match `R` we note that it has used its inspection rules to encode `UIncome` with 3 levels
+for the two interactions.
+
+```{code-cell} ipython3
+p3 = poly('Income', 3)
+design = ModelSpec([pref_encoding, (p3, full_encoding), (full_encoding, 'US')]).fit(Carseats)
+X = design.transform(Carseats)
+sm.OLS(Y, X).fit().params
+```
+
+```{code-cell} ipython3
+sm.stats.anova_lm(*(sm.OLS(Y, D).fit() for D in design.build_sequence(Carseats)))
+```
+
+## Grouping columns for ANOVA
+
+The `Variable` construct can be used to group
+variables together to get custom sequences of models for `anova_lm`.
+
+```{code-cell} ipython3
+group1 = Variable(('Price', pref_encoding), 'group1', None)
+group2 = Variable(('US', 'Advertising'), 'group2', None)
+design = ModelSpec([group1, group2]).fit(Carseats)
+for D in design.build_sequence(Carseats):
+    print(D.columns)
+```
+
+```{code-cell} ipython3
+sm.stats.anova_lm(*(sm.OLS(Y, D).fit() for D in design.build_sequence(Carseats)))
+```
+
+It is not clear this is simple to do in `R` as the formula object expands all parentheses.
+
+```{code-cell} ipython3
+%%R
+anova(lm(Sales ~ (Price + UIncome) + (US + Advertising), data=Carseats))
+```
+
+It can be done by building up the models
+by hand and likely is possible to be done programmatically but it seems not obvious.
+
+```{code-cell} ipython3
+%%R
+M1 = lm(Sales ~ 1, data=Carseats)
+M2 = lm(Sales ~ Price + UIncome, data=Carseats)
+M3 = lm(Sales ~ Price + UIncome + US + Advertising, data=Carseats)
+anova(M1, M2, M3)
+```
+
+## Alternative anova
+
+Another common ANOVA table involves dropping each term in succession from the model and comparing
+to the full model.
+
+```{code-cell} ipython3
+Dfull = design.transform(Carseats)
+Mfull = sm.OLS(Y, Dfull).fit()
+for i, D in enumerate(design.build_sequence(Carseats, anova_type='drop')):
+    if i == 0:
+        D0 = D
+    print(set(D.columns) ^ set(Dfull.columns))
+    print(sm.stats.anova_lm(sm.OLS(Y, D).fit(), Mfull))
+```
+
+```{code-cell} ipython3
+%%R
+M1 = lm(Sales ~ Price + UIncome + US + Advertising, data=Carseats)
+M2 = lm(Sales ~ US + Advertising, data=Carseats)
+print(anova(M2, M1))
+M3 = lm(Sales ~ Price + UIncome, data=Carseats)
+print(anova(M3, M1))
+```
+
+The comparison without the intercept here is actually very hard to achieve in `R` with `anova` due to its inspection
+of the formula.
+
+```{code-cell} ipython3
+%%R
+M1 = lm(Sales ~ Price + UIncome + US + Advertising, data=Carseats)
+M4 = lm(Sales ~ Price + UIncome + US + Advertising - 1, data=Carseats)
+print(anova(M4, M1))
+```
+
+It can be found with `summary`.
+
+```{code-cell} ipython3
+%%R
+summary(M1)
+```
+
+```{code-cell} ipython3
+378.690726, 19.46**2
+```
+
+```{code-cell} ipython3
+
+```

@@ -12,12 +12,9 @@ kernelspec:
   name: islp_test
 ---
 
-# Building design matrices with `ModelSpec`
-
-Force rebuild
+# Model selection using `ModelSpec`
 
 ```{code-cell} ipython3
-x=4
 import numpy as np, pandas as pd
 %load_ext rpy2.ipython
 
@@ -491,4 +488,187 @@ of `np.std(ddof=1)`.
 
 ```{code-cell} ipython3
 np.array(sm.OLS(Y, X).fit().params)[1:3] * np.sqrt(X.shape[0] / (X.shape[0]-1))
+```
+
+## Model selection
+
+Another task requiring different design matrices is model selection. Manipulating
+the `terms` attribute of a `ModelSpec` (or more precisely its more uniform version `terms_`)
+can clearly allow for both exhaustive and stepwise model selection.
+
+```{code-cell} ipython3
+from ISLP.models.strategy import (Stepwise, 
+                                  min_max)
+from ISLP.models.generic_selector import FeatureSelector
+```
+
+### Best subsets
+
+```{code-cell} ipython3
+design = ModelSpec(['Price', 
+                    'UIncome', 
+                    'Advertising', 
+                    'US', 
+                    'Income',
+                    'ShelveLoc',
+                    'Education',
+                    'Urban']).fit(Carseats)
+strategy = min_max(design,
+                   min_terms=0,
+                   max_terms=3)
+```
+
+```{code-cell} ipython3
+from sklearn.linear_model import LinearRegression
+selector = FeatureSelector(LinearRegression(fit_intercept=False),
+                           strategy,
+                           scoring='neg_mean_squared_error')
+```
+
+```{code-cell} ipython3
+selector.fit(Carseats, Y)
+```
+
+```{code-cell} ipython3
+selector.selected_state_
+```
+
+```{code-cell} ipython3
+selector.results_.keys()
+```
+
+```{code-cell} ipython3
+strategy = min_max(design,
+                   min_terms=0,
+                   max_terms=3,
+                   lower_terms=['Price'],
+                   upper_terms=['Price', 'Income', 'Advertising'])
+selector = FeatureSelector(LinearRegression(fit_intercept=False),
+                           strategy,
+                           scoring='neg_mean_squared_error')
+selector.fit(Carseats, Y)
+selector.selected_state_
+```
+
+```{code-cell} ipython3
+selector.results_.keys()
+```
+
+### Stepwise selection
+
+```{code-cell} ipython3
+strategy = Stepwise.first_peak(design,
+                               min_terms=0,
+                               max_terms=6,
+                               lower_terms=['Price'],
+                               upper_terms=['Price', 'Income', 'Advertising', 'ShelveLoc', 'UIncome', 'US'
+                                     'Education', 'Urban'])
+selector = FeatureSelector(LinearRegression(fit_intercept=False),
+                           strategy,
+                           scoring='neg_mean_squared_error',
+                           cv=3)
+selector.fit(Carseats, Y)
+selector.selected_state_
+```
+
+```{code-cell} ipython3
+selector.results_.keys()
+```
+
+```{code-cell} ipython3
+selector.results_
+```
+
+```{code-cell} ipython3
+selector.selected_state_
+```
+
+### Enforcing constraints
+
+In models with interactions, we may often want to impose constraints on interactions and main effects.
+This can be achieved here by use of a `validator` that checks whether a given model is valid.
+
+Suppose we want to have the following constraint: `ShelveLoc` may not be in the model unless
+`Price` is in the following model.
+
+```{code-cell} ipython3
+design = ModelSpec(['Price', 
+                    'Advertising', 
+                    'Income',
+                    'ShelveLoc']).fit(Carseats)
+```
+
+The constraints are described with a boolean matrix with `(i,j)` as `j` is a child of `i`: so `j` should not
+be in the model when `i` is not and enforced with a callable `validator` that evaluates each candidate state.
+
+Both `min_max_strategy` and `step_strategy` accept a `validator` argument.
+
+```{code-cell} ipython3
+from ISLP.models.strategy import validator_from_constraints
+constraints = np.zeros((4, 4))
+constraints[0,3] = 1
+strategy = min_max(design,
+                   min_terms=0,
+                   max_terms=4,
+                   validator=validator_from_constraints(design,
+                                                        constraints))
+selector = FeatureSelector(LinearRegression(fit_intercept=False),
+                           strategy,
+                           scoring='neg_mean_squared_error',
+                           cv=3)
+selector.fit(Carseats, Y)
+selector.results_.keys()
+```
+
+```{code-cell} ipython3
+selector.selected_state_
+```
+
+```{code-cell} ipython3
+Hitters=load_data('Hitters')
+```
+
+```{code-cell} ipython3
+Hitters.columns
+```
+
+```{code-cell} ipython3
+Hitters = Hitters.dropna()
+Y=Hitters['Salary']
+X=Hitters.drop('Salary', axis=1)
+design = ModelSpec(X.columns).fit(X)
+strategy = Stepwise.first_peak(design,
+                               direction='forward',
+                               min_terms=0,
+                               max_terms=19)
+selector = FeatureSelector(LinearRegression(fit_intercept=False),
+                           strategy,
+                           scoring='neg_mean_squared_error', cv=None)
+selector.fit(X, Y)
+selector.results_.keys()
+```
+
+```{code-cell} ipython3
+len(selector.selected_state_)
+```
+
+```{code-cell} ipython3
+len(X.columns)
+```
+
+```{code-cell} ipython3
+%%R -i Hitters
+step(lm(Salary ~ 1, data=Hitters), scope=list(upper=lm(Salary ~ ., data=Hitters)), direction='forward', trace=TRUE)
+```
+
+```{code-cell} ipython3
+
+```
+
+```{code-cell} ipython3
+
+```
+
+```{code-cell} ipython3
+
 ```
