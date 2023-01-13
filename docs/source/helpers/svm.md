@@ -29,7 +29,7 @@ from ISLP.svm import plot_svm
 ```{code-cell}
 rng = np.random.default_rng(1)
 X = rng.normal(size=(100, 5))
-X[:40,4] += 5
+X[:40][:,3:5] += 2
 Y = np.zeros(X.shape[0])
 Y[:40] = 1
 ```
@@ -47,10 +47,10 @@ plot_svm(X, Y, svm)
 
 ## Slicing through different features
 
-When we generated our data, the real difference was in the 5th coordinate.
+When we generated our data, the real differences ware in the 4th and 5th coordinates.
 We can see this by taking a cross-section through the data that includes this coordinate as
 one of the axes in the plot.
 
 ```{code-cell}
-plot_svm(X, Y, svm, features=(2, 4))
+plot_svm(X, Y, svm, features=(3, 4))
 ```
