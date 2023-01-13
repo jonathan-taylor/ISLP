@@ -1,6 +1,6 @@
 ---
 jupytext:
-  formats: notebooks///ipynb,source/datasets///md:myst
+  formats: notebooks/datasets///ipynb,source/datasets///md:myst
   text_representation:
     extension: .md
     format_name: myst
