@@ -1,7 +1,7 @@
 ---
 jupytext:
   cell_metadata_filter: -all
-  formats: ipynb,md:myst
+  formats: notebooks/helpers///ipynb,source/helpers///md:myst
   main_language: python
   text_representation:
     extension: .md
@@ -18,7 +18,7 @@ kernelspec:
 
 This module contains a single function used to help visualize the decision rule of an SVM.
 
-```{code-cell} ipython3
+```{code-cell}
 import numpy as np
 from sklearn.svm import SVC
 from ISLP.svm import plot_svm
@@ -26,7 +26,7 @@ from ISLP.svm import plot_svm
 
 ## Make a toy dataset
 
-```{code-cell} ipython3
+```{code-cell}
 rng = np.random.default_rng(1)
 X = rng.normal(size=(100, 5))
 X[:40,4] += 5
@@ -36,12 +36,12 @@ Y[:40] = 1
 
 ## Fit an SVM classifier
 
-```{code-cell} ipython3
+```{code-cell}
 svm = SVC(kernel='linear')
 svm.fit(X, Y)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 plot_svm(X, Y, svm)
 ```
 
@@ -51,6 +51,6 @@ When we generated our data, the real difference was in the 5th coordinate.
 We can see this by taking a cross-section through the data that includes this coordinate as
 one of the axes in the plot.
 
-```{code-cell} ipython3
+```{code-cell}
 plot_svm(X, Y, svm, features=(2, 4))
 ```

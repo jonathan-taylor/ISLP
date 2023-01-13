@@ -1,7 +1,7 @@
 ---
 jupytext:
   cell_metadata_filter: -all
-  formats: ipynb,md:myst
+  formats: notebooks/helpers///ipynb,source/helpers///md:myst
   main_language: python
   text_representation:
     extension: .md
@@ -19,7 +19,7 @@ kernelspec:
 This module has a single function, used to help visualize a dendrogram from a
 hierarchical clustering.
 
-```{code-cell} ipython3
+```{code-cell}
 import numpy as np
 from sklearn.cluster import AgglomerativeClustering
 from scipy.cluster.hierarchy import dendrogram
@@ -28,7 +28,7 @@ from ISLP.cluster import compute_linkage
 
 ## Make a toy dataset
 
-```{code-cell} ipython3
+```{code-cell}
 rng = np.random.default_rng(1)
 X = rng.normal(size=(30, 5))
 X[:10] += 1
@@ -36,19 +36,19 @@ X[:10] += 1
 
 ## Cluster it
 
-```{code-cell} ipython3
+```{code-cell}
 clust = AgglomerativeClustering(distance_threshold=0,
                                 n_clusters=None,
                                 linkage='complete')
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 clust.fit(X)
 ```
 
 ## Plot the dendrogram
 
-```{code-cell} ipython3
+```{code-cell}
 linkage = compute_linkage(clust)
 dendrogram(linkage);
 ```

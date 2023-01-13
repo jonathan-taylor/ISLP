@@ -1,7 +1,7 @@
 ---
 jupytext:
   cell_metadata_filter: -all
-  formats: ipynb,md:myst
+  formats: notebooks/helpers///ipynb,source/helpers///md:myst
   main_language: python
   text_representation:
     extension: .md
@@ -19,7 +19,7 @@ kernelspec:
 This module has a single function, used to simulate data with a given
 cumulative survival function.
 
-```{code-cell} ipython3
+```{code-cell}
 import numpy as np
 from lifelines import KaplanMeierFitter
 from ISLP.survival import sim_time
@@ -32,18 +32,18 @@ For simplicity we'll use the the baseline $H(t)=t$ which defines the exponential
 We'll take as our linear predictor $l=\log(2)$. This means we will observe draws from $H_l(t)=2t$ which
 corresponds to an exponential distribution with mean 0.5.
 
-```{code-cell} ipython3
+```{code-cell}
 cum_haz = lambda t: t
 rng = np.random.default_rng(1)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 T = np.array([sim_time(np.log(2), cum_haz, rng) for _ in range(500)])
 ```
 
 ## Plot survival function
 
-```{code-cell} ipython3
+```{code-cell}
 kmf = KaplanMeierFitter(label="Simulated data")
 kmf.fit(T, np.ones_like(T))
 ax = kmf.plot()
@@ -56,10 +56,10 @@ ax.plot(Tval,
 ax.legend();
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 
 ```

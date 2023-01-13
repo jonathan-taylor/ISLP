@@ -1,7 +1,7 @@
 ---
 jupytext:
   cell_metadata_filter: -all
-  formats: ipynb,md:myst
+  formats: notebooks/helpers///ipynb,source/helpers///md:myst
   main_language: python
   text_representation:
     extension: .md
@@ -20,7 +20,7 @@ This module has helper functions to help
 compute the degrees of freedom of a GAM and to create a partial dependence plot of a
 fitted `pygam` model.
 
-```{code-cell} ipython3
+```{code-cell}
 import numpy as np
 from pygam import LinearGAM, s
 from ISLP.pygam import (plot, 
@@ -38,7 +38,7 @@ scatter plot look like the partial residuals from our fit. Usually, the scatter 
 look so nice on a partial dependence plot. One should use partial residuals instead. We take this liberty
 here while demonstrating the `plot` function.
 
-```{code-cell} ipython3
+```{code-cell}
 rng = np.random.default_rng(1)
 N = 100
 X = rng.normal(size=(N, 3))
@@ -49,7 +49,7 @@ Y = X[:,0] + 0.3 * X[:,0]**3 + rng.normal(size=N)
 
 Let's start of fitting a GAM with a relatively small amount of smoothing.
 
-```{code-cell} ipython3
+```{code-cell}
 terms = [s(f, lam=0.01) for f in range(3)]
 gam = LinearGAM(terms[0] + 
                 terms[1] + 
@@ -59,13 +59,13 @@ gam.fit(X, Y)
 
 ## Plot the partial dependence plot for first feature
 
-```{code-cell} ipython3
+```{code-cell}
 ax = plot(gam, 0)
 ```
 
-Including a scatter plot of 
+Including a scatter plot of
 
-```{code-cell} ipython3
+```{code-cell}
 ax.scatter(X[:,0], 
            Y - Y.mean(),
           facecolor='k',
@@ -75,7 +75,7 @@ ax.get_figure()
 
 Let's take a look at (approximately) how many degrees of freedom we've used:
 
-```{code-cell} ipython3
+```{code-cell}
 [degrees_of_freedom(X,
                    terms[i]) for i in range(X.shape[1])]
 ```
@@ -85,7 +85,7 @@ Let's take a look at (approximately) how many degrees of freedom we've used:
 Suppose we want to use 5 degrees of freedom for each feature. 
 We compute a value of `lam` for each that fixes the degrees of freedom at 5.
 
-```{code-cell} ipython3
+```{code-cell}
 lam_vals = [approx_lam(X,
                        terms[i],
                        df=5) for i in range(X.shape[1])]
@@ -94,7 +94,7 @@ lam_vals
 
 ### Create a new GAM with the correctly fixed terms
 
-```{code-cell} ipython3
+```{code-cell}
 fixed_terms = [s(f, lam=l) for 
                f, l in zip(range(3), lam_vals)]
 fixed_gam = LinearGAM(fixed_terms[0] + 
@@ -103,7 +103,7 @@ fixed_gam = LinearGAM(fixed_terms[0] +
 fixed_gam.fit(X, Y)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 ax = plot(fixed_gam, 0)
 ax.scatter(X[:,0], 
            Y - Y.mean(),
