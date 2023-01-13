@@ -8,6 +8,10 @@ jupytext:
     format_name: myst
     format_version: 0.13
     jupytext_version: 1.14.1
+kernelspec:
+  display_name: islp_test
+  language: python
+  name: islp_test
 ---
 
 # Violent Crime Rates by US State
@@ -29,3 +33,20 @@ living in urban areas.
 ## Notes
 
 From the `R` base package. See help with command `?USArrests` (in `R`)
+
+```{code-cell} ipython3
+from statsmodels.datasets import get_rdataset
+USArrests = get_rdataset('USArrests').data
+```
+
+```{code-cell} ipython3
+USArrests.shape
+```
+
+```{code-cell} ipython3
+USArrests.columns
+```
+
+```{code-cell} ipython3
+USArrests.describe()
+```
