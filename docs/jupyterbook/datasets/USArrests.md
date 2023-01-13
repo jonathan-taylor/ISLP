@@ -1,7 +1,7 @@
 ---
 jupytext:
   cell_metadata_filter: -all
-  formats: notebooks/datasets///ipynb,source/datasets///md:myst
+  formats: source/datasets///ipynb,jupyterbook/datasets///md:myst,jupyterbook/datasets///ipynb
   main_language: python
   text_representation:
     extension: .md
