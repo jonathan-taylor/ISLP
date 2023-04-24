@@ -187,8 +187,7 @@ def anova(*models,
 
     """
 
-    For a given term, try to find multiplier of
-    penalty to achieve a specified degrees of freedom.
+    Compute an ANOVA table for a sequence of GAM models.
 
     Parameters
     ----------
@@ -258,8 +257,7 @@ def plot(gam,
 
     """
 
-    For a given term, try to find multiplier of
-    penalty to achieve a specified degrees of freedom.
+    Plot the fitted function of a term in a GAM model.
 
     Parameters
     ----------
