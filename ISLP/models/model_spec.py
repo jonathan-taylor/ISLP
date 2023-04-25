@@ -98,7 +98,7 @@ class Contrast(TransformerMixin, BaseEstimator):
         if self.method == 'drop':
             self.columns_ = [column_names[j] for j in colmap]
             self.contrast_matrix_ = np.identity(len(cats))
-            keep = np.ones(len(cats), np.bool)
+            keep = np.ones(len(cats), bool)
             keep[drop_idx] = 0
             self.contrast_matrix_ = self.contrast_matrix_[:,keep]
             self.contrast_matrix_ = self.contrast_matrix_[:,colmap]            
@@ -203,7 +203,7 @@ class ModelSpec(TransformerMixin, BaseEstimator):
                                                          X)
             self.columns_ = X.columns
             if self.is_categorical_ is None:
-                self.is_categorical_ = np.zeros(X.shape[1], np.bool)
+                self.is_categorical_ = np.zeros(X.shape[1], bool)
             self.is_ordinal_ = pd.Series(self.is_ordinal_,
                                          index=self.columns_)
             self.is_categorical_ = pd.Series(self.is_categorical_,
@@ -214,9 +214,9 @@ class ModelSpec(TransformerMixin, BaseEstimator):
              self.known_categories_) = _check_categories(categorical_features,
                                                          X)
             if self.is_categorical_ is None:
-                self.is_categorical_ = np.zeros(X.shape[1], np.bool)
+                self.is_categorical_ = np.zeros(X.shape[1], bool)
             self.is_ordinal_ = np.zeros(self.is_categorical_.shape,
-                                        np.bool)
+                                        bool)
             self.columns_ = np.arange(X.shape[1])
 
         self.variables_ = {}
