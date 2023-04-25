@@ -63,8 +63,6 @@ can be found [here](https://github.com/intro-stat-learning/ISLP/blob/main/torch_
 ---
 tags: [skip-execution]
 ---
-reqs = 'https://raw.githubusercontent.com/intro-stat-learning/ISLP/master/torch_requirements.txt'
-cmd = f'{sys.executable} -m pip install -r {reqs}'
-os.system(cmd)
+!pip install -r https://raw.githubusercontent.com/intro-stat-learning/ISLP/master/torch_requirements.txt
 ```
 
