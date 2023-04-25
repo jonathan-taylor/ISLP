@@ -1,0 +1,3 @@
+texext
+numpydoc
+myst_nb
