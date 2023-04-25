@@ -13,7 +13,7 @@ pip install ISLP
 
 ### Windows
 
-See the [https://packaging.python.org/en/latest/tutorials/installing-packages/#ensure-you-can-run-pip-from-the-command-line](python packaging instructions) for a simple way to run `pip` within
+See the [https://packaging.python.org/en/latest/tutorials/installing-packages/#ensure-you-can-run-pip-from-the-command-line](python-packaging-instructions) for a simple way to run `pip` within
 Jupyter.
 
 Alternatively, within a python shell, the following commands should install `ISLP`:
@@ -27,7 +27,14 @@ os.system(cmd)
 ### Torch requirements
 
 The `ISLP` labs use `torch` and various related packages for the lab on deep learning. The requirements
-can be found [here](requirements.txt)
+can be found [here](requirements.txt). Alternatively, you can install them directly using `pip`
+
+```{python}
+raw = 'https://raw.githubusercontent.com/jonathan-taylor/ISLP/master/requirements.txt'
+cmd = f'{sys.executable} -m pip install -r {raw}'
+os.system(cmd)
+```
+
 
 ## Documentation
 
