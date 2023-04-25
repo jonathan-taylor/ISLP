@@ -7,9 +7,9 @@ jupytext:
     format_version: 0.13
     jupytext_version: 1.14.5
 kernelspec:
-  display_name: python3
+  display_name: islp_test
   language: python
-  name: python3
+  name: islp_test
 ---
 
 # Derived features: using PCA on a subset of columns
@@ -19,9 +19,14 @@ construction of transformers applied to features.
 
 ```{code-cell} ipython3
 import numpy as np
-from ISLP import load_data
-from ISLP.models import ModelSpec, pca, Variable, derived_variable
 from sklearn.decomposition import PCA
+
+from ISLP import load_data
+from ISLP.models import (ModelSpec, 
+                         pca, 
+                         Variable, 
+                         derived_variable,
+                         build_columns)
 ```
 
 ```{code-cell} ipython3
@@ -51,14 +56,16 @@ sklearn_pca = PCA(n_components=3, whiten=True)
 We can now fit `sklearn_pca` and create our new variable.
 
 ```{code-cell} ipython3
-sklearn_pca.fit(design.build_columns(Carseats, grouped)[0]) 
+grouped_features = build_columns(design.column_info_,
+                                 Carseats,
+                                 grouped)[0]
+sklearn_pca.fit(grouped_features) 
 pca_var = derived_variable(['CompPrice', 'Income', 'Advertising', 'Population', 'Price'],
                            name='pca(grouped)', encoder=sklearn_pca)
-derived_features, _ = design.build_columns(Carseats, pca_var)
-```
-
-```{code-cell} ipython3
-design.build_columns(Carseats, grouped)[0]
+derived_features, _ = build_columns(design.column_info_,
+                                    Carseats, 
+                                    pca_var,
+                                    encoders=design.encoders_)
 ```
 
 ## Helper function
