@@ -46,7 +46,7 @@ The `ISLP` labs use `torch` and various related packages for the lab on deep lea
 can be found [here](torch_requirements.txt). Alternatively, you can install them directly using `pip`
 
 ```{python}
-!pip install -r https://raw.githubusercontent.com/intro-stat-learning/ISLP/master/torch_requirements.txt
+!pip install -r https://raw.githubusercontent.com/intro-stat-learning/ISLP/main/torch_requirements.txt
 ```
 
 ## Documentation
