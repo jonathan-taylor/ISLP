@@ -13,7 +13,7 @@ pip install ISLP
 
 ### Windows
 
-See the [https://packaging.python.org/en/latest/tutorials/installing-packages/#ensure-you-can-run-pip-from-the-command-line](python-packaging-instructions) for a simple way to run `pip` within
+See the [python-packaging-instructions](https://packaging.python.org/en/latest/tutorials/installing-packages/#ensure-you-can-run-pip-from-the-command-line) for a simple way to run `pip` within
 Jupyter.
 
 Alternatively, within a python shell, the following commands should install `ISLP`:
