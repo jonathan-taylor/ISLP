@@ -26,6 +26,3 @@ python:
    - requirements: docs/requirements.txt
    - method: pip
      path: .
-
-conda:
-   environment: environment.yaml
