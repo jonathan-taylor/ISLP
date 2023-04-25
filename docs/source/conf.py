@@ -51,5 +51,11 @@ html_theme_options = {
 html_title = "Introduction to Statistical Learning (Python)"
 html_logo = "logo.png"
 
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.ipynb': 'myst-nb',
+    '.myst': 'myst-nb',
+}
+
 # -- Options for EPUB output
 epub_show_urls = 'footnote'
