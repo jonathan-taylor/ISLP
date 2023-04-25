@@ -43,10 +43,10 @@ os.system(cmd)
 ### Torch requirements
 
 The `ISLP` labs use `torch` and various related packages for the lab on deep learning. The requirements
-can be found [here](requirements.txt). Alternatively, you can install them directly using `pip`
+can be found [here](torch_requirements.txt). Alternatively, you can install them directly using `pip`
 
 ```{python}
-reqs = 'https://raw.githubusercontent.com/jonathan-taylor/ISLP/master/requirements.txt'
+reqs = 'https://raw.githubusercontent.com/jonathan-taylor/ISLP/master/torch_requirements.txt'
 cmd = f'{sys.executable} -m pip install -r {reqs}'
 os.system(cmd)
 ```
