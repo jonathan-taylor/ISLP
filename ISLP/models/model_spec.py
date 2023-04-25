@@ -495,8 +495,9 @@ def build_columns(column_info, X, var, encoders={}, col_cache={}, fit=False):
         cols = np.column_stack(cols)
         if len(names) != cols.shape[1]:
             names = ['{0}[{1}]'.format(var.name, j) for j in range(cols.shape[1])]
-
         if var.encoder:
+            df_cols = pd.DataFrame(np.asarray(cols),
+                                   columns=names)
             try:
                 check_is_fitted(var.encoder)
                 if fit and var not in encoders:
@@ -505,8 +506,7 @@ def build_columns(column_info, X, var, encoders={}, col_cache={}, fit=False):
                 if fit:
                     fit_encoder(encoders,
                                 var,
-                                pd.DataFrame(np.asarray(cols),
-                                             columns=names))
+                                df_cols)
                 # known issue with Pipeline
                 # https://github.com/scikit-learn/scikit-learn/issues/18648
                 elif isinstance(var.encoder, Pipeline):  
@@ -516,9 +516,9 @@ def build_columns(column_info, X, var, encoders={}, col_cache={}, fit=False):
             except Exception as e:  # was not the NotFitted
                 raise ValueError(e)
             if var.use_transform:
-                cols = var.encoder.transform(cols)
+                cols = var.encoder.transform(df_cols)
             else:
-                cols = var.encoder.predict(cols)
+                cols = var.encoder.predict(df_cols)
             if hasattr(var.encoder, 'columns_') and not var.override_encoder_colnames:
                 names = var.encoder.columns_
             else:
