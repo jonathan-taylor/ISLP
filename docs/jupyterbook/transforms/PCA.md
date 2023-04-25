@@ -24,8 +24,8 @@ from sklearn.decomposition import PCA
 from ISLP import load_data
 from ISLP.models import (ModelSpec, 
                          pca, 
-                         Variable, 
-                         derived_variable,
+                         Feature, 
+                         derived_feature,
                          build_columns)
 ```
 
@@ -40,27 +40,27 @@ Let's create a `ModelSpec` that is aware of all of the relevant columns.
 design = ModelSpec(Carseats.columns.drop(['Sales'])).fit(Carseats)
 ```
 
-Suppose we want to make a `Variable` representing the first 3 principal components of the
+Suppose we want to make a `Feature` representing the first 3 principal components of the
  features `['CompPrice', 'Income', 'Advertising', 'Population', 'Price']`.
 
 +++
 
-We first make a `Variable` that represents these five features columns, then `pca`
-can be used to compute a new `Variable` that returns the first three principal components.
+We first make a `Feature` that represents these five features columns, then `pca`
+can be used to compute a new `Feature` that returns the first three principal components.
 
 ```{code-cell} ipython3
-grouped = Variable(('CompPrice', 'Income', 'Advertising', 'Population', 'Price'), name='grouped', encoder=None)
+grouped = Feature(('CompPrice', 'Income', 'Advertising', 'Population', 'Price'), name='grouped', encoder=None)
 sklearn_pca = PCA(n_components=3, whiten=True)
 ```
 
-We can now fit `sklearn_pca` and create our new variable.
+We can now fit `sklearn_pca` and create our new feature.
 
 ```{code-cell} ipython3
 grouped_features = build_columns(design.column_info_,
                                  Carseats,
                                  grouped)[0]
 sklearn_pca.fit(grouped_features) 
-pca_var = derived_variable(['CompPrice', 'Income', 'Advertising', 'Population', 'Price'],
+pca_var = derived_feature(['CompPrice', 'Income', 'Advertising', 'Population', 'Price'],
                            name='pca(grouped)', encoder=sklearn_pca)
 derived_features, _ = build_columns(design.column_info_,
                                     Carseats, 

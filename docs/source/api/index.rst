@@ -1,12 +1,7 @@
-.. _api-index:
+ISLP reference
+--------------
 
-#####
- API
-#####
 
-.. only:: html
+.. toctree::
 
-   :Release: |version|
-   :Date: |today|
-
-.. include:: gen.rst
+   gen

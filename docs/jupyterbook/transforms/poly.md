@@ -66,7 +66,7 @@ np.linalg.norm(ISLP_features - R_features)
 
 ## Underlying model
 
-If we look at `quartic`, we see it is a `Variable`, i.e. it can be used to produce a set of columns
+If we look at `quartic`, we see it is a `Feature`, i.e. it can be used to produce a set of columns
 in a design matrix when it is a term used in creating the `ModelSpec`.
 
 Its encoder is `Poly(degree=4)`. This is a special `sklearn` transform that expects a single column

@@ -29,11 +29,11 @@ Classes
 
   .. automethod:: __init__
 
-:class:`ModelSpec`
-~~~~~~~~~~~~~~~~~~
+:class:`Feature`
+~~~~~~~~~~~~~~~~
 
 
-.. autoclass:: ModelSpec
+.. autoclass:: Feature
   :members:
   :undoc-members:
   :show-inheritance:
@@ -41,11 +41,11 @@ Classes
 
   .. automethod:: __init__
 
-:class:`Variable`
-~~~~~~~~~~~~~~~~~
+:class:`ModelSpec`
+~~~~~~~~~~~~~~~~~~
 
 
-.. autoclass:: Variable
+.. autoclass:: ModelSpec
   :members:
   :undoc-members:
   :show-inheritance:
@@ -63,10 +63,13 @@ Functions
 .. autofunction:: ISLP.models.model_spec.build_columns
 
 
+.. autofunction:: ISLP.models.model_spec.build_model
+
+
 .. autofunction:: ISLP.models.model_spec.contrast
 
 
-.. autofunction:: ISLP.models.model_spec.derived_variable
+.. autofunction:: ISLP.models.model_spec.derived_feature
 
 
 .. autofunction:: ISLP.models.model_spec.fit_encoder

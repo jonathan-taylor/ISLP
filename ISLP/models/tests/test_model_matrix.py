@@ -2,7 +2,7 @@ import numpy as np, pandas as pd
 from sklearn.base import clone
 
 from ISLP.transforms import Poly, NaturalSpline, BSpline, Interaction
-from ISLP.models.model_spec import ModelSpec, Variable, ns, bs, poly, pca, contrast, Contrast
+from ISLP.models.model_spec import ModelSpec, Feature, ns, bs, poly, pca, contrast, Contrast, build_model
 
 from sklearn.preprocessing import (OneHotEncoder,
                                    OrdinalEncoder)
@@ -119,7 +119,6 @@ def test_dataframe4():
     np.testing.assert_allclose(MX, MX2)
 
     print(MX2.columns)
-    return M, D
     
 def test_dataframe5():
     
@@ -144,7 +143,7 @@ def test_dataframe6():
     rng = np.random.default_rng(11)
     X = rng.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
-    W = Variable(('A','E'), 'AE', None)
+    W = Feature(('A','E'), 'AE', None)
     D['D'] = pd.Categorical(rng.choice(['a','b','c'], 50, replace=True))
     D['E'] = pd.Categorical(rng.choice(range(4,8), 50, replace=True))
     
@@ -178,7 +177,7 @@ def test_dataframe8():
     
     poly =  Poly(degree=3)
     # raises a ValueError because poly will have been already fit -- need new instance of Poly
-    W = Variable(('A',), 'poly(A)', poly)
+    W = Feature(('A',), 'poly(A)', poly)
     M = ModelSpec(terms=list(D.columns.drop(['Y','C'])) + [(W,'E')],
                   default_encoders=default_encoders)
     MX = M.fit_transform(D)
@@ -196,8 +195,8 @@ def test_dataframe9():
     
     poly =  Poly(degree=3)
     # raises a ValueError because poly will have been already fit -- need new instance of Poly
-    W = Variable(('A',), 'poly(A)', poly)
-    U = Variable(('B',), 'poly(B)', clone(poly))
+    W = Feature(('A',), 'poly(A)', poly)
+    U = Feature(('B',), 'poly(B)', clone(poly))
     M = ModelSpec(terms=list(D.columns.drop(['Y','C'])) + [W,U],
                   default_encoders=default_encoders)
     MX = M.fit_transform(D)
@@ -210,8 +209,8 @@ def test_dataframe10():
     rng = np.random.default_rng(15)
     X = rng.standard_normal((50,5))
     D = pd.DataFrame(X, columns=['A','B','C','D','E'])
-    W = Variable(('A','E'), 'AE', None)
-    U = Variable((W, 'C'), 'WC', None)
+    W = Feature(('A','E'), 'AE', None)
+    U = Feature((W, 'C'), 'WC', None)
     D['D'] = pd.Categorical(rng.choice(['a','b','c'], 50, replace=True))
     D['E'] = pd.Categorical(rng.choice(range(4,8), 50, replace=True))
     
@@ -258,7 +257,11 @@ def test_submodel():
 
     M.fit(D)
     MX = M.transform(D)
-    MXsub = M.build_submodel(D, M.terms[:2])
+    MXsub = build_model(M.column_info_,
+                        D,
+                        M.terms[:2],
+                        intercept=M.intercept,
+                        encoders=M.encoders_)
     print(MX.columns)
     print(MXsub.columns)
 
@@ -275,7 +278,11 @@ def test_contrast():
 
         M.fit(D)
         MX = M.transform(D)
-        MXsub = M.build_submodel(D, M.terms[:2])
+        MXsub = build_model(M.column_info_,
+                            D,
+                            M.terms[:2],
+                            intercept=M.intercept,
+                            encoders=M.encoders_)
         print(method, MX.columns)
     print(MXsub.columns)
     
@@ -309,7 +316,7 @@ def test_pca():
     X = rng.standard_normal((50,8))
     D = pd.DataFrame(X, columns=['A','B','C','D','E', 'F', 'G', 'H'])
     
-    pca_ = Variable(('A','B','C','D'), 'pca(ABCD)', PCA(n_components=2))
+    pca_ = Feature(('A','B','C','D'), 'pca(ABCD)', PCA(n_components=2))
     M = ModelSpec(terms=[poly('F', intercept=True, degree=3),
                          pca_])
 

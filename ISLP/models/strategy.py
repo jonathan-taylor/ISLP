@@ -74,9 +74,9 @@ class MinMaxCandidates(object):
             Minumum number of terms to select
         max_terms: int (default: 0)
             Maximum number of terms to select
-        lower_terms: [Variable]
+        lower_terms: [Feature]
             Subset of terms to keep: smallest model.
-        upper_terms: [Variable]
+        upper_terms: [Feature]
             Largest possible model.
         validator: callable
             Callable taking a single argument: state,
@@ -216,9 +216,9 @@ class Stepwise(MinMaxCandidates):
         Minumum number of terms to select
     max_terms: int (default: 1)
         Maximum number of terms to select
-    lower_terms: [Variable]
+    lower_terms: [Feature]
         Subset of terms to keep: smallest model.
-    upper_terms: [Variable]
+    upper_terms: [Feature]
         Largest possible model.
     constraints: {array-like} (optional), shape [n_terms, n_terms]
         Boolean matrix decribing a dag with [i,j] nonzero implying that j is
@@ -342,9 +342,9 @@ class Stepwise(MinMaxCandidates):
             Minumum number of terms to select
         max_terms: int (default: 1)
             Maximum number of terms to select
-        lower_terms: [Variable]
+        lower_terms: [Feature]
             Subset of terms to keep: smallest model.
-        upper_terms: [Variable]
+        upper_terms: [Feature]
             Largest possible model.
         initial_terms: column identifiers, default=[]
             Subset of terms to be used to initialize when direction
@@ -441,9 +441,9 @@ class Stepwise(MinMaxCandidates):
         max_terms: int (default: None)
             Maximum number of terms to select.
             If None defaults to number of terms in *model_spec*.
-        lower_terms: [Variable]
+        lower_terms: [Feature]
             Subset of terms to keep: smallest model.
-        upper_terms: [Variable]
+        upper_terms: [Feature]
             Largest possible model.
         initial_terms: column identifiers, default=[]
             Subset of terms to be used to initialize.
@@ -506,9 +506,9 @@ def min_max(model_spec,
         Minumum number of terms to select
     max_terms: int (default: 1)
         Maximum number of terms to select
-    lower_terms: [Variable]
+    lower_terms: [Feature]
         Subset of terms to keep: smallest model.
-    upper_terms: [Variable]
+    upper_terms: [Feature]
         Largest possible model.
     validator: callable
         Callable taking a single argument: state,

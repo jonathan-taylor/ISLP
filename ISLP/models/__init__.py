@@ -7,11 +7,11 @@ import numpy as np, pandas as pd
 
 from .model_spec import (ModelSpec,
                          Column,
-                         Variable,
+                         Feature,
                          poly,
                          ns,
                          bs,
-                         derived_variable,
+                         derived_feature,
                          pca,
                          contrast,
                          build_columns)

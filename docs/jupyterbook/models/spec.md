@@ -5,148 +5,188 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.14.1
+    jupytext_version: 1.14.5
 kernelspec:
-  display_name: islp_test
+  display_name: Python 3 (ipykernel)
   language: python
-  name: islp_test
+  name: python3
 ---
 
 # Building design matrices with `ModelSpec`
 
-Force rebuild
+The `ISLP` package provides a facility to build design
+matrices for regression and classification tasks. It provides similar functionality to the formula
+notation of `R` though uses python objects rather than specification through the special formula syntax.
+
+Related tools include `patsy` and `ColumnTransformer` from `sklearn.compose`. 
+
+Perhaps the most common use is to extract some columns from a `pd.DataFrame` and 
+produce a design matrix, optionally with an intercept.
 
 ```{code-cell} ipython3
-x=4
-import numpy as np, pandas as pd
-%load_ext rpy2.ipython
+import pandas as pd
+import numpy as np
 
 from ISLP import load_data
-from ISLP.models import ModelSpec
+from ISLP.models import (ModelSpec,
+                         summarize,
+                         Column,
+                         Feature,
+                         build_columns)
 
 import statsmodels.api as sm
 ```
 
 ```{code-cell} ipython3
 Carseats = load_data('Carseats')
-%R -i Carseats
 Carseats.columns
 ```
 
-## Let's break up income into groups
+We'll first build a design matrix that we can use to model `Sales`
+in terms of the categorical variable `ShelveLoc` and `Price`.
 
-```{code-cell} ipython3
-Carseats['OIncome'] = pd.cut(Carseats['Income'], 
-                             [0,50,90,200], 
-                             labels=['L','M','H'])
-Carseats['OIncome']
-```
-
-Let's also create an unordered version
-
-```{code-cell} ipython3
-Carseats['UIncome'] = pd.cut(Carseats['Income'], 
-                             [0,50,90,200], 
-                             labels=['L','M','H'],
-                             ordered=False)
-Carseats['UIncome']
-```
-
-## A simple model
-
-```{code-cell} ipython3
-design = ModelSpec(['Price', 'Income'])
-X = design.fit_transform(Carseats)
-X.columns
-```
-
-```{code-cell} ipython3
-Y = Carseats['Sales']
-M = sm.OLS(Y, X).fit()
-M.params
-```
-
-## Basic procedure
-
-The design matrix is built by cobbling together a set of columns and possibly transforming them.
-A `pd.DataFrame` is essentially a list of columns. One of the first tasks done  in `ModelSpec.fit`
-is to inspect a dataframe for column info. The column `ShelveLoc` is categorical:
+We see first that `ShelveLoc` is a categorical variable:
 
 ```{code-cell} ipython3
 Carseats['ShelveLoc']
 ```
 
-This is recognized by `ModelSpec` in the form of `Column` objects which are just named tuples with two methods
-`get_columns` and `fit_encoder`.
+This is recognized by `ModelSpec` and only 2 columns are added for the three levels. The
+default behavior is to drop the first level of the categories. Later, 
+we will show other contrasts of the 3 columns can be produced.  
+
+This simple example below illustrates how the first argument (its `terms`) is
+used to construct a design matrix.
 
 ```{code-cell} ipython3
-design.column_info_['ShelveLoc']
+MS = ModelSpec(['ShelveLoc', 'Price'])
+X = MS.fit_transform(Carseats)
+X.iloc[:10]
 ```
 
-It recognized ordinal columns as well.
+We note that a column has been added for the intercept by default. This can be changed using the
+`intercept` argument.
 
 ```{code-cell} ipython3
-design.column_info_['OIncome']
+MS_no1 = ModelSpec(['ShelveLoc', 'Price'], intercept=False)
+MS_no1.fit_transform(Carseats)[:10]
 ```
+
+We see that `ShelveLoc` still only contributes
+two columns to the design. The `ModelSpec` object does no introspection of its arguments to effectively include an intercept term
+in the column space of the design matrix.
+
+To include this intercept via `ShelveLoc` we can use 3 columns to encode this categorical variable. Following the nomenclature of
+`R`, we call this a `Contrast` of the categorical variable.
 
 ```{code-cell} ipython3
-income = design.column_info_['Income']
-cols, names = income.get_columns(Carseats)
-(cols[:4], names)
+from ISLP.models import contrast
+shelve = contrast('ShelveLoc', None)
+MS_contr = ModelSpec([shelve, 'Price'], intercept=False)
+MS_contr.fit_transform(Carseats)[:10]
 ```
 
-## Encoding a column
-
-In building a design matrix we must extract columns from our dataframe (or `np.ndarray`). Categorical
-variables usually are encoded by several columns, typically one less than the number of categories.
-This task is handled by the `encoder` of the `Column`. The encoder must satisfy the `sklearn` transform
-model, i.e. `fit` on some array and `transform` on future arrays. The `fit_encoder` method of `Column` fits
-its encoder the first time data is passed to it.
+This example above illustrates that columns need not be identified by name in `terms`. The basic
+role of an item in the `terms` sequence is a description of how to extract a column
+from a columnar data object, usually a `pd.DataFrame`.
 
 ```{code-cell} ipython3
-shelve = design.column_info_['ShelveLoc']
-cols, names = shelve.get_columns(Carseats)
-(cols[:4], names)
+shelve
 ```
+
+The `Column` object can be used to directly extract relevant columns from a `pd.DataFrame`. If the `encoder` field is not
+`None`, then the extracted columns will be passed through `encoder`.
+The `get_columns` method produces these columns as well as names for the columns.
 
 ```{code-cell} ipython3
-oincome = design.column_info_['OIncome']
-oincome.get_columns(Carseats)[0][:4]
+shelve.get_columns(Carseats)
 ```
 
-## The terms
-
-The design matrix consists of several sets of columns. This is managed by the `ModelSpec` through
-the `terms` argument which should be a sequence. The elements of `terms` are often
-going to be strings (or tuples of strings for interactions, see below) but are converted to a
-`Variable` object and stored in the `terms_` of the fitted `ModelSpec`. A `Variable` is just a named tuple.
+Let's now fit a simple OLS model with this design.
 
 ```{code-cell} ipython3
-design.terms
+X = MS_contr.transform(Carseats)
+Y = Carseats['Sales']
+M_ols = sm.OLS(Y, X).fit()
+summarize(M_ols)
 ```
+
+## Interactions
+
+One of the common uses of formulae in `R` is to specify interactions between variables.
+This is done in `ModelSpec` by including a tuple in the `terms` argument.
 
 ```{code-cell} ipython3
-design.terms_
+ModelSpec([(shelve, 'Price'), 'Price']).fit_transform(Carseats).iloc[:10]
 ```
 
-While each `Column` can itself extract data, they are all promoted to `Variable` to be of a uniform type.  A
-`Variable` can also create columns through the `build_columns` method of `ModelSpec`
+The above design matrix is clearly rank deficient, as `ModelSpec` has not inspected the formula
+and attempted to produce a corresponding matrix that may or may not match a user's intent.
+
++++
+
+## Ordinal variables
+
+Ordinal variables are handled by a corresponding encoder)
 
 ```{code-cell} ipython3
-price = design.terms_[0]
-design.build_columns(Carseats, price)
+Carseats['OIncome'] = pd.cut(Carseats['Income'], 
+                             [0,50,90,200], 
+                             labels=['L','M','H'])
+MS_order = ModelSpec(['OIncome']).fit(Carseats)
 ```
 
-Note that `Variable` objects have a tuple of `variables` as well as an `encoder` attribute. The
+Part of the `fit` method of `ModelSpec` involves inspection of the columns of `Carseats`. 
+The results of that inspection can be found in the `column_info_` attribute:
+
+```{code-cell} ipython3
+MS_order.column_info_
+```
+
+## Structure of a `ModelSpec`
+
+The first argument to `ModelSpec` is stored as the `terms` attribute. Under the hood,
+this sequence is inspected to produce the `terms_` attribute which specify the objects
+that will ultimately create the design matrix.
+
+```{code-cell} ipython3
+MS = ModelSpec(['ShelveLoc', 'Price'])
+MS.fit(Carseats)
+MS.terms_
+```
+
+Each element of `terms_` should be a `Feature` which describes a set of columns to be extracted from
+a columnar data form as well as possible a possible encoder.
+
+```{code-cell} ipython3
+shelve_var = MS.terms_[0]
+```
+
+We can find the columns associated to each term using the `build_columns` method of `ModelSpec`:
+
+```{code-cell} ipython3
+df, names = build_columns(MS.column_info_,
+                          Carseats, 
+                          shelve_var)
+df
+```
+
+The design matrix is constructed by running through `terms_` and concatenating the corresponding columns.
+
++++
+
+### `Feature` objects
+
+Note that `Feature` objects have a tuple of `variables` as well as an `encoder` attribute. The
 tuple of `variables` first creates a concatenated dataframe from all corresponding variables and then
-is run through `encoder.transform`. The `encoder.fit` method of each `Variable` is run once during 
+is run through `encoder.transform`. The `encoder.fit` method of each `Feature` is run once during 
 the call to `ModelSpec.fit`.
 
 ```{code-cell} ipython3
-from ISLP.models.model_spec import Variable
-
-new_var = Variable(('Price', 'Income', 'UIncome'), name='mynewvar', encoder=None)
-design.build_columns(Carseats, new_var)
+new_var = Feature(('Price', 'Income', 'OIncome'), name='mynewvar', encoder=None)
+build_columns(MS.column_info_,
+              Carseats, 
+              new_var)[0]
 ```
 
 Let's now transform these columns with an encoder. Within `ModelSpec` we will first build the
@@ -155,84 +195,91 @@ arrays above and then call `pca.fit` and finally `pca.transform` within `design.
 ```{code-cell} ipython3
 from sklearn.decomposition import PCA
 pca = PCA(n_components=2)
-pca.fit(design.build_columns(Carseats, new_var)[0]) # this is done within `ModelSpec.fit`
-pca_var = Variable(('Price', 'Income', 'UIncome'), name='mynewvar', encoder=pca)
-design.build_columns(Carseats, pca_var)
+pca.fit(build_columns(MS.column_info_, Carseats, new_var)[0]) # this is done within `ModelSpec.fit`
+pca_var = Feature(('Price', 'Income', 'OIncome'), name='mynewvar', encoder=pca)
+build_columns(MS.column_info_,
+              Carseats, 
+              pca_var)[0]
 ```
 
 The elements of the `variables` attribute may be column identifiers ( `"Price"`), `Column` instances (`price`)
-or `Variable` instances (`pca_var`).
+or `Feature` instances (`pca_var`).
 
 ```{code-cell} ipython3
-fancy_var = Variable(('Price', price, pca_var), name='fancy', encoder=None)
-design.build_columns(Carseats, fancy_var)
+price = MS.column_info_['Price']
+fancy_var = Feature(('Income', price, pca_var), name='fancy', encoder=None)
+build_columns(MS.column_info_,
+              Carseats, 
+              fancy_var)[0]
 ```
 
-We can of course run PCA again on these features (if we wanted).
+## Predicting at new points
 
 ```{code-cell} ipython3
-pca2 = PCA(n_components=2)
-pca2.fit(design.build_columns(Carseats, fancy_var)[0]) # this is done within `ModelSpec.fit`
-pca2_var = Variable(('Price', price, pca_var), name='fancy_pca', encoder=pca2)
-design.build_columns(Carseats, pca2_var)
+MS = ModelSpec(['Price', 'Income']).fit(Carseats)
+X = MS.transform(Carseats)
+Y = Carseats['Sales']
+M_ols = sm.OLS(Y, X).fit()
+M_ols.params
 ```
 
-## Building the design matrix
-
-With these notions in mind, the final design is essentially then
-
-```{code-cell} ipython3
-X_hand = np.column_stack([design.build_columns(Carseats, v)[0] for v in design.terms_])[:4]
-```
-
-An intercept column is added if `design.intercept` is `True` and if the original argument to `transform` is
-a dataframe the index is adjusted accordingly.
-
-```{code-cell} ipython3
-design.intercept
-```
-
-```{code-cell} ipython3
-design.transform(Carseats)[:4]
-```
-
-## Predicting
-
+As `ModelSpec` is a transformer, it can be evaluated at new feature values.
 Constructing the design matrix at any values is carried out by the `transform` method.
 
 ```{code-cell} ipython3
-new_data = pd.DataFrame({'Price':[10,20], 'Income':[40, 50]})
-new_X = design.transform(new_data)
-M.get_prediction(new_X).predicted_mean
+new_data = pd.DataFrame({'Price':[40, 50], 'Income':[10, 20]})
+new_X = MS.transform(new_data)
+M_ols.get_prediction(new_X).predicted_mean
 ```
 
-```{code-cell} ipython3
-%%R -i new_data,Carseats
-predict(lm(Sales ~ Price + Income, data=Carseats), new_data)
-```
+## Using `np.ndarray`
 
-### Difference between using `pd.DataFrame` and `np.ndarray`
+As the basic model is to concatenate columns extracted from a columnar data
+representation, one *can* use `np.ndarray` as the column data. In this case,
+columns will be selected by integer indices. 
+
+### Caveats using `np.ndarray`
 
 If the `terms` only refer to a few columns of the data frame, the `transform` method only needs a dataframe with those columns.
+However,
+unless all features are floats, `np.ndarray` will default to a dtype of `object`, complicating issues.
 
-If we had used an `np.ndarray`, the column identifiers would be integers identifying specific columns so,
-in order to work correctly, `transform` would need another `np.ndarray` where the columns have the same meaning.
+However, if we had used an `np.ndarray`, the column identifiers would be integers identifying specific columns so,
+in order to work correctly, `transform` would need another `np.ndarray` where the columns have the same meaning. 
+
+We illustrate this below, where we build a model from `Price` and `Income` for `Sales` and want to find predictions at new
+values of `Price` and `Location`. We first find the predicitions using `pd.DataFrame` and then illustrate the difficulties
+in using `np.ndarray`.
+
++++
+
+We will refit this model, using `ModelSpec` with an `np.ndarray` instead
 
 ```{code-cell} ipython3
-Carseats_np = np.asarray(Carseats[['Price', 'ShelveLoc', 'US', 'Income']])
-design_np = ModelSpec([0,3]).fit(Carseats_np)
-design_np.transform(Carseats_np)[:4]
+Carseats_np = np.asarray(Carseats[['Price', 'Education', 'Income']])
+MS_np = ModelSpec([0,2]).fit(Carseats_np)
+MS_np.transform(Carseats_np)
 ```
 
-The following will fail for hopefully obvious reasons
+```{code-cell} ipython3
+M_ols_np = sm.OLS(Y, MS_np.transform(Carseats_np)).fit()
+M_ols_np.params
+```
+
+Now, let's consider finding the design matrix at new points. 
+When using `pd.DataFrame` we only need to supply the `transform` method
+a data frame with columns implicated in the `terms` argument (in this case, `Price` and `Income`). 
+
+However, when using `np.ndarray` with integers as indices, `Price` was column 0 and `Income` was column 2. The only
+sensible way to produce a return for predict is to extract its 0th and 2nd columns. Note this means
+that the meaning of columns in an `np.ndarray` provided to `transform` essentially must be identical to those
+passed to `fit`.
 
 ```{code-cell} ipython3
 try:
-    new_D = np.zeros((2,2))
-    new_D[:,0] = [10,20]
-    new_D[:,1] = [40,50]
-    M.get_prediction(new_D).predicted_mean
-except ValueError as e:
+    new_D = np.array([[40,50], [10,20]]).T
+    new_X = MS_np.transform(new_D)
+except IndexError as e:
     print(e)
 ```
 
@@ -243,252 +290,11 @@ We might be tempted to try as with the `pd.DataFrame` and produce
 an `np.ndarray` with only the necessary variables.
 
 ```{code-cell} ipython3
-try:
-    new_X = np.zeros((2,2))
-    new_X[:,0] = [10,20]
-    new_X[:,1] = [40,50]
-    new_D = design_np.transform(new_X)
-    M.get_prediction(new_D).predicted_mean
-except IndexError as e:
-    print(e)
+new_D = np.array([[40,50], [np.nan, np.nan], [10,20]]).T
+new_X = MS_np.transform(new_D)
+print(new_X)
+M_ols.get_prediction(new_X).predicted_mean
 ```
 
-This fails because `design_np` is looking for column `3` from its `terms`:
-
-```{code-cell} ipython3
-design_np.terms_
-```
-
-However, if we have an `np.ndarray` in which the first column indeed represents `Price` and the fourth indeed
-represents `Income` then we can arrive at the correct answer by supplying such the array to `design_np.transform`:
-
-```{code-cell} ipython3
-new_X = np.zeros((2,4))
-new_X[:,0] = [10,20]
-new_X[:,3] = [40,50]
-new_D = design_np.transform(new_X)
-M.get_prediction(new_D).predicted_mean
-```
-
-Given this subtlety about needing to supply arrays with identical column structure to `transform` when
-using `np.ndarray` we presume that using a `pd.DataFrame` will be the more popular use case.
-
-+++
-
-## A model with some categorical variables
-
-Categorical variables become `Column` instances with encoders.
-
-```{code-cell} ipython3
-design = ModelSpec(['Population', 'Price', 'UIncome', 'ShelveLoc']).fit(Carseats)
-design.column_info_['UIncome']
-```
-
-```{code-cell} ipython3
-X = design.fit_transform(Carseats)
-X.columns
-```
-
-```{code-cell} ipython3
-sm.OLS(Y, X).fit().params
-```
-
-```{code-cell} ipython3
-%%R
-lm(Sales ~ Population + Price + UIncome + ShelveLoc, data=Carseats)$coef
-```
-
-## Getting the encoding you want
-
-By default the level dropped by `ModelSpec` will be the first of the `categories_` values from 
-`sklearn.preprocessing.OneHotEncoder()`. We might wish to change this. It seems
-as if the correct way to do this would be something like `Variable(('UIncome',), 'mynewencoding', new_encoder)`
-where `new_encoder` would somehow drop the column we want dropped. 
-
-However, when using the convenient identifier `UIncome` in the `variables` argument, this maps to the `Column` associated to `UIncome` within `design.column_info_`:
-
-```{code-cell} ipython3
-design.column_info_['UIncome']
-```
-
-This column already has an encoder and `Column` instances are immutable as named tuples. Further, there are times when 
-we may want to encode `UIncome` differently within the same model. In the model below the main effect of `UIncome` is encoded with two columns while in the interaction `UIncome` (see below) has three columns. This is a design of interest
-and we need a way to allow different encodings of the same column of `Carseats`
-
-```{code-cell} ipython3
-%%R
-lm(Sales ~ UIncome:ShelveLoc + UIncome, data=Carseats)
-```
-
- We can create a new 
-`Column` with the encoder we want. For categorical variables, there is a convenience function to do so.
-
-```{code-cell} ipython3
-from ISLP.models.model_spec import contrast
-pref_encoding = contrast('UIncome', 'drop', 'L')
-```
-
-```{code-cell} ipython3
-design.build_columns(Carseats, pref_encoding)
-```
-
-```{code-cell} ipython3
-design = ModelSpec(['Population', 'Price', pref_encoding, 'ShelveLoc']).fit(Carseats)
-X = design.fit_transform(Carseats)
-X.columns
-```
-
-```{code-cell} ipython3
-sm.OLS(Y, X).fit().params
-```
-
-```{code-cell} ipython3
-%%R
-lm(Sales ~ Population + Price + UIncome + ShelveLoc, data=Carseats)$coef
-```
-
-## Interactions
-
-We've referred to interactions above. These are specified (by convenience) as tuples in the `terms` argument
-to `ModelSpec`.
-
-```{code-cell} ipython3
-design = ModelSpec([('UIncome', 'ShelveLoc'), 'UIncome'])
-X = design.fit_transform(Carseats)
-sm.OLS(Y, X).fit().params
-```
-
-The tuples in `terms` are converted to `Variable` in the formalized `terms_` attribute by creating a `Variable` with
-`variables` set to the tuple and the encoder an `Interaction` encoder which (unsurprisingly) creates the interaction columns from the concatenated data frames of `UIncome` and `ShelveLoc`.
-
-```{code-cell} ipython3
-design.terms_[0]
-```
-
-Comparing this to the previous `R` model.
-
-```{code-cell} ipython3
-%%R
-lm(Sales ~ UIncome:ShelveLoc + UIncome, data=Carseats)
-```
-
-We note a few important things:
-
-1. `R` has reorganized the columns of the design from the formula: although we wrote `UIncome:ShelveLoc` first these
-columns have been built later. **`ModelSpec` builds columns in the order determined by `terms`!**
-
-2. As noted above, `R` has encoded `UIncome` differently in the main effect and in the interaction. For `ModelSpec`, the reference to `UIncome` always refers to the column in `design.column_info_` and will always build only the columns for `L` and `M`. **`ModelSpec` does no inspection of terms to decide how to encode categorical variables.**
-
-A few notes:
-
-- **Why not try to inspect the terms?** For any nontrivial formula in `R` with several categorical variables and interactions, predicting what columns will be produced from a given formula is not simple. **`ModelSpec` errs on the side of being explicit.**
-
-- **Is it impossible to build the design as `R` has?** No. An advanced user who *knows* they want the columns built as `R` has can do so (fairly) easily.
-
-```{code-cell} ipython3
-full_encoding = contrast('UIncome', None)
-design.build_columns(Carseats, full_encoding)
-```
-
-```{code-cell} ipython3
-design = ModelSpec([pref_encoding, (full_encoding, 'ShelveLoc')])
-X = design.fit_transform(Carseats)
-sm.OLS(Y, X).fit().params
-```
-
-## Special encodings
-
-For flexible models, we may want to consider transformations of features, i.e. polynomial
-or spline transformations. Given transforms that follow the `fit/transform` paradigm
-we can of course achieve this with a `Column` and an `encoder`. The `ISLP.transforms`
-package includes a `Poly` transform
-
-```{code-cell} ipython3
-from ISLP.models.model_spec import poly
-poly('Income', 3)
-```
-
-```{code-cell} ipython3
-design = ModelSpec([poly('Income', 3), 'ShelveLoc'])
-X = design.fit_transform(Carseats)
-sm.OLS(Y, X).fit().params
-```
-
-Compare:
-
-```{code-cell} ipython3
-%%R
-lm(Sales ~ poly(Income, 3) + ShelveLoc, data=Carseats)$coef
-```
-
-## Splines
-
-Support for natural and B-splines is also included
-
-```{code-cell} ipython3
-from ISLP.models.model_spec import ns, bs, pca
-design = ModelSpec([ns('Income', df=5), 'ShelveLoc'])
-X = design.fit_transform(Carseats)
-sm.OLS(Y, X).fit().params
-```
-
-```{code-cell} ipython3
-%%R
-library(splines)
-lm(Sales ~ ns(Income, df=5) + ShelveLoc, data=Carseats)$coef
-```
-
-```{code-cell} ipython3
-design = ModelSpec([bs('Income', df=7, degree=2), 'ShelveLoc'])
-X = design.fit_transform(Carseats)
-sm.OLS(Y, X).fit().params
-```
-
-```{code-cell} ipython3
-%%R
-lm(Sales ~ bs(Income, df=7, degree=2) + ShelveLoc, data=Carseats)$coef
-```
-
-## PCA
-
-```{code-cell} ipython3
-design = ModelSpec([pca(['Income', 
-                           'Price', 
-                           'Advertising', 
-                           'Population'], 
-                          n_components=2, 
-                          name='myvars'), 'ShelveLoc'])
-X = design.fit_transform(Carseats)
-sm.OLS(Y, X).fit().params
-```
-
-```{code-cell} ipython3
-%%R
-lm(Sales ~ prcomp(cbind(Income, Price, Advertising, Population))$x[,1:2] + ShelveLoc, data=Carseats)
-```
-
-It is of course common to scale before running PCA.
-
-```{code-cell} ipython3
-design = ModelSpec([pca(['Income', 
-                           'Price', 
-                           'Advertising', 
-                           'Population'], 
-                          n_components=2, 
-                          name='myvars',
-                          scale=True), 'ShelveLoc'])
-X = design.fit_transform(Carseats)
-sm.OLS(Y, X).fit().params
-```
-
-```{code-cell} ipython3
-%%R
-lm(Sales ~ prcomp(cbind(Income, Price, Advertising, Population), scale=TRUE)$x[,1:2] + ShelveLoc, data=Carseats)
-```
-
-There will be some small differences in the coefficients due to `sklearn` use of `np.std(ddof=0)` instead
-of `np.std(ddof=1)`.
-
-```{code-cell} ipython3
-np.array(sm.OLS(Y, X).fit().params)[1:3] * np.sqrt(X.shape[0] / (X.shape[0]-1))
-```
+For more complicated design contructions ensuring the columns of `new_D` match that of the original data will be more cumbersome. We expect
+then that `pd.DataFrame` (or a columnar data representation with similar API) will likely be easier to use with `ModelSpec`.

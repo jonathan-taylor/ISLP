@@ -35,7 +35,7 @@ from ..transforms import (Poly,
 
 DOCACHE = False
 
-class Variable(NamedTuple):
+class Feature(NamedTuple):
 
     """
     An element in a model matrix that will build
@@ -49,6 +49,7 @@ class Variable(NamedTuple):
     pure_columns: bool=False
     override_encoder_colnames: bool=False
     
+
 #### contrast specific code
 
 class Contrast(TransformerMixin, BaseEstimator):
@@ -254,7 +255,7 @@ class ModelSpec(TransformerMixin, BaseEstimator):
                                         bool)
             self.columns_ = np.arange(X.shape[1])
 
-        self.variables_ = {}
+        self.features_ = {}
         self.encoders_ = {}
 
         self.column_info_ = _get_column_info(X,
@@ -262,19 +263,19 @@ class ModelSpec(TransformerMixin, BaseEstimator):
                                              self.is_categorical_,
                                              self.is_ordinal_,
                                              default_encoders=self.default_encoders)
-        # include each column as a Variable
+        # include each column as a Feature
         # so that their columns are built if needed
 
         for col_ in self.columns_:
-            self.variables_[col_] = Variable((col_,), str(col_), None, pure_columns=True) 
+            self.features_[col_] = Feature((col_,), str(col_), None, pure_columns=True) 
 
-        # find possible interactions and other variables
+        # find possible interactions and other features
 
         tmp_cache = {}
 
         for term in self.terms:
-            if isinstance(term, Variable):
-                self.variables_[term] = term
+            if isinstance(term, Feature):
+                self.features_[term] = term
                 build_columns(self.column_info_,
                               X,
                               term,
@@ -282,18 +283,18 @@ class ModelSpec(TransformerMixin, BaseEstimator):
                               col_cache=tmp_cache,
                               fit=True) # these encoders won't have been fit yet
                 for var in term.variables:
-                    if var not in self.variables_ and isinstance(var, Variable):
-                            self.variables_[var] = var
+                    if var not in self.features_ and isinstance(var, Feature):
+                            self.features_[var] = var
             elif term not in self.column_info_:
-                # a tuple of variables represents an interaction
+                # a tuple of features represents an interaction
                 if type(term) == type((1,)): 
                     names = []
                     column_map = {}
                     column_names = {}
                     idx = 0
                     for var in term:
-                        if var in self.variables_:
-                            var = self.variables_[var]
+                        if var in self.features_:
+                            var = self.features_[var]
                         cols, cur_names = build_columns(self.column_info_,
                                                         X,
                                                         var,
@@ -305,17 +306,17 @@ class ModelSpec(TransformerMixin, BaseEstimator):
                         idx += cols.shape[1]                 
                         names.append(var.name)
                     encoder_ = Interaction(names, column_map, column_names)
-                    self.variables_[term] = Variable(term, ':'.join(n for n in names), encoder_)
+                    self.features_[term] = Feature(term, ':'.join(n for n in names), encoder_)
                 elif isinstance(term, Column):
-                    self.variables_[term] = Variable((term,), term.name, None, pure_columns=True)
+                    self.features_[term] = Feature((term,), term.name, None, pure_columns=True)
                 else:
-                    raise ValueError('each element in a term should be a Variable, Column or identify a column')
+                    raise ValueError('each element in a term should be a Feature, Column or identify a column')
                 
         # build the mapping of terms to columns and column names
 
         self.column_names_ = {}
         self.column_map_ = {}
-        self.terms_ = [self.variables_[t] for t in self.terms]
+        self.terms_ = [self.features_[t] for t in self.terms]
         
         idx = 0
         if self.intercept:
@@ -354,12 +355,61 @@ class ModelSpec(TransformerMixin, BaseEstimator):
     
     # ModelSpec specific methods
 
+    @property
+    def names(self, help='Name for each term in model specification.'):
+        names = []
+        if self.intercept:
+            names = ['intercept']
+        return names + [t.name for t in self.terms_]
+        
+
+    def build_submodel(self,
+                       X,
+                       terms):
+        """
+        Build design on X after fitting.
+
+        Parameters
+        ----------
+        X : array-like
+            X on which columns are evaluated.
+
+        terms : [Feature]
+            Sequence of features
+
+        Returns
+        -------
+        D : array-like
+            Design matrix created with `terms`
+        """
+
+        return build_model(self.column_info_,
+                           X,
+                           terms,
+                           intercept=self.intercept,
+                           encoders=self.encoders_)
+
     def build_sequence(self,
                        X,
                        anova_type='sequential'):
         """
         Build implied sequence of submodels 
         based on successively including more terms.
+
+        Parameters
+        ----------
+        X : array-like
+            X on which columns are evaluated.
+
+        anova_type: str
+            One of "sequential" or "drop".
+
+        Returns
+        -------
+
+        models : generator
+            Generator for sequence of models for ANOVA.
+
         """
 
         check_is_fitted(self)
@@ -412,8 +462,11 @@ def fit_encoder(encoders, var, X):
     Parameters
     ----------
 
-    var : Variable
-        Variable whose encoder will be fit.
+    encoders : dict
+        Dictionary of encoders for each feature.
+
+    var : Feature
+        Feature whose encoder will be fit.
 
     X : array-like
         X on which encoder will be fit.
@@ -425,7 +478,7 @@ def fit_encoder(encoders, var, X):
             
 def build_columns(column_info, X, var, encoders={}, col_cache={}, fit=False):
     """
-    Build columns for a Variable from X.
+    Build columns for a Feature from X.
 
     Parameters
     ----------
@@ -437,11 +490,11 @@ def build_columns(column_info, X, var, encoders={}, col_cache={}, fit=False):
     X : array-like
         X on which columns are evaluated.
 
-    var : Variable
-        Variable whose columns will be built, typically a key in `column_info`.
+    var : Feature
+        Feature whose columns will be built, typically a key in `column_info`.
 
     encoders : dict
-        Dict that stores encoder of each Variable.
+        Dict that stores encoder of each Feature.
     
     col_cache: dict
         Dict where columns will be stored --
@@ -468,7 +521,7 @@ def build_columns(column_info, X, var, encoders={}, col_cache={}, fit=False):
             cols, name = col_cache[joblib_hash([var, X])]
         else:
             cols, names = var.get_columns(X, fit=fit)
-    elif isinstance(var, Variable):
+    elif isinstance(var, Feature):
         cols = []
         names = []
         for v in var.variables:
@@ -517,7 +570,7 @@ def build_columns(column_info, X, var, encoders={}, col_cache={}, fit=False):
 
 
     else:
-        raise ValueError('expecting either a column or a Variable')
+        raise ValueError('expecting either a column or a Feature')
     val = pd.DataFrame(np.asarray(cols), columns=names)
 
     if isinstance(X, (pd.DataFrame, pd.Series)):
@@ -547,11 +600,11 @@ def build_model(column_info,
     X : array-like
         X on which columns are evaluated.
 
-    terms : [Variable]
-        Sequence of variables
+    terms : [Feature]
+        Sequence of features
 
     encoders : dict
-        Dict that stores encoder of each Variable.
+        Dict that stores encoder of each Feature.
 
     Returns
     -------
@@ -594,15 +647,15 @@ def build_model(column_info,
         else:
             return zero
 
-def derived_variable(variables, encoder=None, name=None, use_transform=True):
+def derived_feature(variables, encoder=None, name=None, use_transform=True):
     """
-    Create a Variable, optionally
+    Create a Feature, optionally
     applying an encoder to the stacked columns.
     
     Parameters
     ----------
 
-    variables : [column identifier, Column, Variable]
+    variables : [column identifier, Column, Feature]
         Variables to apply transform to. Could be
         column identifiers or variables: all columns
         will be stacked before encoding.
@@ -616,12 +669,12 @@ def derived_variable(variables, encoder=None, name=None, use_transform=True):
     Returns
     -------
 
-    var : Variable
+    var : Feature
     """
 
     if name is None:
         name = str(encoder)
-    var = Variable(tuple([v for v in variables]),
+    var = Feature(tuple([v for v in variables]),
                    name,
                    encoder,
                    use_transform=use_transform,
@@ -646,7 +699,7 @@ def contrast(col,
     Returns
     -------
 
-    var : Variable
+    var : Feature
 
     """
 
@@ -674,7 +727,7 @@ def ordinal(col, *args, **kwargs):
     Returns
     -------
 
-    var : Variable
+    var : Feature
 
     """
 
@@ -693,7 +746,7 @@ def ordinal(col, *args, **kwargs):
 
         name = f'{shortname}({name})'
 
-    return derived_variable([col],
+    return derived_feature([col],
                             name=name,
                             encoder=encoder)
 
@@ -704,7 +757,7 @@ def poly(col,
          name=None):
 
     """
-    Create a polynomial Variable
+    Create a polynomial Feature
     for a given column.
     
     Additional `args` and `kwargs`
@@ -732,7 +785,7 @@ def poly(col,
     Returns
     -------
 
-    var : Variable
+    var : Feature
     """
     shortname, klass = 'poly', Poly
     encoder = klass(degree=degree,
@@ -757,13 +810,13 @@ def poly(col,
 
         name = f'{shortname}({name})'
 
-    return derived_variable([col],
+    return derived_feature([col],
                             name=name,
                             encoder=encoder)
 
 def ns(col, intercept=False, name=None, **spline_args):
     """
-    Create a natural spline Variable
+    Create a natural spline Feature
     for a given column.
     
     Additional *spline_args*
@@ -783,7 +836,7 @@ def ns(col, intercept=False, name=None, **spline_args):
     Returns
     -------
 
-    var : Variable
+    var : Feature
 
     """
     shortname, klass = 'ns', NaturalSpline
@@ -800,13 +853,13 @@ def ns(col, intercept=False, name=None, **spline_args):
         name = f'{shortname}({name})'
     encoder = klass(intercept=intercept,
                     **spline_args) 
-    return derived_variable([col],
+    return derived_feature([col],
                             name=name,
                             encoder=encoder)
 
 def bs(col, intercept=False, name=None, **spline_args):
     """
-    Create a B-spline Variable
+    Create a B-spline Feature
     for a given column.
     
     Additional args and *spline_args*
@@ -827,7 +880,7 @@ def bs(col, intercept=False, name=None, **spline_args):
     Returns
     -------
 
-    var : Variable
+    var : Feature
 
     """
     shortname, klass = 'bs', BSpline
@@ -844,7 +897,7 @@ def bs(col, intercept=False, name=None, **spline_args):
         name = f'{shortname}({name})'
     encoder = klass(intercept=intercept,
                     **spline_args) 
-    return derived_variable([col],
+    return derived_feature([col],
                             name=name,
                             encoder=encoder)
 
@@ -859,13 +912,13 @@ def pca(variables, name, scale=False, **pca_args):
     Parameters
     ----------
 
-    variables : [column identifier, Column or Variable]
+    variables : [column identifier, Column or Feature]
         Sequence whose columns will be encoded by PCA.
 
     Returns
     -------
 
-    var : Variable
+    var : Feature
 
     """
     shortname, klass = 'pca', PCA
@@ -880,52 +933,10 @@ def pca(variables, name, scale=False, **pca_args):
     if _args:
         name = ', '.join([name, _args])
 
-    return derived_variable(variables,
+    return derived_feature(variables,
                             name=f'{shortname}({name})',
                             encoder=encoder)
 
-# def clusterer(variables, name, transform, scale=False):
-#     """
-#     Create PCA encoding of features
-#     from a sequence of variables.
-    
-#     Additional `args` and `kwargs`
-#     are passed to `PCA`.
-
-#     Parameters
-#     ----------
-
-#     variables : [column identifier, Column or Variable]
-#         Sequence whose columns will be encoded by PCA.
-
-#     name: str
-#         name for the Variable
-
-#     transform: Transformer
-#         A transform with a `predict` method.
-
-#     Returns
-#     -------
-
-#     var : Variable
-
-#     """
-
-#     if scale:
-#         scaler = StandardScaler(with_mean=True,
-#                                 with_std=True)
-#         encoder = make_pipeline(scaler, transform)
-#     else:
-#         encoder = transform
-
-#     intermed = Variable((derived_variable(*variables,
-#                                           name='cluster_intermed',
-#                                           encoder=encoder,
-#                                           use_transform=False),),
-#                             name=f'Cat({encoder}({name}))',
-#                             encoder=Contrast(method='drop'))
-
-#     return intermed
 
 def _argstring(*args, **kwargs):
     _args = ', '.join([str(a) for a in args])
