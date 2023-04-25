@@ -52,18 +52,53 @@ class Variable(NamedTuple):
 #### contrast specific code
 
 class Contrast(TransformerMixin, BaseEstimator):
-    """
-    Contrast encoding for categorical variables.
-    """
 
     def __init__(self,
                  method='drop',
                  drop_level=None):
+        """
+        Contrast encoding for categorical variables.
+
+        Parameters
+        ----------
+        method : ['drop', 'sum', None, callable]
+            If 'drop', then a column of the one-hot
+            encoding will be dropped. If 'sum', then the sum of
+            coefficients is constrained to sum to 1.
+            If `None`, the full one-hot encoding is returned.
+            Finally, if callable, then it should take the number of
+            levels of the category as a single argument and return
+            an appropriate contrast of the full one-hot encoding.
+
+        drop_level : str (optional)
+            If not None, this level of the category
+            will be dropped if `method=='drop'`.
+
+        """
 
         self.method = method
         self.drop_level = drop_level
         
-    def fit(self, X):
+    def fit(self, X, y=None):
+
+        """
+        Construct contrast of categorical variable
+        for use in building a design matrix.
+
+        Parameters
+        ----------
+        X : array-like
+            X on which model matrix will be evaluated.
+            If a :py:class:`pd.DataFrame` or :py:class:`pd.Series`, variables that are of
+            categorical dtype will be treated as categorical.
+
+        Returns
+        -------
+        F : array-like
+            Columns of design matrix implied by the
+            categorical variable.
+
+        """
 
         Xa = np.asarray(X).reshape((-1,1))
         self.encoder_ = OneHotEncoder(drop=None,
@@ -310,64 +345,14 @@ class ModelSpec(TransformerMixin, BaseEstimator):
             Ignored. This parameter exists only for compatibility with
             :py:class:`sklearn.pipeline.Pipeline`.
         """
-        return self.build_submodel(X, self.terms_)
+        check_is_fitted(self)
+        return build_model(self.column_info_,
+                           X,
+                           self.terms_,
+                           intercept=self.intercept,
+                           encoders=self.encoders_)
     
     # ModelSpec specific methods
-
-    def build_submodel(self, X, terms):
-
-        """
-        Construct design matrix on a
-        sequence of terms and X after 
-        fitting.
-
-        Parameters
-        ----------
-        X : array-like
-            X on which model matrix will be evaluated.
-
-        Returns
-        -------
-        df : np.ndarray or pd.DataFrame
-            Design matrix.
-        """
-
-        check_is_fitted(self)
-
-        dfs = []
-
-        col_cache = {}  # avoid recomputing the same columns
-
-        if self.intercept:
-            df = pd.DataFrame({'intercept':np.ones(X.shape[0])})
-            if isinstance(X, (pd.Series, pd.DataFrame)):
-                df.index = X.index
-            dfs.append(df)
-
-        for term_ in terms:
-            term_df = build_columns(self.column_info_,
-                                    X,
-                                    term_,
-                                    col_cache=col_cache,
-                                    encoders=self.encoders_,
-                                    fit=False)[0]
-            dfs.append(term_df)
-
-        if len(dfs):
-            if isinstance(X, (pd.Series, pd.DataFrame)):
-                df = pd.concat(dfs, axis=1)
-                df.index = X.index
-                return df
-            else:
-                return np.column_stack(dfs)
-        else:  # return a 0 design
-            zero = np.zeros(X.shape[0])
-            if isinstance(X, (pd.Series, pd.DataFrame)):
-                df = pd.DataFrame({'zero': zero})
-                df.index = X.index
-                return df
-            else:
-                return zero
 
     def build_sequence(self,
                        X,
@@ -455,7 +440,10 @@ def build_columns(column_info, X, var, encoders={}, col_cache={}, fit=False):
     var : Variable
         Variable whose columns will be built, typically a key in `column_info`.
 
-    col_cache: 
+    encoders : dict
+        Dict that stores encoder of each Variable.
+    
+    col_cache: dict
         Dict where columns will be stored --
         if `var.name` in `col_cache` then just
         returns those columns.
@@ -539,6 +527,72 @@ def build_columns(column_info, X, var, encoders={}, col_cache={}, fit=False):
         col_cache[joblib_hash([var.name, X])] = (val, names)
     return val, names
 
+def build_model(column_info,
+                X,
+                terms,
+                intercept=True,
+                encoders={}):
+
+    """
+    Construct design matrix on a
+    sequence of terms and X after 
+    fitting.
+
+    Parameters
+    ----------
+    column_info: dict
+        Dictionary with values specifying sets of columns to
+        be concatenated into a design matrix.
+
+    X : array-like
+        X on which columns are evaluated.
+
+    terms : [Variable]
+        Sequence of variables
+
+    encoders : dict
+        Dict that stores encoder of each Variable.
+
+    Returns
+    -------
+    df : np.ndarray or pd.DataFrame
+        Design matrix.
+    """
+
+    dfs = []
+
+    col_cache = {}  # avoid recomputing the same columns
+
+    if intercept:
+        df = pd.DataFrame({'intercept':np.ones(X.shape[0])})
+        if isinstance(X, (pd.Series, pd.DataFrame)):
+            df.index = X.index
+        dfs.append(df)
+
+    for term_ in terms:
+        term_df = build_columns(column_info,
+                                X,
+                                term_,
+                                col_cache=col_cache,
+                                encoders=encoders,
+                                fit=False)[0]
+        dfs.append(term_df)
+
+    if len(dfs):
+        if isinstance(X, (pd.Series, pd.DataFrame)):
+            df = pd.concat(dfs, axis=1)
+            df.index = X.index
+            return df
+        else:
+            return np.column_stack(dfs)
+    else:  # return a 0 design
+        zero = np.zeros(X.shape[0])
+        if isinstance(X, (pd.Series, pd.DataFrame)):
+            df = pd.DataFrame({'zero': zero})
+            df.index = X.index
+            return df
+        else:
+            return zero
 
 def derived_variable(variables, encoder=None, name=None, use_transform=True):
     """
