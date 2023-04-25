@@ -67,7 +67,7 @@ class Contrast(TransformerMixin, BaseEstimator):
 
         Xa = np.asarray(X).reshape((-1,1))
         self.encoder_ = OneHotEncoder(drop=None,
-                                      sparse=False).fit(Xa)
+                                      sparse_output=False).fit(Xa)
         cats = self.encoder_.categories_[0]
         column_names = [str(n) for n in cats]
 
@@ -503,8 +503,10 @@ def build_columns(column_info, X, var, encoders={}, col_cache={}, fit=False):
                     raise ValueError('encoder has already been fit previously')
             except NotFittedError as e:
                 if fit:
-                    fit_encoder(var, pd.DataFrame(np.asarray(cols),
-                                                  columns=names))
+                    fit_encoder(encoders,
+                                var,
+                                pd.DataFrame(np.asarray(cols),
+                                             columns=names))
                 # known issue with Pipeline
                 # https://github.com/scikit-learn/scikit-learn/issues/18648
                 elif isinstance(var.encoder, Pipeline):  
