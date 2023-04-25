@@ -7,11 +7,11 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.14.1
+    jupytext_version: 1.14.5
 kernelspec:
-  display_name: islp_test
+  display_name: python3
   language: python
-  name: islp_test
+  name: python3
 ---
 
 # Support Vector Machines
