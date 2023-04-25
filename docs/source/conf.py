@@ -28,7 +28,7 @@ extensions = [
 graphviz_dot = '/opt/homebrew/bin/dot'
 numpydoc_class_members_toctree = False
 nb_execution_mode = "cache"
-nb_kernel_rgx_aliases = {'python3': "islp_test"}
+#nb_kernel_rgx_aliases = {'python3': "islp_test"}
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
