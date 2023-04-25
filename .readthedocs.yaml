@@ -10,7 +10,7 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.9"
-  apt-packages:
+  apt_packages:
     - r-base
     
 # Build documentation in the docs/ directory with Sphinx
