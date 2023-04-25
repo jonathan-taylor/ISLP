@@ -196,9 +196,11 @@ pandas
 lxml # pandas needs this for html
 scikit-learn
 joblib
-lifelines
-l0bnb # for bestsubsets
-pygam # for GAM in Ch7'''.split('\n')
+pygam # for GAM in Ch7
+lifelines'''.split('\n')
+#l0bnb # for bestsubsets
+
+
 
 for req in requirements:
     req = req.split('#')[0]
@@ -232,7 +234,6 @@ def main(**extra_args):
           requires=info.REQUIRES,
           provides=info.PROVIDES,
           packages     = ['ISLP',
-                          'ISLP.wrappers',
                           'ISLP.models',
                           'ISLP.bart',
                           'ISLP.torch'
