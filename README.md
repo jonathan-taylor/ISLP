@@ -2,3 +2,33 @@
 
 This package collects data sets and various helper functions
 for ISLP.
+
+## Install instructions
+
+### Mac OS X
+
+```{python}
+pip install ISLP
+```
+
+### Windows
+
+See the [https://packaging.python.org/en/latest/tutorials/installing-packages/#ensure-you-can-run-pip-from-the-command-line](python packaging instructions) for a simple way to run `pip` within
+Jupyter.
+
+Alternatively, within a python shell, the following commands should install `ISLP`:
+
+```{python}
+import os, sys
+cmd = f'{sys.executable} -m pip install ISLP'
+os.system(cmd)
+```
+
+### Torch requirements
+
+The `ISLP` labs use `torch` and various related packages for the lab on deep learning. The requirements
+can be found [here](requirements.txt)
+
+## Documentation
+
+

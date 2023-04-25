@@ -13,7 +13,8 @@ from .model_spec import (ModelSpec,
                          bs,
                          derived_variable,
                          pca,
-                         contrast)
+                         contrast,
+                         build_columns)
 from .strategy import (min_max as min_max_strategy,
                        Stepwise)
 from .generic_selector import FeatureSelector

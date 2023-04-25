@@ -1,10 +1,11 @@
-numpy
-scipy
+numpy>=1.7.1
+scipy>=0.9
 jupyter
-pandas
+pandas>=0.20
 lxml # pandas needs this for html
-scikit-learn
+scikit-learn>=1.0
 joblib
+statsmodels>=0.13
 lifelines
-l0bnb # for bestsubsets
-pygam # for GAM in Ch7
+#l0bnb # for bestsubsets
+#pygam # for GAM in Ch7

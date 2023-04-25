@@ -66,7 +66,7 @@ MICRO               = _version_micro
 ISRELEASE           = _version_extra == ''
 VERSION             = __version__
 STATUS              = 'alpha'
-PROVIDES            = ["fixed_lambda"]
+PROVIDES            = []
 REQUIRES            = ["numpy (>=%s)" % NUMPY_MIN_VERSION,
                        "scipy (>=%s)" % SCIPY_MIN_VERSION,
                        "statsmodels (>=%s)" % STATSMODELS_MIN_VERSION,

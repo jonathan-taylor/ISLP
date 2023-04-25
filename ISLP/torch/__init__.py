@@ -6,7 +6,13 @@ from .lightning import (SimpleDataModule,
 
 def rec_num_workers():
 
-    """Based on 
+    """
+
+    Get a suggested number of workers for data loaders
+    in a `pytorch_lightning` data module.
+
+    Based on 
+
     https://github.com/pytorch/pytorch/blob/fb0f285638338da93960d2b654a59c9639671fc0/torch/utils/data/dataloader.py#L478-L505
     """
 

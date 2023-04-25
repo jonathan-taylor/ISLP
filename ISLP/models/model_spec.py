@@ -240,10 +240,12 @@ class ModelSpec(TransformerMixin, BaseEstimator):
         for term in self.terms:
             if isinstance(term, Variable):
                 self.variables_[term] = term
-                self.build_columns(X,
-                                   term,
-                                   col_cache=tmp_cache,
-                                   fit=True) # these encoders won't have been fit yet
+                build_columns(self.column_info_,
+                              X,
+                              term,
+                              encoders=self.encoders_,
+                              col_cache=tmp_cache,
+                              fit=True) # these encoders won't have been fit yet
                 for var in term.variables:
                     if var not in self.variables_ and isinstance(var, Variable):
                             self.variables_[var] = var
@@ -257,10 +259,12 @@ class ModelSpec(TransformerMixin, BaseEstimator):
                     for var in term:
                         if var in self.variables_:
                             var = self.variables_[var]
-                        cols, cur_names = self.build_columns(X,
-                                                             var,
-                                                             col_cache=tmp_cache,
-                                                             fit=True) # these encoders won't have been fit yet
+                        cols, cur_names = build_columns(self.column_info_,
+                                                        X,
+                                                        var,
+                                                        encoders=self.encoders_,
+                                                        col_cache=tmp_cache,
+                                                        fit=True) # these encoders won't have been fit yet
                         column_map[var.name] = range(idx, idx + cols.shape[1])
                         column_names[var.name] = cur_names
                         idx += cols.shape[1]                 
@@ -284,7 +288,10 @@ class ModelSpec(TransformerMixin, BaseEstimator):
             idx += 1 # intercept will be first column
         
         for term, term_ in zip(self.terms, self.terms_):
-            term_df, term_names = self.build_columns(X, term_)
+            term_df, term_names = build_columns(self.column_info_,
+                                                X,
+                                                term_,
+                                                encoders=self.encoders_)
             self.column_names_[term] = term_names
             self.column_map_[term] = slice(idx, idx + term_df.shape[1])
             idx += term_df.shape[1]
@@ -338,10 +345,12 @@ class ModelSpec(TransformerMixin, BaseEstimator):
             dfs.append(df)
 
         for term_ in terms:
-            term_df = self.build_columns(X,
-                                         term_,
-                                         col_cache=col_cache,
-                                         fit=False)[0]
+            term_df = build_columns(self.column_info_,
+                                    X,
+                                    term_,
+                                    col_cache=col_cache,
+                                    encoders=self.encoders_,
+                                    fit=False)[0]
             dfs.append(term_df)
 
         if len(dfs):
@@ -359,120 +368,6 @@ class ModelSpec(TransformerMixin, BaseEstimator):
                 return df
             else:
                 return zero
-
-    def fit_encoder(self, var, X):
-        """
-        Fit an encoder if not already registered
-        in `self.encoders_`.
-
-        Return the fit encoder.
-
-        Parameters
-        ----------
-
-        var : Variable
-            Variable whose encoder will be fit.
-
-        X : array-like
-            X on which encoder will be fit.
-
-        """
-
-        if var.encoder not in self.encoders_:
-            self.encoders_[var] = var.encoder.fit(X)
-            
-    def build_columns(self, X, var, col_cache={}, fit=False):
-        """
-        Build columns for a Variable from X.
-
-        Parameters
-        ----------
-
-        X : array-like
-            X on which columns are evaluated.
-
-        var : Variable
-            Variable whose columns will be built.
-
-        col_cache: 
-            Dict where columns will be stored --
-            if `var.name` in `col_cache` then just
-            returns those columns.
-
-        fit : bool (optional)
-            If True, then try to fit encoder.
-            Will raise an error if encoder has already been fit.
-
-        """
-
-        if var in self.column_info_:
-            var = self.column_info_[var]
-
-        if DOCACHE and joblib_hash([var, X]) in col_cache:
-            return col_cache[joblib_hash([var, X])]
-        
-        if isinstance(var, Column):
-            if DOCACHE:
-                if joblib_hash([var, X]) not in col_cache:
-                    cols, names = var.get_columns(X, fit=fit)
-                    col_cache[joblib_hash([var, X])] = cols, names
-                cols, name = col_cache[joblib_hash([var, X])]
-            else:
-                cols, names = var.get_columns(X, fit=fit)
-        elif isinstance(var, Variable):
-            cols = []
-            names = []
-            for v in var.variables:
-                cur, cur_names = self.build_columns(X,
-                                                    v,
-                                                    col_cache=col_cache,
-                                                    fit=fit)
-                cols.append(cur)
-                names.extend(cur_names)
-            cols = np.column_stack(cols)
-            if len(names) != cols.shape[1]:
-                names = ['{0}[{1}]'.format(var.name, j) for j in range(cols.shape[1])]
-
-            if var.encoder:
-                try:
-                    check_is_fitted(var.encoder)
-                    if fit and var not in self.encoders_:
-                        raise ValueError('encoder has already been fit previously')
-                except NotFittedError as e:
-                    if fit:
-                        self.fit_encoder(var, pd.DataFrame(np.asarray(cols),
-                                                           columns=names))
-                    # known issue with Pipeline
-                    # https://github.com/scikit-learn/scikit-learn/issues/18648
-                    elif isinstance(var.encoder, Pipeline):  
-                        check_is_fitted(var.encoder, 'n_features_in_') 
-                    else:
-                        raise(e)
-                except Exception as e:  # was not the NotFitted
-                    raise ValueError(e)
-                if var.use_transform:
-                    cols = var.encoder.transform(cols)
-                else:
-                    cols = var.encoder.predict(cols)
-                if hasattr(var.encoder, 'columns_') and not var.override_encoder_colnames:
-                    names = var.encoder.columns_
-                else:
-                    if cols.ndim > 1 and cols.shape[1] > 1:
-                        names = ['{0}[{1}]'.format(var.name, j) for j in range(cols.shape[1])]
-                    else:
-                        names = [var.name]
-
-            
-        else:
-            raise ValueError('expecting either a column or a Variable')
-        val = pd.DataFrame(np.asarray(cols), columns=names)
-
-        if isinstance(X, (pd.DataFrame, pd.Series)):
-            val.index = X.index
-
-        if DOCACHE:
-            col_cache[joblib_hash([var.name, X])] = (val, names)
-        return val, names
 
     def build_sequence(self,
                        X,
@@ -500,10 +395,12 @@ class ModelSpec(TransformerMixin, BaseEstimator):
             dfs.append(df_int)
 
         for term_ in self.terms_:
-            term_df, _  = self.build_columns(X,
-                                             term_,
-                                             col_cache=col_cache,
-                                             fit=False)
+            term_df, _  = build_columns(self.column_info_,
+                                        X,
+                                        term_,
+                                        col_cache=col_cache,
+                                        encoders=self.encoders_,
+                                        fit=False)
             if isinstance(X, (pd.Series, pd.DataFrame)):
                 term_df.index = X.index
 
@@ -521,6 +418,125 @@ class ModelSpec(TransformerMixin, BaseEstimator):
                 return (np.column_stack([dfs[j] for j in range(len(dfs)) if j != i]) for i in range(len(dfs)))
         else:
             raise ValueError('anova_type must be one of ["sequential", "drop"]')
+
+def fit_encoder(encoders, var, X):
+    """
+    Fit an encoder if not already registered
+    in `encoders`.
+
+    Parameters
+    ----------
+
+    var : Variable
+        Variable whose encoder will be fit.
+
+    X : array-like
+        X on which encoder will be fit.
+
+    """
+
+    if var.encoder not in encoders:
+        encoders[var] = var.encoder.fit(X)
+            
+def build_columns(column_info, X, var, encoders={}, col_cache={}, fit=False):
+    """
+    Build columns for a Variable from X.
+
+    Parameters
+    ----------
+
+    column_info: dict
+        Dictionary with values specifying sets of columns to
+        be concatenated into a design matrix.
+
+    X : array-like
+        X on which columns are evaluated.
+
+    var : Variable
+        Variable whose columns will be built, typically a key in `column_info`.
+
+    col_cache: 
+        Dict where columns will be stored --
+        if `var.name` in `col_cache` then just
+        returns those columns.
+
+    fit : bool (optional)
+        If True, then try to fit encoder.
+        Will raise an error if encoder has already been fit.
+
+    """
+
+    if var in column_info:
+        var = column_info[var]
+
+    if DOCACHE and joblib_hash([var, X]) in col_cache:
+        return col_cache[joblib_hash([var, X])]
+
+    if isinstance(var, Column):
+        if DOCACHE:
+            if joblib_hash([var, X]) not in col_cache:
+                cols, names = var.get_columns(X, fit=fit)
+                col_cache[joblib_hash([var, X])] = cols, names
+            cols, name = col_cache[joblib_hash([var, X])]
+        else:
+            cols, names = var.get_columns(X, fit=fit)
+    elif isinstance(var, Variable):
+        cols = []
+        names = []
+        for v in var.variables:
+            cur, cur_names = build_columns(column_info,
+                                           X,
+                                           v,
+                                           encoders=encoders,
+                                           col_cache=col_cache,
+                                           fit=fit)
+            cols.append(cur)
+            names.extend(cur_names)
+        cols = np.column_stack(cols)
+        if len(names) != cols.shape[1]:
+            names = ['{0}[{1}]'.format(var.name, j) for j in range(cols.shape[1])]
+
+        if var.encoder:
+            try:
+                check_is_fitted(var.encoder)
+                if fit and var not in encoders:
+                    raise ValueError('encoder has already been fit previously')
+            except NotFittedError as e:
+                if fit:
+                    fit_encoder(var, pd.DataFrame(np.asarray(cols),
+                                                  columns=names))
+                # known issue with Pipeline
+                # https://github.com/scikit-learn/scikit-learn/issues/18648
+                elif isinstance(var.encoder, Pipeline):  
+                    check_is_fitted(var.encoder, 'n_features_in_') 
+                else:
+                    raise(e)
+            except Exception as e:  # was not the NotFitted
+                raise ValueError(e)
+            if var.use_transform:
+                cols = var.encoder.transform(cols)
+            else:
+                cols = var.encoder.predict(cols)
+            if hasattr(var.encoder, 'columns_') and not var.override_encoder_colnames:
+                names = var.encoder.columns_
+            else:
+                if cols.ndim > 1 and cols.shape[1] > 1:
+                    names = ['{0}[{1}]'.format(var.name, j) for j in range(cols.shape[1])]
+                else:
+                    names = [var.name]
+
+
+    else:
+        raise ValueError('expecting either a column or a Variable')
+    val = pd.DataFrame(np.asarray(cols), columns=names)
+
+    if isinstance(X, (pd.DataFrame, pd.Series)):
+        val.index = X.index
+
+    if DOCACHE:
+        col_cache[joblib_hash([var.name, X])] = (val, names)
+    return val, names
+
 
 def derived_variable(variables, encoder=None, name=None, use_transform=True):
     """
@@ -567,7 +583,7 @@ def contrast(col,
 
     col: column identifier
 
-    method: 
+    method: 'drop', 'sum', None or callable
 
     drop_level: level identifier
 

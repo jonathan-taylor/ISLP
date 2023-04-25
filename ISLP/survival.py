@@ -26,8 +26,6 @@ def sim_time(linpred,
     with `l` the linear predictor `linpred` as in a
     Cox proportional hazards model.
 
-    Compute a grid of lambda values for LASSO path.
-
     Parameters
     ----------
 
