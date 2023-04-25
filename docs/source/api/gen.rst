@@ -6,7 +6,6 @@
    generated/ISLP.bart.bart
    generated/ISLP.bart.likelihood
    generated/ISLP.bart.particle_tree
-   generated/ISLP.bart.tmpbart
    generated/ISLP.bart.tree
    generated/ISLP.cluster
    generated/ISLP.models
