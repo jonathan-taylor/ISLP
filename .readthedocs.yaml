@@ -28,3 +28,5 @@ python:
    - requirements: keras_requirements.txt
    - method: pip
      path: .
+   - method: pip
+     path: rpy2
