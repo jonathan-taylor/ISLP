@@ -31,10 +31,8 @@ from ISLP.models import (ModelSpec,
                          summarize)
 ```
 
-### Forward Selection
- 
-We will  apply the forward-selection approach to the  `Hitters` 
-data.  We wish to predict a baseball player’s `Salary` on the
+We will carry out two simple ANOVA analyses of the `Hitters` data.
+We wish to predict a baseball player’s `Salary` on the
 basis of various statistics associated with performance in the
 previous year.
 
@@ -61,20 +59,20 @@ that there are both career and 1986 offensive stats, as well as some defensive s
 Let's group the offensive into recent and career offensive stats, as well as a group of defensive variables.
 
 ```{code-cell} ipython3
-offense_1986 = derived_feature(['AtBat', 'Hits', 'HmRun', 'Runs', 'RBI', 'Walks'],
-                               name='offense_1986')
-offense_career = derived_feature(['CAtBat', 'CHits', 'CHmRun', 'CRuns', 'CRBI', 'CWalks'],
-                                 name='offense_career')
-defense_1986 = derived_feature(['PutOuts', 'Assists', 'Errors'],
-                               name='defense_1986')
 confounders = derived_feature(['Division', 'League', 'NewLeague'],
                               name='confounders')
+offense_career = derived_feature(['CAtBat', 'CHits', 'CHmRun', 'CRuns', 'CRBI', 'CWalks'],
+                                 name='offense_career')
+offense_1986 = derived_feature(['AtBat', 'Hits', 'HmRun', 'Runs', 'RBI', 'Walks'],
+                               name='offense_1986')
+defense_1986 = derived_feature(['PutOuts', 'Assists', 'Errors'],
+                               name='defense_1986')
 ```
 
 We'll first do a sequential ANOVA where terms are added sequentially
 
 ```{code-cell} ipython3
-design = ModelSpec([confounders, offense_1986, defense_1986, offense_career]).fit(Hitters)
+design = ModelSpec([confounders, offense_career, defense_1986, offense_1986]).fit(Hitters)
 Y = np.array(Hitters['Salary'])
 X = design.transform(Hitters)
 ```
@@ -94,7 +92,9 @@ We'll first produce the sequential, or Type I ANOVA results. This builds up a mo
 two successive models.
 
 ```{code-cell} ipython3
-anova_lm(*[OLS(Y, D).fit() for D in design.build_sequence(Hitters, anova_type='sequential')])
+df = anova_lm(*[OLS(Y, D).fit() for D in design.build_sequence(Hitters, anova_type='sequential')])
+df.index = design.names
+df
 ```
 
 We can similarly compute the Type II ANOVA results which drops each term and compares to the full model.
@@ -108,4 +108,8 @@ for d in design.build_sequence(Hitters, anova_type='drop'):
 df = pd.concat(dfs)
 df.index = design.names
 df
+```
+
+```{code-cell} ipython3
+
 ```
