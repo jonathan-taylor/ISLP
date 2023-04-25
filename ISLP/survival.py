@@ -14,7 +14,7 @@ from scipy.optimize import root
 
 def sim_time(linpred,
              cum_hazard,
-             rng):
+             rng=None):
     """
     Simulate a survival time for a 
     cumulative hazard function $H$ with cumulative hazard
@@ -39,6 +39,9 @@ def sim_time(linpred,
         Used to generate survival times.
     """
 
+    if rng is None:
+        rng = np.random.default_rng()
+        
     U = rng.uniform()
     B = - np.log(U) /  np.exp(linpred)
     lower, upper = 1, 2
