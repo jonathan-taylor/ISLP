@@ -2,3 +2,4 @@ texext
 numpydoc
 myst_nb
 sphinx-book-theme
+rpy2
