@@ -28,4 +28,4 @@ python:
      path: .
 
 conda:
-   environment: environment.yaml	
+   environment: environment.yaml
