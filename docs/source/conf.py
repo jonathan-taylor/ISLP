@@ -28,6 +28,7 @@ extensions = [
 graphviz_dot = '/opt/homebrew/bin/dot'
 numpydoc_class_members_toctree = False
 nb_execution_mode = "cache"
+nb_kernel_rgx_aliases = {'python3': "islp_test"}
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
@@ -42,7 +43,13 @@ templates_path = ['_templates']
 
 # -- Options for HTML output
 
-html_theme = 'sphinx_rtd_theme'
+html_theme = "sphinx_book_theme" 
+html_theme_options = {
+    "repository_url": "https://github.com/intro-stat-learning/ISLP.git",
+    "use_repository_button": True,
+}
+html_title = "Introduction to Statistical Learning (Python)"
+html_logo = "logo.png"
 
 # -- Options for EPUB output
 epub_show_urls = 'footnote'
