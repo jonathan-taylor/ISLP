@@ -235,8 +235,10 @@ def main(**extra_args):
           provides=info.PROVIDES,
           packages     = ['ISLP',
                           'ISLP.models',
+                          'ISLP.models',
                           'ISLP.bart',
-                          'ISLP.torch'
+                          'ISLP.torch',
+                          'ISLP.data'
                           ],
           ext_modules = EXTS,
           package_data = {"ISLP":["data/*csv", "data/*npy", "data/*data"]},
