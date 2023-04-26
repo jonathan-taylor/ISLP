@@ -44,6 +44,7 @@ a fixed lambda test for the LASSO.
 NUMPY_MIN_VERSION='1.7.1'
 SCIPY_MIN_VERSION = '0.9'
 PANDAS_MIN_VERSION = "0.20"
+PANDAS_MAX_VERSION = "1.9"
 SKLEARN_MIN_VERSION = '1.2'
 STATSMODELS_MIN_VERSION = '0.13'
 MATPLOTLIB_MIN_VERSION = '3.3.3'
@@ -71,6 +72,7 @@ REQUIRES            = ["numpy (>=%s)" % NUMPY_MIN_VERSION,
                        "scipy (>=%s)" % SCIPY_MIN_VERSION,
                        "statsmodels (>=%s)" % STATSMODELS_MIN_VERSION,
                        "pandas (>=%s)" % PANDAS_MIN_VERSION,
+                       "pandas (<=%s)" % PANDAS_MAX_VERSION,
                        "sklearn (>=%s)" % SKLEARN_MIN_VERSION,
                        "lifelines",
                        "joblib",
