@@ -5,6 +5,8 @@ for ISLP.
 
 ## Install instructions
 
+### Mac OS X / Linux
+
 We generally recommend creating a [conda](https://anaconda.org) environment to isolate any code
 from other dependencies. The `ISLP` package does not have unusual dependencies, but this is still
 good practice. To create a conda environment in a Mac OS X or Linux environment run:
@@ -19,7 +21,9 @@ To run python code in this environment, you must activate it:
 conda activate islp
 ```
 
-On windows, create a `Python` environment called `islp` in the Anaconda app. This can be done by selecting `Environments` on the left hand side of the app's screen. After creating the environment, open a terminal within that environment by clicking on the <font color="green">Play</font> button.
+### Windows
+
+On windows, create a `Python` environment called `islp` in the Anaconda app. This can be done by selecting `Environments` on the left hand side of the app's screen. After creating the environment, open a terminal within that environment by clicking on the "Play" button.
 
 
 ## Installing `ISLP`
