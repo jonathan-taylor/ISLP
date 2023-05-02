@@ -28,7 +28,7 @@ On windows, create a `Python` environment called `islp` in the Anaconda app. Thi
 
 ## Installing `ISLP`
 
-Running in the desired environment, we use `pip` to install the `ISLP` package:
+Having completed the steps above, we use `pip` to install the `ISLP` package:
 
 ```{python}
 pip install ISLP
@@ -44,6 +44,22 @@ started a terminal within that environment from the Anaconda app (Windows).
 ```{python}
 pip install -r https://raw.githubusercontent.com/intro-stat-learning/ISLP/main/torch_requirements.txt
 ```
+
+## Jupyter
+
+### Mac OS X
+
+If JupyterLab is not already installed, run the following after having activated your `islp` environment:
+
+```{python}
+pip install jupyterlab
+```
+
+### Windows
+
+Either use the same `pip` command above or install JupyterLab from the `Home` tab. Ensure that the environment
+is your `islp` environment. This information appears near the top left in the Anaconda `Home` page.
+
 
 ## Documentation
 
