@@ -96,7 +96,7 @@ class Tree:
             current_node = self.get_node(node_index)
             output[current_node.idx_data_points] = current_node.value
 
-        return output.astype(np.float)
+        return output.astype(float)
 
     def predict_out_of_sample(self, X):
         """

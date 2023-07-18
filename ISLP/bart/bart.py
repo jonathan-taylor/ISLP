@@ -101,7 +101,7 @@ class BART(BaseEnsemble, RegressorMixin):
         check_is_fitted(self)
 
         nsample = len(self.trees_sample_)
-        output = np.zeros(X.shape[0], np.float)
+        output = np.zeros(X.shape[0], float)
 
         for trees in self.trees_sample_:
             for tree in trees:
@@ -118,7 +118,7 @@ class BART(BaseEnsemble, RegressorMixin):
 
         trees_sample_ = self.trees_sample_[start_idx:]
         nsample = len(trees_sample_)
-        output = np.zeros((nsample, X.shape[0]), np.float)
+        output = np.zeros((nsample, X.shape[0]), float)
 
         for nstep, trees in enumerate(trees_sample_):
             for tree in trees:
