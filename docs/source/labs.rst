@@ -19,7 +19,6 @@ To ensure you have the same package versions as those built here, run:
 
 .. toctree::
    :maxdepth: 1
-   :numbered:	      
       
    labs/Ch2-statlearn-lab
    labs/Ch3-linreg-lab
