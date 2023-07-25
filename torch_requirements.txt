@@ -1,6 +1,5 @@
-torch
-torchvision
-torchmetrics
-torchdata
-pytorch_lightning
-torchinfo
+torch==2.0.0
+torchvision==0.15.1
+pytorch_lightning==2.0.2
+torchinfo==1.7.2
+torchmetrics==0.11.4

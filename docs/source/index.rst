@@ -15,5 +15,6 @@ Contents
    transforms
    models
    helpers
+   labs
    imdb
 

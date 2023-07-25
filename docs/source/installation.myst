@@ -48,12 +48,38 @@ tags: [skip-execution]
 pip install ISLP
 ```
 
+## Frozen environment
+
+```{attention}
+
+Python packages change frequently. The labs here are built
+with specific versions of the various packages. 
+```
+
+To ensure you have the same package versions as those built here, run:
+
+```{code-cell} ipython3
+---
+tags: [skip-execution]
+---
+pip install -r https://raw.githubusercontent.com/intro-stat-learning/ISLP/main/frozen_requirements.txt
+```
+
 ## Torch requirements
 
-The `ISLP` labs use `torch` and various related packages for the lab on deep learning. The requirements
-can be found [here](https://github.com/intro-stat-learning/ISLP/blob/main/torch_requirements.txt). Alternatively, you can install them directly using `pip` within a terminal. As above, ensure
-that you have activated that conda environment (Mac OS or Linux) or
-started a terminal within that environment from the Anaconda app (Windows).
+The `ISLP` labs use `torch` and various related packages for the lab
+on deep learning. The requirements can be found
+[here](https://github.com/intro-stat-learning/ISLP/blob/main/torch_requirements.txt). Alternatively, you can install them
+directly using `pip` within a terminal. As above, ensure that you have
+activated that conda environment (Mac OS or Linux) or started a
+terminal within that environment from the Anaconda app (Windows).
+
+```{attention}
+Because
+`torch` and related libraries change frequently, you will note that we
+have pinned the versions at specific versions that were used to make
+current verisons of the labs.
+```
 
 ```{code-cell} ipython3
 ---

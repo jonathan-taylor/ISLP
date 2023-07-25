@@ -24,7 +24,7 @@ sphinx:
 # Optionally declare the Python requirements required to build your docs
 python:
    install:
-   - requirements: requirements.txt
+   - requirements: frozen_requirements.txt
    - requirements: docs/requirements.txt
    - requirements: torch_requirements.txt
    - requirements: keras_requirements.txt
