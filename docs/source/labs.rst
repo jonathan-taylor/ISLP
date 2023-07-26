@@ -28,6 +28,7 @@ To ensure you have the same package versions as those built here, run:
    labs/Ch7-nonlin-lab
    labs/Ch8-baggboost-lab
    labs/Ch9-svm-lab
+   labs/Ch10-deeplearning-lab
    labs/Ch11-surv-lab
    labs/Ch12-unsup-lab
    labs/Ch13-multiple-lab                               
