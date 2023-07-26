@@ -59,6 +59,16 @@ throws up many warnings. We have suppressed them below.
 
         os.system(f'jupytext --sync {base}.ipynb; rm {base}.md')
 
+        cmd = f'jupyter nbconvert --execute --inplace {nbfile}'
+        if labname[:3] == 'Ch2':
+            cmd += ' --allow-errors'
+        os.system(cmd)
+
+
+for nbfile in glob('source/helpers/*nb') + glob('source/datasets/*nb'):
+    cmd = f'jupyter nbconvert --execute --inplace {nbfile}'
+    os.system(cmd)
+
 
 # add a warning for ridge
 # at ## Ridge Regression and the Lasso
