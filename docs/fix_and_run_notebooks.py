@@ -1,21 +1,24 @@
 import os, nbformat
 from glob import glob
 
-for f in glob('source/labs/Ch14*'):
+import __main__
+dirname = os.path.split(__main__.__file__)[0]
+
+for f in glob(os.path.join(dirname, 'source', 'labs', 'Ch14*')):
     os.remove(f)
 
 version = 'v1'
 main = 'main'
 os.system(f'''
-cd ISLP_labs;
+cd {dirname}/ISLP_labs;
 git checkout {version};
-cp * ../source/labs;
+cp * {dirname}/source/labs;
 git checkout {main};
-pip install -r ../source/labs/frozen_requirements.txt;
-pip install -r ../source/labs/torch_requirements.txt;
+pip install -r {dirname}/source/labs/frozen_requirements.txt;
+pip install -r {dirname}/source/labs/torch_requirements.txt;
 ''')
 
-for nbfile in glob('source/labs/*nb'):
+for nbfile in glob(os.path.join(dirname, 'source', 'labs', '*nb')):
     base = os.path.splitext(nbfile)[0]
     labname = os.path.split(base)[1]
 

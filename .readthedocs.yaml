@@ -13,7 +13,8 @@ build:
   apt_packages:
     - r-base
   jobs:
-    pre_install:
+    pre_build:
+      - pip install nbformat
       - python docs/fix_and_run_notebooks.py
 
 submodules:
