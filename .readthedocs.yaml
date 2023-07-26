@@ -12,7 +12,13 @@ build:
     python: "3.9"
   apt_packages:
     - r-base
-    
+  jobs:
+    pre_install:
+      - python docs/fix_and_run_notebooks.py
+
+submodules:
+  include: all
+
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
    configuration: docs/source/conf.py
