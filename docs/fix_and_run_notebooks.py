@@ -4,14 +4,23 @@ from glob import glob
 for f in glob('source/labs/Ch14*'):
     os.remove(f)
 
-
+version = 'v1'
+main = 'main'
+os.system(f'''
+cd ISLP_labs;
+git checkout {version};
+cp * ../source/labs;
+git checkout {main};
+pip install -r ../source/labs/frozen_requirements.txt;
+pip install -r ../source/labs/torch_requirements.txt;
+''')
 
 for nbfile in glob('source/labs/*nb'):
     base = os.path.splitext(nbfile)[0]
     labname = os.path.split(base)[1]
 
     colab_code = f'''
-<a target="_blank" href="https://colab.research.google.com/github/intro-stat-learning/ISLP/blob/main/docs/source/labs/{labname}.ipynb">
+<a target="_blank" href="https://colab.research.google.com/github/intro-stat-learning/ISLP_labs/blob/{version}/{labname}.ipynb">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
 
 </a>
@@ -40,36 +49,23 @@ throws up many warnings. We have suppressed them below.
 
     if labname[:4] != 'Ch10':
 
+        # clear outputs for all but Ch10
         os.system(f'jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace {nbfile}')
 
-        os.system(f'jupytext --set-formats ipynb,md:myst {nbfile}; jupytext --sync {nbfile}')
+    os.system(f'jupytext --set-formats ipynb,md:myst {nbfile}; jupytext --sync {nbfile}')
 
-        myst = open(f'{base}.md').read().strip()
+    myst = open(f'{base}.md').read().strip()
 
-        new_myst = []
-        for l in myst.split('\n'):
-            if l.strip()[:9] != '# Chapter':
-                if 'Lab:' in l:
-                    l = '# ' + l[6:] + '\n' + colab_code
-                new_myst.append(l)
-            
-        myst = '\n'.join(new_myst) # remove the "Chapter %d
+    new_myst = []
+    for l in myst.split('\n'):
+        if l.strip()[:9] != '# Chapter':
+            if 'Lab:' in l:
+                l = l.replace('Lab:', '') + '\n' + colab_code
+            new_myst.append(l)
 
-        open(f'{base}.md', 'w').write(myst)
+    myst = '\n'.join(new_myst) # remove the "Chapter %d
 
-        os.system(f'jupytext --sync {base}.ipynb; rm {base}.md')
+    open(f'{base}.md', 'w').write(myst)
 
-        cmd = f'jupyter nbconvert --execute --inplace {nbfile}'
-        if labname[:3] == 'Ch2':
-            cmd += ' --allow-errors'
-        os.system(cmd)
-
-
-for nbfile in glob('source/helpers/*nb') + glob('source/datasets/*nb'):
-    cmd = f'jupyter nbconvert --execute --inplace {nbfile}'
-    os.system(cmd)
-
-
-# add a warning for ridge
-# at ## Ridge Regression and the Lasso
+    os.system(f'jupytext --sync {base}.ipynb; rm {base}.md')
 
