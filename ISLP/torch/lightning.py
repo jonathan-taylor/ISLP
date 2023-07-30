@@ -14,7 +14,7 @@ from torchmetrics import Accuracy
 
 from pytorch_lightning import (LightningModule,
                                LightningDataModule)
-from pytorch_lightning.utilities.distributed import rank_zero_only
+from pytorch_lightning.utilities import rank_zero_only
 from pytorch_lightning.callbacks import Callback
 
 class SimpleDataModule(LightningDataModule):
@@ -132,14 +132,15 @@ class SimpleModule(LightningModule):
                  model,
                  loss,
                  optimizer=None,
-                 metrics={},
+                 metrics=None,
                  on_epoch=True,
                  pre_process_y_for_metrics=lambda y: y):
 
         super(SimpleModule, self).__init__()
 
         self.model = model
-        self.loss = loss or nn.MSELoss()
+        self.loss = loss
+
         optimizer = optimizer or RMSprop(model.parameters())
         self._optimizer = optimizer
         self.metrics = metrics
@@ -160,8 +161,10 @@ class SimpleModule(LightningModule):
 
         y_ = self.pre_process_y_for_metrics(y)
         for _metric in self.metrics.keys():
+            pl_metric = self.metrics[_metric]
             self.log(f"train_{_metric}",
-                     self.metrics[_metric](preds, y_),
+                     pl_metric(preds.to(pl_metric.device),
+                               y_.to(pl_metric.device)),
                      on_epoch=self.on_epoch)
         return loss
 
@@ -181,22 +184,36 @@ class SimpleModule(LightningModule):
 
     @staticmethod
     def regression(model,
+                   metrics=None,
+                   device='cpu',
                    **kwargs):
-        loss = nn.MSELoss()
+
+        if metrics is None:
+            metrics = {}
+
+        loss = nn.MSELoss().to(device)
+        if device is not None:
+            for key, metric in metrics.items():
+                metrics[key] = metric.to(device)
         return SimpleModule(model,
                             loss,
+                            metrics=metrics,
                             **kwargs)
 
     @staticmethod
     def binary_classification(model,
-                              metrics={},
-                              device=None,
+                              metrics=None,
+                              device='cpu',
                               **kwargs):
+
+        if metrics is None:
+            metrics = {}
+
         loss = nn.BCEWithLogitsLoss()
         if 'accuracy' not in metrics:
-            metrics['accuracy'] = Accuracy()
+            metrics['accuracy'] = Accuracy('binary')
         if device is not None:
-            for key, metric in metrics:
+            for key, metric in metrics.items():
                 metrics[key] = metric.to(device)
         return SimpleModule(model,
                             loss,
@@ -205,15 +222,21 @@ class SimpleModule(LightningModule):
                             **kwargs)
 
     @staticmethod
-    def classification(model,
-                       metrics={},
-                       device=None,
-                       **kwargs):
-        loss = nn.CrossEntropyLoss()
+    def multiclass(model,
+                   num_classes,
+                   metrics=None,
+                   device='cpu',
+                   **kwargs):
+
+        if metrics is None:
+            metrics = {}
+
+        loss = nn.CrossEntropyLoss().to(device)
         if 'accuracy' not in metrics:
-            metrics['accuracy'] = Accuracy()
+            metrics['accuracy'] = Accuracy('multiclass',
+                                           num_classes=num_classes)
         if device is not None:
-            for key, metric in metrics:
+            for key, metric in metrics.items():
                 metrics[key] = metric.to(device)
         return SimpleModule(model,
                             loss,
@@ -233,7 +256,7 @@ class ErrorTracker(Callback):
                                   pl_module,
                                   batch,
                                   batch_idx,
-                                  dataloader_idx):
+                                  dataloader_idx=0):
         x, y = batch
         self.val_preds.append(pl_module.forward(x))
         self.val_targets.append(y)
@@ -252,8 +275,10 @@ class ErrorTracker(Callback):
                       on_epoch=pl_module.on_epoch)
 
         for _metric in pl_module.metrics.keys():
+            pl_metric = pl_module.metrics[_metric]
             pl_module.log(f"valid_{_metric}",
-                          pl_module.metrics[_metric](preds, targets_),
+                          pl_metric(preds.to(pl_metric.device),
+                                    targets_.to(pl_metric.device)),
                           on_epoch=pl_module.on_epoch)
 
     def on_test_epoch_start(self,
@@ -267,7 +292,7 @@ class ErrorTracker(Callback):
                             pl_module,
                             batch,
                             batch_idx,
-                            dataloader_idx):
+                            dataloader_idx=0):
         x, y = batch
         self.test_preds.append(pl_module.forward(x))
         self.test_targets.append(y)
@@ -286,7 +311,9 @@ class ErrorTracker(Callback):
                       on_epoch=pl_module.on_epoch)
 
         for _metric in pl_module.metrics.keys():
+            pl_metric = pl_module.metrics[_metric]
             pl_module.log(f"test_{_metric}",
-                          pl_module.metrics[_metric](preds, targets_),
+                          pl_metric(preds.to(pl_metric.device),
+                                    targets_.to(pl_metric.device)),
                           on_epoch=pl_module.on_epoch)
 
