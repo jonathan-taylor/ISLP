@@ -61,8 +61,10 @@ To ensure you have the same package versions as those built here, run:
 ---
 tags: [skip-execution]
 ---
-pip install -r https://raw.githubusercontent.com/intro-stat-learning/ISLP_labs/v1/frozen_requirements.txt
+pip install -r https://raw.githubusercontent.com/intro-stat-learning/ISLP_labs/v2_devel/frozen_requirements.txt
 ```
+
+For more specific install instructions go to [ISLP_labs](https://github.com/intro-stat-learning/ISLP_labs/tree/v2_devel).
 
 ## Torch requirements
 
