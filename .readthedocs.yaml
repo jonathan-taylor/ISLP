@@ -31,9 +31,9 @@ sphinx:
 # Optionally declare the Python requirements required to build your docs
 python:
    install:
-   - requirements: frozen_requirements.txt
+   - requirements: https://raw.githubusercontent.com/intro-stat-learning/ISLP_labs/v2_devel/frozen_requirements.txt;
    - requirements: docs/requirements.txt
-   - requirements: torch_requirements.txt
+   - requirements: https://raw.githubusercontent.com/intro-stat-learning/ISLP_labs/v2_devel/torch_requirements.txt;
    - requirements: keras_requirements.txt
    - method: pip
      path: .
