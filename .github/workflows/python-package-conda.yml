@@ -20,7 +20,9 @@ jobs:
         echo $CONDA/bin >> $GITHUB_PATH
     - name: Install dependencies
       run: |
-        conda env update --file environment.yml --name base
+        pip install -r https://raw.githubusercontent.com/intro-stat-learning/ISLP/main/requirements.txt
+        pip install -r https://raw.githubusercontent.com/intro-stat-learning/ISLP/main/torch_requirements.txt
+        
     - name: Lint with flake8
       run: |
         conda install flake8
