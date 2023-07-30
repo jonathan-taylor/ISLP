@@ -222,11 +222,11 @@ class SimpleModule(LightningModule):
                             **kwargs)
 
     @staticmethod
-    def multiclass(model,
-                   num_classes,
-                   metrics=None,
-                   device='cpu',
-                   **kwargs):
+    def classification(model,
+                       num_classes,
+                       metrics=None,
+                       device='cpu',
+                       **kwargs):
 
         if metrics is None:
             metrics = {}
