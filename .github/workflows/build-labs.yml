@@ -1,4 +1,4 @@
-name: Python Package using Conda
+name: Build labs
 
 on: [push]
 
@@ -30,8 +30,9 @@ jobs:
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: Test with pytest
+    - name: Test labs (except Ch2, Ch10)
       run: |
-        conda install pytest
-        pytest
+        git clone https://github.com/intro-stat-learning/ISLP_labs.git
+        cd ISLP_labs
+	jupyter nbconvert --execute --inplace Ch{3,4,5,6,7,8,9,11,12,13}*nb
 
