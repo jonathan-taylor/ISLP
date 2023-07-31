@@ -16,7 +16,7 @@ def load_data(dataset):
     if dataset == 'NCI60':
         with as_file(files('ISLP').joinpath('data', 'NCI60data.npy')) as features:
             X = np.load(features)
-            labels = as_file(files('ISLP').joinpath('data', 'NCI60labs.csv'))
+        with as_file(files('ISLP').joinpath('data', 'NCI60labs.csv')) as labels:
             Y = pd.read_csv(labels)
         return {'data':X, 'labels':Y}
     elif dataset == 'Khan':
@@ -33,7 +33,7 @@ def load_data(dataset):
             xtrain = xtrain.rename(columns=dict([('V%d' % d, 'G%04d' % d) for d in range(1, len(xtest.columns)+0)]))
 
         with as_file(files('ISLP').joinpath('data', 'Khan_ytrain.csv')) as ytrain:
-        ytrain = pd.read_csv(ytrain)
+            ytrain = pd.read_csv(ytrain)
         ytrain = ytrain.rename(columns={'x':'Y'})
         ytrain = ytrain['Y']
 
