@@ -23,7 +23,6 @@ jobs:
         pip install -r https://raw.githubusercontent.com/intro-stat-learning/ISLP/main/requirements.txt
         pip install -r https://raw.githubusercontent.com/intro-stat-learning/ISLP/main/torch_requirements.txt
         pip install git+https://github.com/intro-stat-learning/ISLP.git
-        
     - name: Lint with flake8
       run: |
         conda install flake8
@@ -35,3 +34,9 @@ jobs:
       run: |
         conda install pytest
         pytest
+    - name: Test labs (except Ch2, Ch10)
+      run: |
+        git clone https://github.com/intro-stat-learning/ISLP_labs.git
+        cd ISLP_labs
+	jupyter nbconvert --execute --inplace Ch{3,4,5,6,7,8,9,11,12,13}*nb
+
