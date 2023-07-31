@@ -82,7 +82,7 @@ def marginal_loglikelihood(response,
     if not incremental:
         if responsesq_sum is None:
             responsesq_sum = (response**2).sum()
-            response_moments = (n, response_sum, responseseq_sum)
+            response_moments = (n, response_sum, responsesq_sum)
             
         logL -= n * 0.5 * np.log(sigmasq)
         logL -= 0.5 * responsesq_sum / sigmasq

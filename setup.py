@@ -213,10 +213,7 @@ cmdclass=versioneer.get_cmdclass()
 
 # get long_description
 
-if sys.version_info[0] > 2:
-    long_description = open('README.md', 'rt', encoding='utf-8').read()
-else:
-    long_description = unicode(file('README.md').read(), 'utf-8')
+long_description = open('README.md', 'rt', encoding='utf-8').read()
 
 def main(**extra_args):
     setup(name=info.NAME,

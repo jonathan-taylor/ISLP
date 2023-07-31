@@ -8,7 +8,6 @@ print(dirname)
 for f in glob(os.path.join(dirname, 'source', 'labs', 'Ch14*')):
     os.remove(f)
     print(f)
-    stop
     
 version = 'v1'
 main = 'main'

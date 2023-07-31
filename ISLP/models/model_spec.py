@@ -715,7 +715,7 @@ def contrast(col,
                   is_categorical=True,
                   encoder=encoder)
 
-def ordinal(col, *args, **kwargs):
+def ordinal(col, name=None, *args, **kwargs):
     """
     Create ordinal encoding of categorical feature.
     
