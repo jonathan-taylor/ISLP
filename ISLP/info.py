@@ -25,7 +25,7 @@ CLASSIFIERS = ["Development Status :: 3 - Alpha",
                "Programming Language :: Python",
                "Topic :: Scientific/Engineering"]
 
-description  = 'Testing a fixed value of lambda'
+description  = 'Library for ISLP labs'
 
 # Note: this long_description is actually a copy/paste from the top-level
 # README.txt, so that it shows up nicely on PyPI.  So please remember to edit
@@ -54,7 +54,7 @@ MAINTAINER          = "Jonathan Taylor"
 MAINTAINER_EMAIL    = ""
 DESCRIPTION         = description
 LONG_DESCRIPTION    = long_description
-URL                 = "http://github.org/jonathan.taylor/ISLP"
+URL                 = "http://github.org/intro-stat-learning/ISLP"
 DOWNLOAD_URL        = ""
 LICENSE             = "BSD license"
 CLASSIFIERS         = CLASSIFIERS
