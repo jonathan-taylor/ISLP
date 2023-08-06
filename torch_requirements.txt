@@ -1,5 +1,0 @@
-torch
-torchvision
-pytorch_lightning
-torchinfo
-torchmetrics
