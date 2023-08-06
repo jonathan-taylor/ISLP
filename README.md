@@ -37,13 +37,8 @@ pip install ISLP
 ### Torch requirements
 
 The `ISLP` labs use `torch` and various related packages for the lab on deep learning. The requirements
-can be found [here](torch_requirements.txt). Alternatively, you can install them directly using `pip` within a terminal. As above, ensure
-that you have activated that conda environment (Mac OS or Linux) or
-started a terminal within that environment from the Anaconda app (Windows).
-
-```{python}
-pip install -r https://raw.githubusercontent.com/intro-stat-learning/ISLP/main/torch_requirements.txt
-```
+are included in the requirements for `ISLP` with the exception of those needed
+for the labs which are included in the [requirements for the labs](https://github.com/intro-stat-learning/ISLP_labs/blob/main/requirements.txt). 
 
 ## Jupyter
 
