@@ -14,7 +14,6 @@ build:
     - r-base
   jobs:
     pre_build:
-      - pip install nbformat jupytext
       - python docs/fix_and_run_notebooks.py
 
 submodules:
