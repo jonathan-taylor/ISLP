@@ -31,8 +31,7 @@ sphinx:
 # Optionally declare the Python requirements required to build your docs
 python:
    install:
-   - requirements: docs/ISLP_labs/frozen_requirements.txt
+   - requirements: docs/ISLP_labs/requirements.txt
    - requirements: docs/requirements.txt
-   - requirements: docs/ISLP_labs/torch_requirements.txt
    - method: pip
      path: .
