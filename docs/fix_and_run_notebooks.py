@@ -61,7 +61,7 @@ throws up many warnings. We have suppressed them below.
     if labname[:4] != 'Ch10':
 
         # clear outputs for all but Ch10
-        os.system(f'jupyter nbconvert --execute --ClearOutputPreprocessor.enabled=True --inplace {nbfile}')
+        os.system(f'jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace {nbfile}')
 
     os.system(f'jupytext --set-formats ipynb,md:myst {nbfile}; jupytext --sync {nbfile}')
 
