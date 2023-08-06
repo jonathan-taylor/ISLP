@@ -22,7 +22,7 @@ jobs:
       run: |
         pip install -r https://raw.githubusercontent.com/intro-stat-learning/ISLP/main/requirements.txt
         pip install git+https://github.com/intro-stat-learning/ISLP.git
-	pip install torchvision torchinfo
+        pip install torchvision torchinfo
     - name: Lint with flake8
       run: |
         conda install flake8
