@@ -7,7 +7,7 @@ from torch.utils.data import (random_split,
                               DataLoader,
                               Dataset)
 from torch import tensor, Generator, concat
-from torchvision import transforms
+
 from torch.utils.data import TensorDataset
 
 from torchmetrics import Accuracy

@@ -11,6 +11,10 @@ for f in glob(os.path.join(dirname, 'source', 'labs', 'Ch14*')):
     
 version = 'v2'
 main = 'main'
+
+print(f'checking out version {version} of the labs')
+print(f'checking out version {main} of ISLP')
+
 os.system(f'''
 cd {dirname}/ISLP_labs;
 git checkout {version};
@@ -28,6 +32,9 @@ for nbfile in glob(os.path.join(dirname, 'source', 'labs', '*nb')):
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
 
 </a>
+
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/intro-stat-learning/ISLP_labs/{version}?labpath={labname}.ipynb)
+
 '''
 
     # allow errors for lab2
