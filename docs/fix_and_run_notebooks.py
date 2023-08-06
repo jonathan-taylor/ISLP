@@ -9,7 +9,7 @@ for f in glob(os.path.join(dirname, 'source', 'labs', 'Ch14*')):
     os.remove(f)
     print(f)
     
-version = 'v1'
+version = 'v2'
 main = 'main'
 os.system(f'''
 cd {dirname}/ISLP_labs;
@@ -17,7 +17,6 @@ git checkout {version};
 mkdir -p {dirname}/source/labs;
 cp -r * {dirname}/source/labs;
 git checkout {main};
-pip install -r {dirname}/source/labs/frozen_requirements.txt;
 ''')
 
 for nbfile in glob(os.path.join(dirname, 'source', 'labs', '*nb')):
