@@ -61,7 +61,7 @@ To ensure you have the same package versions as those built here, run:
 ---
 tags: [skip-execution]
 ---
-pip install -r https://raw.githubusercontent.com/intro-stat-learning/ISLP_labs/v2_devel/frozen_requirements.txt
+pip install -r https://raw.githubusercontent.com/intro-stat-learning/ISLP_labs/v2_devel/requirements.txt
 ```
 
 For more specific install instructions go to [ISLP_labs](https://github.com/intro-stat-learning/ISLP_labs/tree/v2_devel).
@@ -69,24 +69,14 @@ For more specific install instructions go to [ISLP_labs](https://github.com/intr
 ## Torch requirements
 
 The `ISLP` labs use `torch` and various related packages for the lab
-on deep learning. The requirements can be found
-[here](https://github.com/intro-stat-learning/ISLP/blob/main/torch_requirements.txt). Alternatively, you can install them
-directly using `pip` within a terminal. As above, ensure that you have
-activated that conda environment (Mac OS or Linux) or started a
-terminal within that environment from the Anaconda app (Windows).
+on deep learning. Most of the requirements are included in the requirements for `ISLP` though the labs
+also use `torchinfo` and `torchvision`. These will be installed by the `requirements.txt` above.
 
 ```{attention}
 Because
 `torch` and related libraries change frequently, you will note that we
 have pinned the versions at specific versions that were used to make
 current verisons of the labs.
-```
-
-```{code-cell} ipython3
----
-tags: [skip-execution]
----
-pip install -r https://raw.githubusercontent.com/intro-stat-learning/ISLP_labs/v1/torch_requirements.txt
 ```
 
 ## Jupyter

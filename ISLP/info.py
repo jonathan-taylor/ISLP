@@ -76,5 +76,8 @@ REQUIRES            = ["numpy (>=%s)" % NUMPY_MIN_VERSION,
                        "sklearn (>=%s)" % SKLEARN_MIN_VERSION,
                        "lifelines",
                        "joblib",
-                       "pygam"
+                       "pygam",
+                       "torch",
+                       "torchmetrics",
+                       "pytorch_lightning"
                        ]

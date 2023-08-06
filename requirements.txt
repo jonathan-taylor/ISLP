@@ -7,5 +7,9 @@ scikit-learn>=1.2
 joblib
 statsmodels>=0.13
 lifelines
+pygam # for GAM in Ch7
+torch
+pytorch_lightning
+torchmetrics
 #l0bnb # for bestsubsets
-#pygam # for GAM in Ch7
+
