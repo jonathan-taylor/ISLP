@@ -9,18 +9,15 @@ for f in glob(os.path.join(dirname, 'source', 'labs', 'Ch14*')):
     os.remove(f)
     print(f)
     
-version = 'v2'
-main = 'main'
+version = 'v2_devel'
 
 print(f'checking out version {version} of the labs')
-print(f'checking out version {main} of ISLP')
 
 os.system(f'''
 cd {dirname}/ISLP_labs;
 git checkout {version};
 mkdir -p {dirname}/source/labs;
 cp -r * {dirname}/source/labs;
-git checkout {main};
 ''')
 
 for nbfile in glob(os.path.join(dirname, 'source', 'labs', '*nb')):
@@ -37,8 +34,8 @@ for nbfile in glob(os.path.join(dirname, 'source', 'labs', '*nb')):
 
 '''
 
-    # allow errors for lab2
-    if labname[:3] == 'Ch6':
+    # allow errors for Ch02, suppress warnings for Ch06
+    if labname[:3] == 'Ch06':
         colab_code = ('''
 ```{code-cell}
 :tags: [hide-cell]
@@ -53,7 +50,7 @@ throws up many warnings. We have suppressed them below.
 ```
 
 ''' + colab_code)
-    if labname[:3] == 'Ch2':
+    if labname[:3] == 'Ch02':
         nb = nbformat.read(open(nbfile), 4)
         nb.metadata.setdefault('execution', {})['allow_errors'] = True
         nbformat.write(nb, open(nbfile, 'w'))
