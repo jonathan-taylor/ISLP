@@ -20,14 +20,14 @@ To ensure you have the same package versions as those built here, run:
 .. toctree::
    :maxdepth: 1
       
-   labs/Ch2-statlearn-lab
-   labs/Ch3-linreg-lab
-   labs/Ch4-classification-lab
-   labs/Ch5-resample-lab   
-   labs/Ch6-varselect-lab
-   labs/Ch7-nonlin-lab
-   labs/Ch8-baggboost-lab
-   labs/Ch9-svm-lab
+   labs/Ch02-statlearn-lab
+   labs/Ch03-linreg-lab
+   labs/Ch04-classification-lab
+   labs/Ch05-resample-lab   
+   labs/Ch06-varselect-lab
+   labs/Ch07-nonlin-lab
+   labs/Ch08-baggboost-lab
+   labs/Ch09-svm-lab
    labs/Ch10-deeplearning-lab
    labs/Ch11-surv-lab
    labs/Ch12-unsup-lab
