@@ -9,7 +9,7 @@ for f in glob(os.path.join(dirname, 'source', 'labs', 'Ch14*')):
     os.remove(f)
     print(f)
     
-version = 'v2_devel'
+version = 'v2'
 
 print(f'checking out version {version} of the labs')
 
