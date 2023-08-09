@@ -41,13 +41,6 @@ jobs:
           git clone https://github.com/intro-stat-learning/ISLP_labs.git
           cd ISLP_labs
           git checkout $LABS
-          jupyter nbconvert --execute --inplace Ch03-statlearn-lab.ipynb 
-          cp Ch03-statlearn-lab.ipynb ..
+          jupyter nbconvert --execute --inplace Ch03*lab.ipynb 
+          cp Ch03*lab.ipynb ..
 
-      # Store the output
-      - name: Upload Ch03 lab
-        uses: actions/upload-artifact@v3
-        with:
-          name: Ch03-statlearn-lab
-          path: Ch03-statlearn-lab.ipynb
-          retention-days: 5
