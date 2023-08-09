@@ -43,7 +43,7 @@ jobs:
           git checkout $LABS
           jupyter nbconvert --execute --inplace Ch02-statlearn-lab.ipynb --allow-errors 
           cp Ch02-statlearn-lab.ipynb ..
-	  
+
       # Store the output
       - name: Upload Ch02 lab
         uses: actions/upload-artifact@v3
