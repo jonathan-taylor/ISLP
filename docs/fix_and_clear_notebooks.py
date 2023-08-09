@@ -6,6 +6,8 @@ from glob import glob
 from ISLP import __lab_version__
 parser = ArgumentParser()
 parser.add_argument('--version', default=__lab_version__)
+parser.add_argument('--clear', dest='clear', action='store_true', default=False)
+parser.add_argument('--noclear', dest='clear', action='store_false')
 args = parser.parse_args()
 version = args.version
 
@@ -64,9 +66,10 @@ throws up many warnings. We have suppressed them below.
     if labname[:4] not in ['Ch10', 'Ch13']:
 
         # clear outputs for all but Ch10,Ch13
-        cmd = f'jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace {nbfile}'
-        print(f'Running: {cmd}')
-        os.system(cmd)
+        if args.clear:
+            cmd = f'jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace {nbfile}'
+            print(f'Running the clearing command: {cmd}')
+            os.system(cmd)
 
     cmd = f'jupytext --set-formats ipynb,md:myst {nbfile}; jupytext --sync {nbfile}'
     print(f'Running: {cmd}')
