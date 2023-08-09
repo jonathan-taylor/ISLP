@@ -63,9 +63,13 @@ throws up many warnings. We have suppressed them below.
     if labname[:4] not in ['Ch10', 'Ch13']:
 
         # clear outputs for all but Ch10,Ch13
-        os.system(f'jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace {nbfile}')
+        cmd = f'jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace {nbfile}'
+        print(f'Running: {cmd}')
+        os.system(cmd)
 
-    os.system(f'jupytext --set-formats ipynb,md:myst {nbfile}; jupytext --sync {nbfile}')
+    cmd = f'jupytext --set-formats ipynb,md:myst {nbfile}; jupytext --sync {nbfile}'
+    print(f'Running: {cmd}')
+    os.system(cmd)
 
     myst = open(f'{base}.md').read().strip()
 
@@ -78,7 +82,10 @@ throws up many warnings. We have suppressed them below.
 
     myst = '\n'.join(new_myst) # remove the "Chapter %d
 
+    print(myst)
     open(f'{base}.md', 'w').write(myst)
 
-    os.system(f'jupytext --sync {base}.ipynb; rm {base}.md')
+    cmd = f'jupytext --sync {base}.ipynb; rm {base}.md'
+    print(f'Running: {cmd}')
+    os.system(cmd)
 
