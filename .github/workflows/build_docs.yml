@@ -45,18 +45,6 @@ jobs:
           git submodule update --init --force docs/ISLP_labs
           cd docs
           python fix_and_clear_notebooks.py --version $LABS         
-
-      # Store the labs
-      - name: Upload cleaned labs
-        uses: actions/upload-artifact@v3
-        with:
-          name: ISLP_cleaned_labs
-          path: docs/source/labs
-          retention-days: 5
-
-      # Store the labs
-      - name: Remove markdown
-        run: |
           rm docs/source/labs/Ch*md
 
       - name: Make docs
