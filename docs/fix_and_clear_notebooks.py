@@ -3,8 +3,9 @@ import nbformat
 from argparse import ArgumentParser
 from glob import glob
 
+from ISLP import __lab_version__
 parser = ArgumentParser()
-parser.add_argument('--version', default='v2')
+parser.add_argument('--version', default=__lab_version__)
 args = parser.parse_args()
 version = args.version
 
@@ -84,7 +85,6 @@ throws up many warnings. We have suppressed them below.
 
     open(f'{base}.md', 'w').write(myst)
 
-#    cmd = f'jupytext --sync {base}.ipynb; rm {base}.md'
     cmd = f'jupytext --sync {base}.ipynb; '
     print(f'Running: {cmd}')
     os.system(cmd)

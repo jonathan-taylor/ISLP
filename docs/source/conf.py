@@ -7,7 +7,15 @@ copyright = '2023, ISLP authors'
 author = 'Jonathan Taylor'
 
 release = '0.1'
-version = '0.1.0'
+import ISLP
+version = ISLP.__version__
+
+lab_version = ISLP.__lab_version__
+myst_enable_extensions = ['substitution']
+
+myst_substitutions = {
+    "ISLP_lab_link": f"[ISLP_labs {lab_version}](https://github.com/intro-stat-learning/ISLP_labs/tree/{lab_version})"
+    }
 
 # -- General configuration
 

@@ -119,3 +119,5 @@ def confusion_table(predicted_labels,
 
 from . import _version
 __version__ = _version.get_versions()['version']
+
+__lab_version__ = 'v2'
