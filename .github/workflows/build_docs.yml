@@ -49,7 +49,7 @@ jobs:
           cd ..
           python fix_and_clear_notebooks.py          
           mkdir -p ../source/labs
-          cp Ch*nb ../source/labs
+          cp ISLP_labs/Ch*nb source/labs
 
       # Runs a set of commands using the runners shell
       - name: Make docs
