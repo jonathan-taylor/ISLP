@@ -55,9 +55,9 @@ throws up many warnings. We have suppressed them below.
         nb.metadata.setdefault('execution', {})['allow_errors'] = True
         nbformat.write(nb, open(nbfile, 'w'))
 
-    if labname[:4] != 'Ch10':
+    if labname[:4] not in ['Ch10', 'Ch13']:
 
-        # clear outputs for all but Ch10
+        # clear outputs for all but Ch10,Ch13
         os.system(f'jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace {nbfile}')
 
     os.system(f'jupytext --set-formats ipynb,md:myst {nbfile}; jupytext --sync {nbfile}')
