@@ -1,5 +1,12 @@
-import os, nbformat
+import os
+import nbformat
+from argparse import ArgumentParser
 from glob import glob
+
+parser = ArgumentParser()
+parser.add_argument('--version', default='v2')
+args = parser.parse_args()
+version = args.version
 
 import __main__
 dirname = os.path.split(__main__.__file__)[0]
@@ -9,8 +16,6 @@ for f in glob(os.path.join(dirname, 'source', 'labs', 'Ch14*')):
     os.remove(f)
     print(f)
     
-version = 'v2'
-
 print(f'checking out version {version} of the labs')
 
 os.system(f'''
@@ -55,12 +60,16 @@ throws up many warnings. We have suppressed them below.
         nb.metadata.setdefault('execution', {})['allow_errors'] = True
         nbformat.write(nb, open(nbfile, 'w'))
 
-    if labname[:4] != 'Ch10':
+    if labname[:4] not in ['Ch10', 'Ch13']:
 
-        # clear outputs for all but Ch10
-        os.system(f'jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace {nbfile}')
+        # clear outputs for all but Ch10,Ch13
+        cmd = f'jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace {nbfile}'
+        print(f'Running: {cmd}')
+        os.system(cmd)
 
-    os.system(f'jupytext --set-formats ipynb,md:myst {nbfile}; jupytext --sync {nbfile}')
+    cmd = f'jupytext --set-formats ipynb,md:myst {nbfile}; jupytext --sync {nbfile}'
+    print(f'Running: {cmd}')
+    os.system(cmd)
 
     myst = open(f'{base}.md').read().strip()
 
@@ -75,5 +84,8 @@ throws up many warnings. We have suppressed them below.
 
     open(f'{base}.md', 'w').write(myst)
 
-    os.system(f'jupytext --sync {base}.ipynb; rm {base}.md')
+#    cmd = f'jupytext --sync {base}.ipynb; rm {base}.md'
+    cmd = f'jupytext --sync {base}.ipynb; '
+    print(f'Running: {cmd}')
+    os.system(cmd)
 
