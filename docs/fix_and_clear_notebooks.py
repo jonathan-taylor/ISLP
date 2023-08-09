@@ -3,9 +3,9 @@ import nbformat
 from argparse import ArgumentParser
 from glob import glob
 
-from ISLP import __lab_version__
+from ISLP import __docs_lab_version__
 parser = ArgumentParser()
-parser.add_argument('--version', default=__lab_version__)
+parser.add_argument('--version', default=__docs_lab_version__)
 parser.add_argument('--clear', dest='clear', action='store_true', default=False)
 parser.add_argument('--noclear', dest='clear', action='store_false')
 args = parser.parse_args()
