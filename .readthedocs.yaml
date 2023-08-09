@@ -14,7 +14,7 @@ build:
     - r-base
   jobs:
     pre_build:
-      - python docs/fix_and_run_notebooks.py
+      - python docs/fix_and_clear_notebooks.py
 
 submodules:
   include: all

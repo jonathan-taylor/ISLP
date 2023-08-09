@@ -42,7 +42,9 @@ jobs:
           LABS:  ${{ inputs.LABS }}
         run: |
           git submodule update --init --force docs/ISLP_labs
-          cd docs/ISLP_labs
+          cd docs
+          python fix_and_clear_notebooks.py          
+          cd ISLP_labs
           git checkout $LABS
           mkdir -p ../source/labs
           cp Ch*nb ../source/labs
