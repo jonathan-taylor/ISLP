@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: Build notebooks, save artifact
+name: Build + save notebooks (not 10,13)
 
 # Controls when the workflow will run
 on:
@@ -41,7 +41,8 @@ jobs:
           git clone https://github.com/intro-stat-learning/ISLP_labs.git
           cd ISLP_labs
           git checkout $LABS
-          rm Ch10-deeplearning-lab.ipynb
+          rm Ch10*
+          rm Ch13*
           jupyter nbconvert --execute --inplace --allow-errors Ch02*lab.ipynb 
 
       - name: Build Ch03 notebook
@@ -106,13 +107,6 @@ jobs:
         run: |
           cd ISLP_labs
           jupyter nbconvert --execute --inplace --allow-errors Ch12*lab.ipynb 
-
-      - name: Build Ch13 notebook
-        env:
-          LABS:  ${{ inputs.LABS }}
-        run: |
-          cd ISLP_labs
-          jupyter nbconvert --execute --inplace --allow-errors Ch13*lab.ipynb 
 
       # Store the output
       - name: Upload labs
