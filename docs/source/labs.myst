@@ -28,6 +28,10 @@ to install the frozen environment.
 The version of the `ISLP` library used to build these labs
 may differ slightly from the one documented here.
 The labs are built with {{ ISLP_lab_version }}.
+
+The [Binder](http://mybinder.org) link above will run {{ ISLP_lab_link }} with
+library version {{ ISLP_lab_version }}.
+
 ```
 
 
