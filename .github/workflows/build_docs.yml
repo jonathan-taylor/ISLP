@@ -45,7 +45,7 @@ jobs:
           git submodule update --init --force docs/ISLP_labs
           cd docs
           python fix_and_clear_notebooks.py --version $LABS         
-          rm docs/source/labs/Ch*md
+          rm source/labs/Ch*md
 
       - name: Make docs
         run: |
