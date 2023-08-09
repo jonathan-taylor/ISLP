@@ -31,10 +31,10 @@ jobs:
       # Install
       - name: Install dependencies 
         run: |
+          sudo apt-get install r-base
           pip install -r requirements.txt
           pip install -r docs/requirements.txt
           pip install .
-          sudo apt-get install r-base
 
       # Checkout labs
       - name: Checkout version of labs
