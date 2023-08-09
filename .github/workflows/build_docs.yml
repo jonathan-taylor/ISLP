@@ -46,6 +46,7 @@ jobs:
           cd docs
           cd ISLP_labs
           git checkout $LABS
+          cd ..
           python fix_and_clear_notebooks.py          
           mkdir -p ../source/labs
           cp Ch*nb ../source/labs
