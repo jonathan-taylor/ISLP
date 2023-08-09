@@ -15,7 +15,7 @@ Package versions
 
 To ensure you have the same package versions as those built here, run:
 
-    pip install -r https://raw.githubusercontent.com/intro-stat-learning/ISLP_labs/v2/requirements.txt;
+    pip install -r https://raw.githubusercontent.com/intro-stat-learning/ISLP_labs/LAB_VERSION/requirements.txt;
 
 .. toctree::
    :maxdepth: 1

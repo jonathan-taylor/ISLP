@@ -61,10 +61,10 @@ To ensure you have the same package versions as those built here, run:
 ---
 tags: [skip-execution]
 ---
-pip install -r https://raw.githubusercontent.com/intro-stat-learning/ISLP_labs/v2/requirements.txt
+pip install -r https://raw.githubusercontent.com/intro-stat-learning/ISLP_labs/LAB_VERSION/requirements.txt
 ```
 
-For more specific install instructions go to [ISLP_labs](https://github.com/intro-stat-learning/ISLP_labs/tree/v2).
+For more specific install instructions go to [ISLP_labs](https://github.com/intro-stat-learning/ISLP_labs/tree/LAB_VERSION).
 
 ## Torch requirements
 
