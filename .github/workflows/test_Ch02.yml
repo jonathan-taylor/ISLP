@@ -35,10 +35,10 @@ jobs:
 
       # Runs a set of commands using the runners shell
       - name: Build notebook for Ch02 (some errors, not really a test)
+        env:
+          LABS:  ${{ inputs.LABS }}
         run: |
           git clone https://github.com/intro-stat-learning/ISLP_labs.git
           cd ISLP_labs
-          git checkout ${{ LABS }}
+          git checkout $LABS
           jupyter nbconvert --execute --inplace Ch02-statlearn-lab.ipynb --allow-errors 
-
-
