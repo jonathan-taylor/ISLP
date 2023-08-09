@@ -1,6 +1,11 @@
-# This is a basic workflow to help you get started with Actions
+# This builds and deploys ISLP docs
 
 name: Build docs
+
+# Give permission to write
+
+permissions:
+  id-token: write
 
 # Controls when the workflow will run
 on:
