@@ -1,5 +1,12 @@
-import os, nbformat
+import os
+import nbformat
+from argparse import ArgumentParser
 from glob import glob
+
+parser = ArgumentParser()
+parser.add_argument('--version', default='v2')
+args = parser.parse_args()
+version = args.version
 
 import __main__
 dirname = os.path.split(__main__.__file__)[0]
@@ -9,8 +16,6 @@ for f in glob(os.path.join(dirname, 'source', 'labs', 'Ch14*')):
     os.remove(f)
     print(f)
     
-version = 'v2'
-
 print(f'checking out version {version} of the labs')
 
 os.system(f'''
