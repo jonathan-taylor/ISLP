@@ -53,4 +53,10 @@ jobs:
           cd docs
           make html
 
-
+      # Store the output
+      - name: Upload docs
+        uses: actions/upload-artifact@v3
+        with:
+          name: ISLP_docs
+          path: docs/build/html
+          retention-days: 5
