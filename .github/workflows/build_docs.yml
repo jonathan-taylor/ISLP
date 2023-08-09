@@ -49,7 +49,7 @@ jobs:
         run: |
           git submodule update --init --force docs/ISLP_labs
           cd docs
-          python fix_and_clear_notebooks.py $LABS         
+          python fix_and_clear_notebooks.py --version $LABS         
           mkdir -p ../source/labs
           cp ISLP_labs/Ch*nb source/labs
 
