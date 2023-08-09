@@ -120,9 +120,3 @@ def confusion_table(predicted_labels,
 from . import _version
 __version__ = _version.get_versions()['version']
 
-# related to docs
-# __docs_lab_version__ should be a commit on intro-stat-learning/ISLP_labs
-# __docs_lab_ISLP_version__ should be the tag in requirements.txt of __docs_lab_version__
-
-__docs_lab_version__ = 'v2'
-__docs_lab_ISLP_version__ = 'v0.3.18'

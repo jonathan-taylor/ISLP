@@ -30,10 +30,6 @@ may differ slightly from the one documented here.
 The labs are built with {{ ISLP_lab_version }}.
 ```
 
-```python
-{{ ISLP_binder_code }}
-```
-
 
 ```{toctree}
 maxdepth: 1
