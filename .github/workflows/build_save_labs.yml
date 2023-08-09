@@ -46,72 +46,59 @@ jobs:
           jupyter nbconvert --execute --inplace --allow-errors Ch02*lab.ipynb 
 
       - name: Build Ch03 notebook
-        env:
-          LABS:  ${{ inputs.LABS }}
         run: |
           cd ISLP_labs
-          jupyter nbconvert --execute --inplace --allow-errors Ch03*lab.ipynb 
+          jupyter nbconvert --execute --inplace  Ch03*lab.ipynb 
 
       - name: Build Ch04 notebook
-        env:
-          LABS:  ${{ inputs.LABS }}
         run: |
           cd ISLP_labs
-          jupyter nbconvert --execute --inplace --allow-errors Ch04*lab.ipynb 
+          jupyter nbconvert --execute --inplace  Ch04*lab.ipynb 
 
       - name: Build Ch05 notebook
-        env:
-          LABS:  ${{ inputs.LABS }}
         run: |
           cd ISLP_labs
-          jupyter nbconvert --execute --inplace --allow-errors Ch05*lab.ipynb 
+          jupyter nbconvert --execute --inplace  Ch05*lab.ipynb 
 
       - name: Build Ch06 notebook
-        env:
-          LABS:  ${{ inputs.LABS }}
         run: |
           cd ISLP_labs
-          jupyter nbconvert --execute --inplace --allow-errors Ch06*lab.ipynb 
+          jupyter nbconvert --execute --inplace  Ch06*lab.ipynb 
 
       - name: Build Ch07 notebook
-        env:
-          LABS:  ${{ inputs.LABS }}
         run: |
           cd ISLP_labs
-          jupyter nbconvert --execute --inplace --allow-errors Ch07*lab.ipynb 
+          jupyter nbconvert --execute --inplace  Ch07*lab.ipynb 
 
       - name: Build Ch08 notebook
-        env:
-          LABS:  ${{ inputs.LABS }}
         run: |
           cd ISLP_labs
-          jupyter nbconvert --execute --inplace --allow-errors Ch08*lab.ipynb 
+          jupyter nbconvert --execute --inplace  Ch08*lab.ipynb 
 
       - name: Build Ch09 notebook
-        env:
-          LABS:  ${{ inputs.LABS }}
         run: |
           cd ISLP_labs
-          jupyter nbconvert --execute --inplace --allow-errors Ch09*lab.ipynb 
+          jupyter nbconvert --execute --inplace  Ch09*lab.ipynb 
 
       - name: Build Ch11 notebook
-        env:
-          LABS:  ${{ inputs.LABS }}
         run: |
           cd ISLP_labs
-          jupyter nbconvert --execute --inplace --allow-errors Ch11*lab.ipynb 
+          jupyter nbconvert --execute --inplace  Ch11*lab.ipynb 
 
       - name: Build Ch12 notebook
-        env:
-          LABS:  ${{ inputs.LABS }}
         run: |
           cd ISLP_labs
-          jupyter nbconvert --execute --inplace --allow-errors Ch12*lab.ipynb 
+          jupyter nbconvert --execute --inplace  Ch12*lab.ipynb 
+
+      - name: Build HTML
+        run: |
+          cd ISLP_labs
+          jupyter nbconvert --to html Ch*ipynb 
 
       # Store the output
       - name: Upload labs
         uses: actions/upload-artifact@v3
         with:
           name: ISLP_labs
-          path: ISLP_labs/Ch*nb
-          retention-days: 5
+          path: ISLP_labs/Ch*
+          retention-days: 1

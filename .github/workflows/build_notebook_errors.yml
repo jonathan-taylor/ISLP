@@ -51,9 +51,11 @@ jobs:
 
       # Store the output
       - name: Upload labs
+        env:
+          ID:  ${{ inputs.ID }}
         uses: actions/upload-artifact@v3
         with:
           name: ISLP_labs
-          path: ISLP_labs/Ch*nb
-          retention-days: 5	  
+          path: ISLP_labs/Ch*$ID*nb
+          retention-days: 1	  
 

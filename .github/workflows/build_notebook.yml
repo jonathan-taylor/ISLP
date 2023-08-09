@@ -48,4 +48,14 @@ jobs:
           cd ISLP_labs
           git checkout $LABS
           jupyter nbconvert --execute --inplace Ch*$ID*lab.ipynb 
+          jupyter nbconvert --to html Ch*$ID*lab.ipynb 
 
+      # Store the output
+      - name: Upload labs
+        env:
+          ID:  ${{ inputs.ID }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: ISLP_labs
+          path: ISLP_labs/Ch*$ID*
+          retention-days: 1
