@@ -27,8 +27,8 @@ myst_enable_extensions = ['substitution']
 
 myst_substitutions = {
     "ISLP_lab_link": f"[ISLP_labs/{lab_version}](https://github.com/intro-stat-learning/ISLP_labs/tree/{lab_version})",
-    "ISLP_binder_code": f"[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/intro-stat-learning/ISLP_labs/{lab_version}",
-    "ISLP_lab_version": docs_version['library'],
+    "ISLP_binder_code": f"[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/intro-stat-learning/ISLP_labs/{lab_version})",
+    "ISLP_lab_version": "[ISLP/{0}](https://github.com/intro-stat-learning/ISLP_labs/tree/{0})".format(docs_version['library'])
     }
 myst_number_code_blocks = ['python', 'ipython3']
 
