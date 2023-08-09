@@ -34,6 +34,7 @@ jobs:
           pip install -r requirements.txt
           pip install -r docs/requirements.txt
           pip install .
+          sudo apt-get install r-base
 
       # Checkout labs
       - name: Checkout version of labs
@@ -43,6 +44,7 @@ jobs:
           git submodule update --init --force docs/ISLP_labs
           cd docs/ISLP_labs
           git checkout $LABS
+          mkdir -p ../source/labs
           cp Ch*nb ../source/labs
 
       # Runs a set of commands using the runners shell
