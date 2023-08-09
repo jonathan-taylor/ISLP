@@ -82,10 +82,10 @@ throws up many warnings. We have suppressed them below.
 
     myst = '\n'.join(new_myst) # remove the "Chapter %d
 
-    print(myst)
     open(f'{base}.md', 'w').write(myst)
 
-    cmd = f'jupytext --sync {base}.ipynb; rm {base}.md'
+#    cmd = f'jupytext --sync {base}.ipynb; rm {base}.md'
+    cmd = f'jupytext --sync {base}.ipynb; '
     print(f'Running: {cmd}')
     os.system(cmd)
 
