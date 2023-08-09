@@ -41,7 +41,7 @@ jobs:
         run: |
           git submodule update --init --force docs/ISLP_labs
           cd docs/ISLP_labs
-	  git checkout $LABS
+          git checkout $LABS
 
       # Runs a set of commands using the runners shell
       - name: Make docs
