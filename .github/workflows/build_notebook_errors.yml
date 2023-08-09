@@ -39,7 +39,7 @@ jobs:
           pip install .
 
       # Runs a set of commands using the runners shell
-      - name: Build notebook for Ch03 
+      - name: Build notebook, allowing errors
         env:
           LABS:  ${{ inputs.LABS }}
           ID:  ${{ inputs.ID }}
