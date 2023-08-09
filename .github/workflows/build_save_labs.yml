@@ -51,6 +51,69 @@ jobs:
           cd ISLP_labs
           jupyter nbconvert --execute --inplace --allow-errors Ch03*lab.ipynb 
 
+      - name: Build Ch04 notebook
+        env:
+          LABS:  ${{ inputs.LABS }}
+        run: |
+          cd ISLP_labs
+          jupyter nbconvert --execute --inplace --allow-errors Ch04*lab.ipynb 
+
+      - name: Build Ch05 notebook
+        env:
+          LABS:  ${{ inputs.LABS }}
+        run: |
+          cd ISLP_labs
+          jupyter nbconvert --execute --inplace --allow-errors Ch05*lab.ipynb 
+
+      - name: Build Ch06 notebook
+        env:
+          LABS:  ${{ inputs.LABS }}
+        run: |
+          cd ISLP_labs
+          jupyter nbconvert --execute --inplace --allow-errors Ch06*lab.ipynb 
+
+      - name: Build Ch07 notebook
+        env:
+          LABS:  ${{ inputs.LABS }}
+        run: |
+          cd ISLP_labs
+          jupyter nbconvert --execute --inplace --allow-errors Ch07*lab.ipynb 
+
+      - name: Build Ch08 notebook
+        env:
+          LABS:  ${{ inputs.LABS }}
+        run: |
+          cd ISLP_labs
+          jupyter nbconvert --execute --inplace --allow-errors Ch08*lab.ipynb 
+
+      - name: Build Ch09 notebook
+        env:
+          LABS:  ${{ inputs.LABS }}
+        run: |
+          cd ISLP_labs
+          jupyter nbconvert --execute --inplace --allow-errors Ch09*lab.ipynb 
+
+      - name: Build Ch11 notebook
+        env:
+          LABS:  ${{ inputs.LABS }}
+        run: |
+          cd ISLP_labs
+          jupyter nbconvert --execute --inplace --allow-errors Ch11*lab.ipynb 
+
+      - name: Build Ch12 notebook
+        env:
+          LABS:  ${{ inputs.LABS }}
+        run: |
+          cd ISLP_labs
+          jupyter nbconvert --execute --inplace --allow-errors Ch12*lab.ipynb 
+
+      - name: Build Ch13 notebook
+        env:
+          LABS:  ${{ inputs.LABS }}
+        run: |
+          cd ISLP_labs
+          jupyter nbconvert --execute --inplace --allow-errors Ch13*lab.ipynb 
+
       # Store the output
       - name: Upload labs
         uses: actions/upload-artifact@v3
