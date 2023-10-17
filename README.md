@@ -3,6 +3,18 @@
 This package collects data sets and various helper functions
 for ISLP.
 
+## Authors
+
+- Jonathan Taylor
+
+- Gareth James
+
+- Daniela Witten
+
+- Trevor Hastie
+
+- Rob Tibshirani
+
 ## Install instructions
 
 ### Mac OS X
